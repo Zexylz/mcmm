@@ -1,0 +1,37 @@
+<?xml version='1.0' standalone='yes'?>
+<!DOCTYPE PLUGIN [
+<!ENTITY name      "minecraft-modpack-manager">
+<!ENTITY author    "Zexylz">
+<!ENTITY version   "2025.11.27a">
+<!ENTITY launch    "Settings/minecraft-modpack-manager">
+<!ENTITY gitURL    "https://raw.githubusercontent.com/Zexylz/mcmm/main">
+<!ENTITY pluginURL "&gitURL;/minecraft-modpack-manager.plg">
+<!ENTITY pkgURL    "&gitURL;/minecraft-modpack-manager.txz">
+<!ENTITY plgPath   "/boot/config/plugins/&name;">
+<!ENTITY plgName   "&name;.plg">
+<!ENTITY emhttp    "/usr/local/emhttp/plugins/&name;">
+]>
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0" support="https://github.com/Zexylz/mcmm/issues">
+
+<CHANGES>
+<CHANGE>2025.11.27 - Initial Release: Wide modal, styled toggles, caching fixes.</CHANGE>
+</CHANGES>
+
+<FILE Name="&plgPath;/&name;.txz" Min="6.9.0" Run="upgradepkg --install-new">
+<URL>&pkgURL;</URL>
+</FILE>
+
+<FILE Name="&plgPath;/&plgName;">
+<URL>&pluginURL;</URL>
+</FILE>
+
+<!-- Clean up old versions -->
+<FILE Run="/bin/bash">
+<INLINE>
+echo "Cleaning up old versions..."
+rm -f $(ls &plgPath;/*.txz 2>/dev/null | grep -v '&version;')
+echo "Plugin installed successfully."
+</INLINE>
+</FILE>
+
+</PLUGIN>
