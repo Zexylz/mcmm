@@ -43,7 +43,7 @@ function getMinecraftServers()
     
     $servers = [];
     $serversDir = '/boot/config/plugins/mcmm/servers';
-    
+
     // Debug logging
     $debugLog = "=== getMinecraftServers Debug ===\n";
     
@@ -51,7 +51,7 @@ function getMinecraftServers()
     if (!is_dir($serversDir)) {
         @mkdir($serversDir, 0755, true);
     }
-    
+
     // First, read all server configs from disk
     $serverConfigs = [];
     if (is_dir($serversDir)) {
@@ -76,7 +76,7 @@ function getMinecraftServers()
     
     $debugLog .= "Docker command: $cmd\n";
     $debugLog .= "Docker output: " . ($output ? "YES" : "EMPTY") . "\n";
-    
+
     if ($output) {
         $lines = explode("\n", trim($output));
         $debugLog .= "Found " . count($lines) . " lines\n";
@@ -296,7 +296,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                 </div>
             <?php else : ?>
                 <div class="mcmm-server-list" id="serverListContainer">
-                    <?php 
+                    <?php
                     foreach ($servers as $index => $server) : 
                         $icon = isset($server['icon']) && $server['icon'] ? $server['icon'] : "https://media.forgecdn.net/avatars/855/527/638260492657788102.png";
                         $ramUsage = isset($server['ram']) ? $server['ram'] : 0;
