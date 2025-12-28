@@ -1,0 +1,1734 @@
+/* ===== CSS RESET FOR UNRAID ===== */
+.mcmm-app,
+.mcmm-app * {
+    all: revert;
+    box-sizing: border-box !important;
+}
+
+/* ===== THEME VARIABLES ===== */
+.mcmm-app {
+    --bg-body: #0b0c16;
+    --bg-surface: rgba(22, 24, 35, 0.7);
+    --bg-surface-hover: rgba(30, 32, 45, 0.8);
+    --bg-input: rgba(10, 11, 16, 0.6);
+    --primary: #9d4edd;
+    --primary-hover: #c77dff;
+    --primary-dim: rgba(157, 78, 221, 0.15);
+    --text-main: #ffffff;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border: rgba(255, 255, 255, 0.08);
+    --success: #34d399;
+    --danger: #f87171;
+    --warning: #fbbf24;
+    --radius-sm: 8px;
+    --radius-md: 16px;
+    --blur-strength: 16px;
+    --content-max-width: 1400px;
+}
+
+/* ===== BASE STYLES ===== */
+.mcmm-app {
+    font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    background: var(--bg-body) !important;
+    color: var(--text-main) !important;
+    min-height: 100vh;
+    padding: 0 !important;
+    margin: 0 !important;
+    line-height: 1.6 !important;
+    font-size: 16px !important;
+}
+
+.mcmm-app h1,
+.mcmm-app h2,
+.mcmm-app h3,
+.mcmm-app h4,
+.mcmm-app p {
+    margin: 0 !important;
+    padding: 0 !important;
+    font-family: inherit !important;
+}
+
+.mcmm-app a {
+    text-decoration: none !important;
+    color: inherit !important;
+}
+
+/* ===== BACKGROUND ===== */
+.mcmm-bg {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: -1 !important;
+    pointer-events: none !important;
+    background:
+        radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 85% 30%, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
+        linear-gradient(to bottom, #0b0c16 0%, #11121f 100%) !important;
+}
+
+/* ===== HEADER ===== */
+.mcmm-header {
+    background: transparent !important;
+    padding: 2rem 2rem 0 2rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    max-width: var(--content-max-width) !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+}
+
+.mcmm-brand {
+    font-weight: 800 !important;
+    font-size: 1.8rem !important;
+    color: white !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.8rem !important;
+    letter-spacing: -0.5px !important;
+    text-shadow: 0 0 20px rgba(157, 78, 221, 0.4) !important;
+}
+
+.mcmm-brand span {
+    color: var(--primary) !important;
+}
+
+.mcmm-version {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: var(--text-secondary) !important;
+    padding: 0.4rem 0.8rem !important;
+    border-radius: 6px !important;
+    font-size: 0.85rem !important;
+}
+
+/* ===== TABS ===== */
+.mcmm-tabs {
+    display: flex !important;
+    gap: 0.5rem !important;
+    padding: 1rem 2rem 0 2rem !important;
+    border-bottom: 1px solid var(--border) !important;
+    max-width: var(--content-max-width) !important;
+    width: 100% !important;
+    margin: 0 auto 2rem auto !important;
+}
+
+.mcmm-tab {
+    padding: 0.75rem 1.5rem !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+    color: var(--text-secondary) !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-bottom: none !important;
+    border-radius: 8px 8px 0 0 !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+    position: relative !important;
+}
+
+.mcmm-tab:hover {
+    color: var(--text-main) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.mcmm-tab.active {
+    color: white !important;
+    background: linear-gradient(to top, rgba(157, 78, 221, 0.1), transparent) !important;
+    border-color: var(--border) !important;
+    border-bottom: 2px solid var(--primary) !important;
+    box-shadow: 0 -4px 10px rgba(157, 78, 221, 0.05) !important;
+}
+
+/* ===== MAIN CONTENT ===== */
+.mcmm-main {
+    max-width: var(--content-max-width) !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 2rem 4rem 2rem !important;
+}
+
+.mcmm-tab-content {
+    display: none !important;
+}
+
+.mcmm-tab-content.active {
+    display: block !important;
+}
+
+/* ===== BUTTONS ===== */
+.mcmm-app .mcmm-btn {
+    border-radius: var(--radius-sm) !important;
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    padding: 0.7rem 1.4rem !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+    font-family: inherit !important;
+    text-transform: none !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    line-height: normal !important;
+
+    /* Default / Cancel Button Style - Force Override */
+    background: rgba(255, 255, 255, 0.05) !important;
+    background-image: none !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.mcmm-app .mcmm-btn:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.mcmm-app .mcmm-btn-primary {
+    background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%) !important;
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(123, 44, 191, 0.4) !important;
+    border: 1px solid transparent !important;
+}
+
+.mcmm-app .mcmm-btn-primary:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(123, 44, 191, 0.6) !important;
+}
+
+/* ===== SERVER LIST ===== */
+.mcmm-server-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+}
+
+.mcmm-server-row {
+    display: flex !important;
+    align-items: center !important;
+    background: var(--bg-surface) !important;
+    backdrop-filter: blur(var(--blur-strength)) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+    padding: 1.2rem 1.5rem !important;
+    position: relative !important;
+    transition: all 0.3s !important;
+    overflow: hidden !important;
+}
+
+.mcmm-server-row:hover {
+    transform: translateX(4px) !important;
+    background: var(--bg-surface-hover) !important;
+    border-color: rgba(157, 78, 221, 0.4) !important;
+}
+
+.mcmm-server-row::before {
+    content: '' !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 4px !important;
+    background: var(--border) !important;
+}
+
+.mcmm-server-row.running::before {
+    background: var(--success) !important;
+    box-shadow: 2px 0 12px var(--success) !important;
+}
+
+.mcmm-server-row.stopped::before {
+    background: var(--danger) !important;
+    box-shadow: 2px 0 8px rgba(248, 113, 113, 0.5) !important;
+}
+
+.mcmm-server-icon {
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 12px !important;
+    background-color: #333 !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    margin-right: 1.5rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    flex-shrink: 0 !important;
+}
+
+.mcmm-server-info {
+    flex: 1.5 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Deploy version selector cards */
+.mcmm-version-card {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.15rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    text-align: left;
+    transition: all 0.18s ease;
+}
+
+.mcmm-version-card:hover {
+    border-color: var(--primary);
+    background: rgba(157, 78, 221, 0.08);
+    transform: translateY(-1px);
+}
+
+.mcmm-version-card.selected {
+    border-color: var(--primary);
+    background: rgba(157, 78, 221, 0.12);
+    box-shadow: 0 6px 24px rgba(157, 78, 221, 0.12);
+}
+
+.mcmm-version-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+    background-color: #222;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.mcmm-version-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.mcmm-version-name {
+    font-weight: 700;
+    font-size: 0.98rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mcmm-version-top {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.mcmm-version-meta {
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.mcmm-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.22rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.mcmm-chip.subtle {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.mcmm-chip.release {
+    background: rgba(52, 211, 153, 0.18);
+    border-color: rgba(52, 211, 153, 0.45);
+    color: #d2ffee;
+}
+
+.mcmm-chip.beta {
+    background: rgba(255, 200, 87, 0.22);
+    border-color: rgba(255, 200, 87, 0.5);
+    color: #fff2ce;
+}
+
+.mcmm-chip.alpha {
+    background: rgba(255, 107, 107, 0.24);
+    border-color: rgba(255, 107, 107, 0.55);
+    color: #ffe2de;
+}
+
+.mcmm-version-select {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 800;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.mcmm-version-card.selected .mcmm-version-select {
+    color: var(--primary);
+}
+
+.mcmm-version-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.mcmm-version-card {
+    display: flex;
+    gap: 0.9rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.06));
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+}
+
+.mcmm-version-card:hover {
+    border-color: rgba(157, 78, 221, 0.55);
+    box-shadow: 0 12px 28px rgba(157, 78, 221, 0.2);
+    transform: translateY(-1px);
+}
+
+.mcmm-version-card.selected {
+    border-color: var(--primary);
+    box-shadow: 0 14px 34px rgba(157, 78, 221, 0.35);
+}
+
+.mcmm-version-thumb {
+    width: 54px;
+    height: 54px;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+    background-color: #1a1a1f;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.mcmm-version-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.mcmm-version-top {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    justify-content: space-between;
+}
+
+.mcmm-version-name {
+    font-weight: 700;
+    color: var(--text-main);
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mcmm-version-pill {
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.mcmm-version-pill.success {
+    background: rgba(34, 197, 94, 0.18);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #bbf7d0;
+}
+
+.mcmm-version-pill.warning {
+    background: rgba(234, 179, 8, 0.16);
+    border-color: rgba(234, 179, 8, 0.5);
+    color: #fef08a;
+}
+
+.mcmm-version-pill.danger {
+    background: rgba(239, 68, 68, 0.14);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #fecdd3;
+}
+
+.mcmm-version-pill.muted {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: var(--text-muted);
+}
+
+.mcmm-version-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.45rem;
+}
+
+.mcmm-version-radio {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.mcmm-version-radio .dot {
+    width: 10px;
+    height: 10px;
+    background: var(--primary);
+    border-radius: 50%;
+}
+
+.mcmm-chip {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    padding: 0.25rem 0.55rem;
+    border-radius: 8px;
+    line-height: 1.2;
+}
+
+.mcmm-chip.subtle {
+    color: var(--text-muted);
+    border-style: dashed;
+}
+
+.mcmm-pagination .mcmm-btn {
+    height: 34px !important;
+    padding: 0 0.65rem !important;
+    font-size: 0.9rem !important;
+}
+
+.mcmm-pagination-bar {
+    position: absolute;
+    left: 50%;
+    bottom: 1rem;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.25));
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 0.5rem 0.8rem;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
+    z-index: 5;
+}
+
+.mcmm-pagination-bar .mcmm-btn {
+    height: 32px !important;
+    width: 36px !important;
+    padding: 0 !important;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 800;
+    border-radius: 8px !important;
+}
+
+.mcmm-pagination-bar .mcmm-btn.subtle {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+}
+
+.mcmm-pagination-bar .mcmm-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.mcmm-pagination-bar span {
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.mcmm-page-btn {
+    min-width: 36px !important;
+    height: 34px !important;
+    padding: 0 0.65rem !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(0, 0, 0, 0.25));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-main);
+    border-radius: 9px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+.mcmm-page-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(157, 78, 221, 0.28), rgba(157, 78, 221, 0.18));
+    border-color: rgba(157, 78, 221, 0.7);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 12px 26px rgba(157, 78, 221, 0.35);
+}
+
+.mcmm-page-btn.active {
+    background: linear-gradient(135deg, #9d4edd, #7b2cbf);
+    border-color: rgba(157, 78, 221, 0.95);
+    color: white;
+    box-shadow: 0 14px 30px rgba(157, 78, 221, 0.45);
+    transform: translateY(-1px);
+}
+
+.mcmm-page-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.mcmm-server-title {
+    font-size: 1.15rem !important;
+    font-weight: 700 !important;
+    color: white !important;
+    margin-bottom: 0.2rem !important;
+}
+
+.mcmm-server-subtitle {
+    font-size: 0.9rem !important;
+    color: var(--text-secondary) !important;
+    display: flex !important;
+    gap: 1rem !important;
+}
+
+.mcmm-server-metrics {
+    flex: 2 !important;
+    display: flex !important;
+    gap: 2rem !important;
+    padding: 0 2rem !important;
+}
+
+.mcmm-metric {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.3rem !important;
+}
+
+.mcmm-metric-label {
+    font-size: 0.75rem !important;
+    text-transform: uppercase !important;
+    color: var(--text-secondary) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+}
+
+.mcmm-metric-bar {
+    width: 100% !important;
+    height: 6px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 4px !important;
+    overflow: hidden !important;
+}
+
+.mcmm-metric-fill {
+    height: 100% !important;
+    border-radius: 4px !important;
+}
+
+.mcmm-server-actions {
+    display: flex !important;
+    gap: 0.6rem !important;
+}
+
+.mcmm-btn-icon {
+    width: 44px !important;
+    height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 10px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-main) !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+    font-size: 1.1rem !important;
+    font-family: 'Fira Code', monospace !important;
+}
+
+.mcmm-btn-icon:hover {
+    background: var(--primary) !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 15px rgba(157, 78, 221, 0.4) !important;
+    transform: translateY(-2px) !important;
+}
+
+.mcmm-btn-icon.danger {
+    color: var(--danger) !important;
+    border-color: rgba(248, 113, 113, 0.3) !important;
+}
+
+.mcmm-btn-icon.danger:hover {
+    background: var(--danger) !important;
+    border-color: var(--danger) !important;
+    color: white !important;
+    box-shadow: 0 0 15px rgba(248, 113, 113, 0.4) !important;
+}
+
+.mcmm-btn-icon.success {
+    color: var(--success) !important;
+    border-color: rgba(52, 211, 153, 0.3) !important;
+}
+
+.mcmm-btn-icon.success:hover {
+    background: var(--success) !important;
+    border-color: var(--success) !important;
+    color: white !important;
+}
+
+/* ===== EMPTY STATE ===== */
+.mcmm-empty {
+    text-align: center !important;
+    padding: 4rem 2rem !important;
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+}
+
+.mcmm-empty h3 {
+    font-size: 1.25rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.mcmm-empty p {
+    color: var(--text-secondary) !important;
+    margin-bottom: 1.5rem !important;
+}
+
+/* ===== CATALOG GRID ===== */
+.mcmm-catalog-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 1.5rem !important;
+    gap: 1rem !important;
+    flex-wrap: wrap !important;
+}
+
+.mcmm-search {
+    flex: 1 !important;
+    max-width: 400px !important;
+    position: relative !important;
+}
+
+/* Override max-width in modal to fix size issue */
+.mcmm-modal .mcmm-search {
+    max-width: none !important;
+}
+
+.mcmm-search-input {
+    width: 100% !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    border: 1px solid rgba(157, 78, 221, 0.3) !important;
+    border-radius: 50px !important;
+    color: var(--text-main) !important;
+    padding: 0.9rem 1rem 0.9rem 3rem !important;
+    font-family: inherit !important;
+    font-size: 1rem !important;
+    transition: all 0.3s !important;
+}
+
+.mcmm-search-input:focus {
+    outline: none !important;
+    border-color: var(--primary) !important;
+    background: rgba(157, 78, 221, 0.1) !important;
+}
+
+.mcmm-search-icon {
+    position: absolute !important;
+    left: 1rem !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: var(--text-muted) !important;
+    font-size: 1.1rem !important;
+    pointer-events: none !important;
+}
+
+.mcmm-modpack-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+    gap: 1.5rem !important;
+}
+
+.mcmm-modpack-card {
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+    overflow: hidden !important;
+    cursor: pointer !important;
+    transition: all 0.3s !important;
+}
+
+.mcmm-modpack-card:hover {
+    transform: translateY(-8px) scale(1.02) !important;
+    border-color: rgba(157, 78, 221, 0.6) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 25px rgba(157, 78, 221, 0.2) !important;
+}
+
+.mcmm-modpack-thumb {
+    height: 140px !important;
+    background-size: cover !important;
+    background-position: center !important;
+    position: relative !important;
+    transition: background-size 0.3s !important;
+}
+
+.mcmm-modpack-grid.fit-images .mcmm-modpack-thumb {
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+}
+
+.mcmm-modpack-thumb::after {
+    content: '' !important;
+    position: absolute !important;
+    inset: 0 !important;
+    background: linear-gradient(to top, rgba(11, 12, 22, 0.9) 0%, transparent 60%) !important;
+}
+
+.mcmm-modpack-info {
+    padding: 1.25rem !important;
+}
+
+.mcmm-modpack-name {
+    font-weight: 700 !important;
+    font-size: 1.1rem !important;
+    color: var(--text-main) !important;
+    margin-bottom: 0.3rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.mcmm-modpack-meta {
+    display: flex !important;
+    justify-content: space-between !important;
+    font-size: 0.85rem !important;
+    color: var(--text-secondary) !important;
+}
+
+.mcmm-modpack-tags {
+    display: flex !important;
+    gap: 0.4rem !important;
+    flex-wrap: wrap !important;
+    margin-top: 0.8rem !important;
+}
+
+.mcmm-tag {
+    font-size: 0.7rem !important;
+    padding: 0.2rem 0.6rem !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 100px !important;
+    color: var(--text-muted) !important;
+}
+
+/* ===== SETTINGS ===== */
+.mcmm-settings-container {
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+}
+
+.mcmm-panel {
+    background: rgba(13, 14, 23, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 12px !important;
+    padding: 2rem !important;
+    margin-bottom: 2rem !important;
+    backdrop-filter: blur(8px) !important;
+}
+
+.mcmm-panel-title {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    color: var(--text-main) !important;
+    margin-bottom: 1.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    padding-bottom: 0.75rem !important;
+}
+
+.mcmm-form-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 2rem !important;
+}
+
+.mcmm-form-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+}
+
+.mcmm-label {
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    color: var(--text-secondary) !important;
+}
+
+.mcmm-input {
+    background: rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-main) !important;
+    padding: 0.9rem 1rem !important;
+    border-radius: 8px !important;
+    font-family: inherit !important;
+    font-size: 0.95rem !important;
+    transition: all 0.2s !important;
+    width: 100% !important;
+}
+
+.mcmm-input:focus {
+    outline: none !important;
+    border-color: var(--primary) !important;
+    background: rgba(157, 78, 221, 0.05) !important;
+}
+
+.mcmm-input-hint {
+    font-size: 0.8rem !important;
+    color: var(--text-muted) !important;
+}
+
+/* Toggle Grid */
+.mcmm-toggle-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.75rem !important;
+}
+
+.mcmm-toggle-item {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    padding: 0.9rem 1rem !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--border) !important;
+    transition: all 0.2s !important;
+}
+
+.mcmm-toggle-item:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(157, 78, 221, 0.3) !important;
+}
+
+.mcmm-toggle-label {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.mcmm-toggle-name {
+    font-weight: 500 !important;
+    font-size: 0.9rem !important;
+    color: white !important;
+}
+
+.mcmm-toggle-desc {
+    font-size: 0.75rem !important;
+    color: var(--text-muted) !important;
+}
+
+/* Switch */
+.mcmm-switch {
+    position: relative !important;
+    display: inline-block !important;
+    width: 44px !important;
+    height: 24px !important;
+}
+
+.mcmm-switch input {
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+.mcmm-slider {
+    position: absolute !important;
+    cursor: pointer !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background-color: #2d2d30 !important;
+    transition: 0.4s !important;
+    border-radius: 24px !important;
+}
+
+.mcmm-slider:before {
+    position: absolute !important;
+    content: "" !important;
+    height: 18px !important;
+    width: 18px !important;
+    left: 3px !important;
+    bottom: 3px !important;
+    background-color: white !important;
+    transition: 0.4s !important;
+    border-radius: 50% !important;
+}
+
+.mcmm-switch input:checked+.mcmm-slider {
+    background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%) !important;
+}
+
+.mcmm-switch input:checked+.mcmm-slider:before {
+    transform: translateX(20px) !important;
+}
+
+/* RAM Pills */
+.mcmm-ram-presets {
+    display: flex !important;
+    gap: 0.5rem !important;
+    margin-top: 0.5rem !important;
+    flex-wrap: wrap !important;
+}
+
+.mcmm-ram-pill {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 6px !important;
+    font-size: 0.85rem !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+    color: var(--text-secondary) !important;
+}
+
+.mcmm-ram-pill:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    padding: 0.5rem 1rem !important;
+}
+
+.mcmm-ram-pill.active {
+    background: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: white !important;
+}
+
+/* Custom Select */
+.mcmm-select {
+    position: relative !important;
+    width: 100% !important;
+}
+
+.mcmm-select-trigger {
+    background: rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-main) !important;
+    padding: 0.9rem 1rem !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 0.95rem !important;
+    transition: all 0.2s !important;
+}
+
+.mcmm-select-trigger:hover {
+    border-color: rgba(157, 78, 221, 0.4) !important;
+}
+
+.mcmm-select-trigger::after {
+    content: '▼' !important;
+    font-size: 0.7rem !important;
+    color: var(--text-muted) !important;
+}
+
+.mcmm-select.open .mcmm-select-trigger {
+    border-color: var(--primary) !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+
+.mcmm-select-options {
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    background: #0f1014 !important;
+    border: 1px solid var(--primary) !important;
+    border-top: none !important;
+    border-radius: 0 0 8px 8px !important;
+    z-index: 100 !important;
+    display: none !important;
+    max-height: 200px !important;
+    overflow-y: auto !important;
+}
+
+.mcmm-select.open .mcmm-select-options {
+    display: block !important;
+}
+
+.mcmm-option {
+    padding: 0.8rem 1rem !important;
+    cursor: pointer !important;
+    color: var(--text-secondary) !important;
+    transition: all 0.2s !important;
+}
+
+.mcmm-option:hover {
+    background: rgba(157, 78, 221, 0.1) !important;
+    color: white !important;
+}
+
+.mcmm-option.selected {
+    color: white !important;
+    background: rgba(157, 78, 221, 0.15) !important;
+}
+
+/* Section Title */
+.mcmm-section-title {
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    color: var(--text-secondary) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 0.75rem !important;
+    padding-bottom: 0.5rem !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    text-transform: uppercase !important;
+}
+
+/* Status Message */
+.mcmm-status {
+    display: none;
+    padding: 1rem !important;
+    border-radius: 8px !important;
+    margin-bottom: 1rem !important;
+    font-weight: 500 !important;
+}
+
+.mcmm-status.success {
+    background: rgba(16, 185, 129, 0.1) !important;
+    border: 1px solid rgba(16, 185, 129, 0.3) !important;
+    color: var(--success) !important;
+}
+
+.mcmm-status.error {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+    color: var(--danger) !important;
+}
+
+/* Footer */
+.mcmm-settings-footer {
+    display: flex !important;
+    justify-content: flex-end !important;
+    padding-top: 1rem !important;
+}
+
+/* ===== MODAL ===== */
+.mcmm-modal-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(0, 0, 0, 0.85) !important;
+    backdrop-filter: blur(8px) !important;
+    z-index: 1000 !important;
+    display: none !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+.mcmm-modal-overlay.open {
+    display: flex !important;
+}
+
+.mcmm-modal {
+    background: var(--bg-surface) !important;
+    border: 1px solid rgba(157, 78, 221, 0.3) !important;
+    border-radius: 16px !important;
+    max-width: 95vw !important;
+    width: 95% !important;
+    max-height: 90vh !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.mcmm-modal-header {
+    padding: 1.5rem !important;
+    border-bottom: 1px solid var(--border) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+
+.mcmm-modal-title {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+}
+
+.mcmm-modal-close {
+    font-size: 1.5rem !important;
+    cursor: pointer !important;
+    color: var(--text-muted) !important;
+    transition: color 0.2s !important;
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+.mcmm-modal-close:hover {
+    color: var(--danger) !important;
+}
+
+.mcmm-modal-body {
+    padding: 1.5rem !important;
+    overflow-y: auto !important;
+    flex: 1 !important;
+}
+
+/* Console Modal Specific */
+.mcmm-console-output {
+    background: #0f1014 !important;
+    border-radius: 8px !important;
+    padding: 1rem !important;
+    flex: 1 !important;
+    /* Allow it to grow */
+    overflow-y: auto !important;
+    font-family: 'Fira Code', monospace !important;
+    font-size: 0.85rem !important;
+    color: #c0caf5 !important;
+    line-height: 1.4 !important;
+    white-space: pre-wrap !important;
+    /* Respect newlines and wrapping */
+    word-break: break-all !important;
+    /* Break long words if needed */
+}
+
+.mcmm-console-input-container {
+    display: flex !important;
+    gap: 0.5rem !important;
+    align-items: center !important;
+    padding: 1rem !important;
+    background: #1a1b26 !important;
+    border-top: 1px solid var(--border) !important;
+    flex-shrink: 0 !important;
+    /* Don't shrink */
+}
+
+.mcmm-player-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    padding: 0.5rem !important;
+}
+
+.mcmm-player-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+    padding: 0.75rem !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.mcmm-player-head {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 6px !important;
+    background-size: cover !important;
+    background-position: center !important;
+    border: 1px solid var(--border) !important;
+    flex-shrink: 0 !important;
+}
+
+.mcmm-player-name {
+    font-weight: 700 !important;
+    color: var(--text-main) !important;
+}
+
+.mcmm-player-actions {
+    margin-left: auto !important;
+    display: flex !important;
+    gap: 0.4rem !important;
+}
+
+.mcmm-btn.warning {
+    background: rgba(255, 200, 87, 0.18) !important;
+    border: 1px solid rgba(255, 200, 87, 0.6) !important;
+    color: #ffe6a7 !important;
+}
+
+.mcmm-btn.warning:hover {
+    background: rgba(255, 200, 87, 0.28) !important;
+    color: white !important;
+}
+
+.mcmm-btn.danger {
+    background: rgba(239, 68, 68, 0.18) !important;
+    border: 1px solid rgba(239, 68, 68, 0.6) !important;
+    color: #fecdd3 !important;
+}
+
+.mcmm-btn.danger:hover {
+    background: rgba(239, 68, 68, 0.28) !important;
+    color: white !important;
+}
+
+.mcmm-console-prompt {
+    color: var(--primary) !important;
+    font-family: 'Fira Code', monospace !important;
+    font-weight: bold !important;
+}
+
+.mcmm-console-input {
+    flex: 1 !important;
+    background: transparent !important;
+    border: none !important;
+    color: white !important;
+    font-family: 'Fira Code', monospace !important;
+    font-size: 0.95rem !important;
+    outline: none !important;
+}
+
+/* Loading */
+.mcmm-loading {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 4rem !important;
+    color: var(--text-secondary) !important;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.mcmm-spinner {
+    width: 32px !important;
+    height: 32px !important;
+    border: 3px solid var(--border) !important;
+    border-top-color: var(--primary) !important;
+    border-radius: 50% !important;
+    animation: spin 1s linear infinite !important;
+}
+
+/* Source Toggle (Pill) */
+.mcmm-source-toggle {
+    display: flex;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 4px;
+    border: 1px solid var(--border);
+}
+
+.mcmm-source-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.mcmm-source-btn.active {
+    background: var(--primary);
+    color: white;
+}
+
+.mcmm-source-btn:hover:not(.active) {
+    color: white;
+}
+
+/* Queue Panel */
+.mcmm-queue-panel {
+    width: 0;
+    overflow: hidden;
+    background: #0f1014;
+    border-left: 0 solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 20;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-left-width 0.3s;
+    box-shadow: -5px 0 25px rgba(0, 0, 0, 0.5);
+    flex-shrink: 0;
+}
+
+.mcmm-queue-panel.open {
+    width: 350px;
+    border-left-width: 1px;
+}
+
+.mcmm-queue-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.mcmm-queue-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.mcmm-queue-footer {
+    padding: 1.25rem;
+    border-top: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Queue Item */
+.mcmm-queue-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.mcmm-queue-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.mcmm-queue-thumb {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background-size: cover;
+    background-color: #333;
+    flex-shrink: 0;
+}
+
+.mcmm-queue-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mcmm-queue-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.1rem;
+}
+
+.mcmm-queue-remove {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    transition: all 0.2s;
+}
+
+.mcmm-queue-remove:hover {
+    color: var(--danger);
+    background: rgba(248, 113, 113, 0.1);
+}
+
+/* Selected Card State */
+.mcmm-modpack-card.selected {
+    border-color: var(--primary);
+    background: rgba(157, 78, 221, 0.1) !important;
+    box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.mcmm-checkbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    /* Position Top Right */
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 5;
+    background: rgba(0, 0, 0, 0.5);
+    /* Improve visibility over dark backgrounds */
+}
+
+.mcmm-modpack-card:hover .mcmm-checkbox {
+    border-color: var(--text-secondary);
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.mcmm-modpack-card.selected .mcmm-checkbox {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.mcmm-checkbox::after {
+    content: '✓';
+    font-size: 0.8rem;
+    font-weight: bold;
+    display: none;
+}
+
+.mcmm-modpack-card.selected .mcmm-checkbox::after {
+    display: block;
+}
+
+/* Version Selection Rows */
+.mcmm-version-row:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.mcmm-version-row.selected {
+    background: rgba(157, 78, 221, 0.15) !important;
+    border-color: var(--primary) !important;
+}
+
+/* Spinner Animation */
+@keyframes mcmm-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.mcmm-loader {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(157, 78, 221, 0.2);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: mcmm-spin 0.8s linear infinite;
+    margin: 0 auto 1.5rem auto;
+}
+
+.mcmm-ver-chip {
+    background: rgba(157, 78, 221, 0.15);
+    color: var(--primary-hover);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+    border: 1px solid rgba(157, 78, 221, 0.2);
+    display: inline-flex;
+    align-items: center;
+}
+
+#activeFilterContainer {
+    transition: all 0.2s ease;
+}
+
+#activeFilterContainer:hover {
+    background: rgba(157, 78, 221, 0.2) !important;
+    border-color: var(--primary-hover) !important;
+    transform: translateY(-1px);
+}
+
+#activeFilterContainer:active {
+    transform: translateY(0);
+}
+
+/* ===== MINIMALIST BACKUP CARD STYLES ===== */
+.mcmm-modpack-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    gap: 1.5rem !important;
+    width: 100% !important;
+}
+
+.mcmm-modpack-card {
+    background: var(--bg-card) !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    overflow: hidden !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: relative !important;
+}
+
+.mcmm-modpack-card:hover {
+    transform: translateY(-4px) !important;
+    border-color: var(--primary-dim) !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Info Trigger (!) */
+.mcmm-backup-info-trigger {
+    position: absolute !important;
+    top: 10px !important;
+    right: 10px !important;
+    z-index: 25 !important;
+    cursor: help !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 26px !important;
+    height: 26px !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    border-radius: 50% !important;
+    backdrop-filter: blur(4px) !important;
+}
+
+.mcmm-backup-info-trigger:hover {
+    color: white !important;
+    background: var(--primary) !important;
+    transform: scale(1.1) !important;
+}
+
+/* Floating Info Panel */
+.mcmm-backup-info-panel {
+    position: absolute !important;
+    top: 32px !important;
+    right: 0 !important;
+    width: 220px !important;
+    background: rgba(15, 16, 28, 0.98) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+    padding: 0.85rem !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4) !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transform: translateY(-5px) !important;
+    transition: all 0.2s ease !important;
+    z-index: 30 !important;
+    backdrop-filter: blur(12px) !important;
+    text-align: left !important;
+}
+
+.mcmm-backup-info-trigger:hover .mcmm-backup-info-panel {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateY(0) !important;
+}
+
+.mcmm-backup-panel-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.6rem !important;
+    font-size: 0.75rem !important;
+    color: var(--text-secondary) !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.mcmm-backup-panel-item:last-child {
+    margin-bottom: 0 !important;
+}
+
+.mcmm-backup-panel-item .material-symbols-outlined {
+    font-size: 1rem !important;
+    color: var(--primary) !important;
+    opacity: 0.8 !important;
+}
+
+/* Tag */
+.mcmm-backup-tag {
+    color: var(--primary) !important;
+    font-weight: 800 !important;
+    font-size: 0.65rem !important;
+    letter-spacing: 0.5px !important;
+    opacity: 0.8 !important;
+}
+
+/* Actions Overlay - Minimal */
+.mcmm-backup-overlay {
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(11, 12, 22, 0.8) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 2rem !important;
+    opacity: 0 !important;
+    transition: all 0.3s ease !important;
+    z-index: 10 !important;
+    backdrop-filter: blur(4px) !important;
+}
+
+.mcmm-modpack-card:hover .mcmm-backup-overlay {
+    opacity: 1 !important;
+}
+
+.mcmm-backup-actions {
+    display: flex !important;
+    gap: 0.75rem !important;
+    width: 100% !important;
+}
+
+.mcmm-modpack-thumb {
+    width: 100% !important;
+    background-size: cover !important;
+    background-position: center !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
+}
+
+.mcmm-modpack-info {
+    padding: 1rem 1.25rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.25rem !important;
+}
+
+.mcmm-modpack-name {
+    font-weight: 700 !important;
+    color: white !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 0.95rem !important;
+}
