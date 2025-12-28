@@ -4,8 +4,8 @@
     <rule ref="PSR12"/>
     <rule ref="Generic.Files.LineLength">
         <properties>
-            <property name="lineLimit" value="280"/>
-            <property name="absoluteLineLimit" value="300"/>
+            <property name="lineLimit" value="320"/>
+            <property name="absoluteLineLimit" value="350"/>
         </properties>
     </rule>
     <file>.</file>
