@@ -3,8 +3,6 @@ Title="Modpack Manager"
 Icon="cubes"
 ---
 <?php
-// phpcs:disable PSR1.Files.SideEffect
-
 /* Minecraft Modpack Manager for Unraid */
 
 // Debug visibility
