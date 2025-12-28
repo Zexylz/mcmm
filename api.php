@@ -1,5 +1,4 @@
 <?php
-// phpcs:disable PSR1.Files.SideEffect
 
 /**
  * Resolve host data directory for a container by inspecting the /data mount.
