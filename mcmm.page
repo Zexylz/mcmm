@@ -40,13 +40,13 @@ $config = array_merge($defaults, $config);
 function getMinecraftServers()
 {
     global $config;
-    
+
     $servers = [];
     $serversDir = '/boot/config/plugins/mcmm/servers';
 
     // Debug logging
     $debugLog = "=== getMinecraftServers Debug ===\n";
-    
+
     // Ensure servers directory exists
     if (!is_dir($serversDir)) {
         @mkdir($serversDir, 0755, true);
@@ -69,54 +69,54 @@ function getMinecraftServers()
             }
         }
     }
-    
+
     // Then, get running containers from Docker
     $cmd = '/usr/bin/docker ps -a --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Image}}|{{.Ports}}|{{.Labels}}"';
     $output = @shell_exec($cmd . ' 2>/dev/null');
-    
+
     $debugLog .= "Docker command: $cmd\n";
     $debugLog .= "Docker output: " . ($output ? "YES" : "EMPTY") . "\n";
 
     if ($output) {
         $lines = explode("\n", trim($output));
         $debugLog .= "Found " . count($lines) . " lines\n";
-        
+
         foreach ($lines as $line) {
             if (empty($line)) {
                 continue;
             }
             $parts = explode('|', $line);
-            
+
             $debugLog .= "Processing line: $line\n";
             $debugLog .= "Parts count: " . count($parts) . "\n";
-            
+
             if (count($parts) >= 4) {
                 $image = $parts[3];
                 $labels = $parts[5] ?? '';
                 $containerName = $parts[1];
                 $containerId = $parts[0];
-                
+
                 $debugLog .= "Container: $containerName, Image: $image\n";
-                
+
                 // Match logic: itzg images (by name or label), or mcmm label
                 $isItzg = strpos($image, 'itzg/') !== false;
                 $isMcmm = strpos($labels, 'mcmm=1') !== false;
-                
+
                 // Also check if labels contain itzg repository (handles image ID case)
                 if (!$isItzg && (strpos($labels, 'net.unraid.docker.repository=itzg/') !== false)) {
                     $isItzg = true;
                 }
-                
+
                 $debugLog .= "IsItzg: " . ($isItzg ? 'YES' : 'NO') . ", IsMcmm: " . ($isMcmm ? 'YES' : 'NO') . "\n";
-                
+
                 if ($isItzg || $isMcmm) {
                     $isRunning = strpos($parts[2], 'Up') !== false;
-                    
+
                     $port = '25565';
                     if (preg_match('/:(\d+)->25565/', $parts[4] ?? '', $matches) || preg_match('/(\d+)->25565/', $parts[4] ?? '', $matches)) {
                         $port = $matches[1];
                     }
-                    
+
                     // Try to get icon from config file first, then from Docker labels
                     $icon = '';
                     if (isset($serverConfigs[$containerName]['logo'])) {
@@ -132,14 +132,14 @@ function getMinecraftServers()
                                 break;
                             }
                         }
-                        
+
                         // If still no icon, try to backfill from Docker environment variables
                         if (empty($icon)) {
                             $icon = backfillServerIconPage($containerId, $containerName, $serversDir, $config);
                             $debugLog .= "Icon from backfill: " . ($icon ?: 'none') . "\n";
                         }
                     }
-                    
+
                     $servers[] = [
                         'id' => $containerId,
                         'name' => $containerName,
@@ -149,7 +149,7 @@ function getMinecraftServers()
                         'image' => $image,
                         'icon' => $icon
                     ];
-                    
+
                     $debugLog .= "Added server: $containerName\n";
                 } else {
                     $debugLog .= "Skipped (not itzg/mcmm)\n";
@@ -157,10 +157,10 @@ function getMinecraftServers()
             }
         }
     }
-    
+
     $debugLog .= "Total servers found: " . count($servers) . "\n";
     @file_put_contents('/tmp/mcmm_page_debug.log', $debugLog);
-    
+
     return $servers;
 }
 
@@ -174,15 +174,15 @@ function backfillServerIconPage($containerId, $containerName, $serversDir, $conf
         if (!$inspectOutput) {
             return '';
         }
-        
+
         $inspectData = @json_decode($inspectOutput, true);
         if (!$inspectData || !isset($inspectData[0])) {
             return '';
         }
-        
+
         $containerInfo = $inspectData[0];
         $env = $containerInfo['Config']['Env'] ?? [];
-        
+
         // Extract ICON environment variable directly (fastest method)
         foreach ($env as $envVar) {
             if (strpos($envVar, 'ICON=') === 0) {
@@ -191,11 +191,11 @@ function backfillServerIconPage($containerId, $containerName, $serversDir, $conf
                     // Save to config for future use
                     $serverId = md5($containerName);
                     $serverDir = $serversDir . '/' . $serverId;
-                    
+
                     if (!is_dir($serverDir)) {
                         @mkdir($serverDir, 0755, true);
                     }
-                    
+
                     $serverConfig = [
                         'id' => $serverId,
                         'name' => $containerName,
@@ -203,13 +203,13 @@ function backfillServerIconPage($containerId, $containerName, $serversDir, $conf
                         'containerName' => $containerName,
                         'backfilled' => true
                     ];
-                    
+
                     @file_put_contents($serverDir . '/config.json', json_encode($serverConfig, JSON_PRETTY_PRINT));
                     return $iconEnv;
                 }
             }
         }
-        
+
         // If no ICON env var, don't do slow API lookups on page load
         // These will be handled by the API endpoint instead
         return '';
@@ -259,7 +259,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
         MCMM UI loaded (debug)
     </div>
     <div class="mcmm-bg"></div>
-    
+
     <!-- Header -->
     <header class="mcmm-header">
         <div class="mcmm-brand">
@@ -267,7 +267,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
         </div>
         <div class="mcmm-version">v1.0.0</div>
     </header>
-    
+
     <!-- Tabs -->
     <nav class="mcmm-tabs">
         <a href="#" class="mcmm-tab active" onclick="switchTab('servers', this); return false;">My Servers</a>
@@ -275,10 +275,10 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
         <a href="#" class="mcmm-tab" onclick="switchTab('catalog', this); return false;">Catalog</a>
         <a href="#" class="mcmm-tab" onclick="switchTab('settings', this); return false;">Settings</a>
     </nav>
-    
+
     <!-- Main Content -->
     <main class="mcmm-main">
-        
+
         <!-- My Servers Tab -->
         <div id="tab-servers" class="mcmm-tab-content active">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
@@ -287,7 +287,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                     Deploy New Server
                 </button>
             </div>
-            
+
             <?php if (empty($servers)) : ?>
                 <div class="mcmm-empty">
                     <h3>No servers found</h3>
@@ -297,7 +297,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
             <?php else : ?>
                 <div class="mcmm-server-list" id="serverListContainer">
                     <?php
-                    foreach ($servers as $index => $server) : 
+                    foreach ($servers as $index => $server) :
                         $icon = isset($server['icon']) && $server['icon'] ? $server['icon'] : "https://media.forgecdn.net/avatars/855/527/638260492657788102.png";
                         $ramUsage = isset($server['ram']) ? $server['ram'] : 0;
                         $cpuUsage = isset($server['cpu']) ? $server['cpu'] : 0;
@@ -317,7 +317,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                         <!-- DEBUG: Icon for <?php echo htmlspecialchars($server['name']); ?>: <?php echo htmlspecialchars($icon); ?> -->
                         <div class="mcmm-server-row <?php echo $statusClass; ?>">
                             <div class="mcmm-server-icon" style="background-image: url('<?php echo htmlspecialchars($icon); ?>');"></div>
-                            
+
                             <div class="mcmm-server-info">
                                 <div class="mcmm-server-title"><?php echo htmlspecialchars($server['name']); ?></div>
                                 <div class="mcmm-server-subtitle">
@@ -332,7 +332,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                     <?php endif; ?>
                                 </div>
                             </div>
-                            
+
                             <div class="mcmm-server-metrics">
                                 <div class="mcmm-metric">
                                     <div class="mcmm-metric-label">
@@ -353,7 +353,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="mcmm-server-actions">
                                 <?php if ($server['isRunning']) : ?>
                                     <button class="mcmm-btn-icon danger" title="Stop Server" onclick="controlServer('<?php echo $server['id']; ?>', 'stop')">⏹</button>
@@ -376,7 +376,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                 </div>
             <?php endif; ?>
         </div>
-        
+
         <!-- Backups Tab -->
         <div id="tab-backups" class="mcmm-tab-content">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
@@ -409,21 +409,21 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                     </label>
                 </div>
             </div>
-            
+
             <div class="mcmm-modpack-grid" id="modpackGrid">
                 <!-- Loaded via JS -->
             </div>
         </div>
-        
+
         <!-- Settings Tab -->
         <div id="tab-settings" class="mcmm-tab-content">
             <div class="mcmm-settings-container">
                 <h2 style="font-size: 1.15rem; margin-bottom: 2rem;">Global Settings</h2>
-                
+
                 <div id="settingsStatus" class="mcmm-status"></div>
-                
+
                 <form id="settingsForm" onsubmit="saveSettings(event)">
-                    
+
                     <!-- Integrations -->
                     <div class="mcmm-panel">
                         <h3 class="mcmm-panel-title">🔗 Integrations</h3>
@@ -436,7 +436,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <div class="mcmm-input-hint">Required to browse and download modpacks from CurseForge.</div>
                         </div>
                     </div>
-                    
+
                     <!-- Server Configuration -->
                     <div class="mcmm-panel">
                         <h3 class="mcmm-panel-title">⚙️ Server Configuration</h3>
@@ -463,7 +463,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Performance -->
                     <div class="mcmm-panel">
                         <h3 class="mcmm-panel-title">🚀 Performance Tuning</h3>
@@ -482,7 +482,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <label class="mcmm-label">JVM Flags</label>
                             <textarea id="jvm_flags" class="mcmm-input" style="height: 80px; resize: vertical; font-family: 'Fira Code', monospace; font-size: 0.85rem;" placeholder="-XX:+UseG1GC ..."><?php echo htmlspecialchars($config['jvm_flags']); ?></textarea>
                         </div>
-                        
+
                         <div style="margin-top: 1.5rem;">
                             <div class="mcmm-section-title">⚡ Optimization Flags</div>
                             <div class="mcmm-toggle-grid">
@@ -519,11 +519,11 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Gameplay -->
                     <div class="mcmm-panel">
                         <h3 class="mcmm-panel-title">🎮 Gameplay & Server Settings</h3>
-                        
+
                         <div class="mcmm-section-title">🎮 Gameplay Settings</div>
                         <div class="mcmm-toggle-grid">
                             <div class="mcmm-toggle-item">
@@ -567,7 +567,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                 </label>
                             </div>
                         </div>
-                        
+
                         <div class="mcmm-section-title" style="margin-top: 1.5rem;">📋 Logging & Console</div>
                         <div class="mcmm-toggle-grid">
                             <div class="mcmm-toggle-item">
@@ -602,7 +602,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="mcmm-settings-footer">
                         <button type="submit" class="mcmm-btn mcmm-btn-primary" style="padding: 1rem 3rem; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;">
                             Save Changes
@@ -612,7 +612,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
             </div>
         </div>
     </main>
-    
+
     <!-- Deploy Modal -->
     <div class="mcmm-modal-overlay" id="deployModal">
         <div class="mcmm-modal" style="max-width: 300px; width: 50%;">
@@ -859,7 +859,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                     <span class="mcmm-search-icon">🔍</span>
                     <input type="text" class="mcmm-search-input" placeholder="Search for mods..." id="modSearchInput" onkeyup="filterMods()">
         </div>
-                
+
                 <!-- Sort Selector (custom dropdown) -->
                 <div id="modSortSelector" style="min-width: 220px;">
                     <div class="mcmm-select" id="modSortSelect" data-target="mod_sort_value">
@@ -907,7 +907,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
 
                 <!-- Pagination (bottom-center) -->
                 <div id="modsPaginationBar" class="mcmm-pagination-bar"></div>
-                
+
                 <!-- Queue Panel (Popout) -->
                 <div id="modQueuePanel" class="mcmm-queue-panel">
                     <div class="mcmm-queue-header">
@@ -943,7 +943,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
 
             <div class="mcmm-modal-body" style="display: grid; gap: 1rem; padding: 1.25rem;">
                 <input type="hidden" id="edit_server_id">
-                
+
                 <div class="mcmm-form-grid">
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Server IP</label>
@@ -1068,7 +1068,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                 </div>
 
                 <div id="editStatus" class="mcmm-status" style="display: none;"></div>
-                
+
                 <div style="font-size: 0.8rem; color: var(--warning); padding: 0.5rem; border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 6px; background: rgba(251, 191, 36, 0.05);">
                     Note: Saving changes will restart the server.
                 </div>
