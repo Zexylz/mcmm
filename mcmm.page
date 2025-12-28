@@ -289,16 +289,16 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                 </button>
             </div>
             
-            <?php if (empty($servers)): ?>
+            <?php if (empty($servers)) : ?>
                 <div class="mcmm-empty">
                     <h3>No servers found</h3>
                     <p>Get started by deploying your first modpack server.</p>
                     <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog', document.querySelector('.mcmm-tab:nth-child(2)'))">Browse Catalog</button>
                 </div>
-            <?php else: ?>
+            <?php else : ?>
                 <div class="mcmm-server-list" id="serverListContainer">
                     <?php 
-                    foreach ($servers as $index => $server): 
+                    foreach ($servers as $index => $server) : 
                         $icon = isset($server['icon']) && $server['icon'] ? $server['icon'] : "https://media.forgecdn.net/avatars/855/527/638260492657788102.png";
                         $ramUsage = isset($server['ram']) ? $server['ram'] : 0;
                         $cpuUsage = isset($server['cpu']) ? $server['cpu'] : 0;
@@ -314,7 +314,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                         $ramPercent = round($ramPercent, 1);
                         $ramUsedLabel = $ramUsedMb > 0 ? round($ramUsedMb / 1024, 1) . ' GB' : '0 GB';
                         $ramCapLabel = $ramCapMb > 0 ? round($ramCapMb / 1024, 1) . ' GB' : 'N/A';
-                    ?>
+                        ?>
                         <!-- DEBUG: Icon for <?php echo htmlspecialchars($server['name']); ?>: <?php echo htmlspecialchars($icon); ?> -->
                         <div class="mcmm-server-row <?php echo $statusClass; ?>">
                             <div class="mcmm-server-icon" style="background-image: url('<?php echo htmlspecialchars($icon); ?>');"></div>
@@ -325,7 +325,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                     <span>Port: <?php echo htmlspecialchars($server['ports']); ?></span>
                                     <span style="opacity:0.5;">|</span>
                                     <span><?php echo $server['isRunning'] ? 'Online' : 'Offline'; ?></span>
-                                    <?php if ($server['isRunning']): ?>
+                                    <?php if ($server['isRunning']) : ?>
                                         <span style="opacity:0.5;">|</span>
                                         <span id="players-<?php echo $server['id']; ?>" data-server-id="<?php echo $server['id']; ?>" data-port="<?php echo htmlspecialchars($server['ports']); ?>" data-running="<?php echo $server['isRunning'] ? '1' : '0'; ?>">
                                             <?php echo intval($playersOnline); ?> / <?php echo ($playersMax > 0 ? intval($playersMax) : '?'); ?> players
@@ -341,7 +341,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                         <span><?php echo $ramUsedLabel; ?> / <?php echo $ramCapLabel; ?></span>
                                     </div>
                                     <div class="mcmm-metric-bar">
-                                        <div class="mcmm-metric-fill" style="width: <?php echo min(max($ramPercent,0),100); ?>%; background: linear-gradient(90deg, #a855f7, #ec4899);"></div>
+                                        <div class="mcmm-metric-fill" style="width: <?php echo min(max($ramPercent, 0), 100); ?>%; background: linear-gradient(90deg, #a855f7, #ec4899);"></div>
                                     </div>
                                 </div>
                                 <div class="mcmm-metric">
@@ -356,11 +356,11 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             </div>
                             
                             <div class="mcmm-server-actions">
-                                <?php if ($server['isRunning']): ?>
+                                <?php if ($server['isRunning']) : ?>
                                     <button class="mcmm-btn-icon danger" title="Stop Server" onclick="controlServer('<?php echo $server['id']; ?>', 'stop')">⏹</button>
                                     <button class="mcmm-btn-icon" title="Console" onclick="openConsole('<?php echo $server['id']; ?>', '<?php echo htmlspecialchars($server['name']); ?>')">_></button>
                                     <button class="mcmm-btn-icon" title="Players" onclick="openPlayersModal('<?php echo $server['id']; ?>', '<?php echo htmlspecialchars($server['name']); ?>', '<?php echo htmlspecialchars($server['ports']); ?>')">👥</button>
-                                <?php else: ?>
+                                <?php else : ?>
                                     <button class="mcmm-btn-icon success" title="Start Server" onclick="controlServer('<?php echo $server['id']; ?>', 'start')">▶</button>
                                     <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Console Offline">_></button>
                                     <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Players Offline">👥</button>
@@ -473,7 +473,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                 <label class="mcmm-label">Default Memory</label>
                                 <input type="text" id="default_memory" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_memory']); ?>">
                                 <div class="mcmm-ram-presets">
-                                    <?php foreach (['4G', '6G', '8G', '10G', '12G'] as $ram): ?>
+                                    <?php foreach (['4G', '6G', '8G', '10G', '12G'] as $ram) : ?>
                                         <div class="mcmm-ram-pill <?php echo $config['default_memory'] == $ram ? 'active' : ''; ?>" onclick="setRam('<?php echo $ram; ?>')"><?php echo $ram; ?></div>
                                     <?php endforeach; ?>
                                 </div>

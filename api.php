@@ -334,8 +334,9 @@ try {
 
         case 'get_log':
             // Ensure clean output for this endpoint too
-            if (ob_get_length())
+            if (ob_get_length()) {
                 ob_clean();
+            }
 
             $logFile = '/tmp/mcmm.log';
             $debugFile = '/tmp/mcmm_debug.txt';
@@ -451,8 +452,9 @@ try {
             // $config = array_merge($defaults, $existing); 
 
             // Explicitly clear buffer just in case
-            if (ob_get_length())
+            if (ob_get_length()) {
                 ob_clean();
+            }
 
             // Explicitly exit to prevent any further output
             jsonResponse(['success' => true, 'message' => 'Settings saved successfully']);
@@ -1246,8 +1248,9 @@ try {
             if (!empty($c['Config']['Env'])) {
                 foreach ($c['Config']['Env'] as $e) {
                     $parts = explode('=', $e, 2);
-                    if (count($parts) === 2)
+                    if (count($parts) === 2) {
                         $currentEnv[$parts[0]] = $parts[1];
+                    }
                 }
             }
 
@@ -2909,8 +2912,9 @@ function getModpackVersions(string $platform, string $id, string $apiKey = ''): 
 {
     if ($platform === 'modrinth') {
         $data = mrRequest("/project/" . urlencode($id) . "/version");
-        if (!$data || isset($data['error']))
+        if (!$data || isset($data['error'])) {
             return [];
+        }
         $versions = [];
         foreach ($data as $v) {
             $versions[] = [
@@ -2934,8 +2938,9 @@ function getModpackVersions(string $platform, string $id, string $apiKey = ''): 
             }
         }
         $data = cfRequest("/mods/" . urlencode($modId) . "/files?pageSize=50", $apiKey);
-        if (!$data || !isset($data['data']))
+        if (!$data || !isset($data['data'])) {
             return [];
+        }
         $versions = [];
         foreach ($data['data'] as $file) {
             $mcVersions = [];
@@ -3013,11 +3018,11 @@ function getServerMetadata(array $env, array $config, string $containerName, str
         $envType = strtolower($env['TYPE'] ?? $env['GAME_TYPE'] ?? $env['MODRINTH_LOADER'] ?? '');
         if (strpos($envType, 'neoforge') !== false) {
             $loader = 'neoforge';
-        } else if (strpos($envType, 'forge') !== false) {
+        } elseif (strpos($envType, 'forge') !== false) {
             $loader = 'forge';
-        } else if (strpos($envType, 'fabric') !== false) {
+        } elseif (strpos($envType, 'fabric') !== false) {
             $loader = 'fabric';
-        } else if (strpos($envType, 'quilt') !== false) {
+        } elseif (strpos($envType, 'quilt') !== false) {
             $loader = 'quilt';
         }
     }
@@ -3225,10 +3230,12 @@ function buildEnvArgs(array $env): string
 // Normalize boolean-ish inputs (e.g., "false", "0", "", null) to bool
 function boolInput($value, $default = false): bool
 {
-    if (is_bool($value))
+    if (is_bool($value)) {
         return $value;
-    if ($value === null)
+    }
+    if ($value === null) {
         return (bool) $default;
+    }
     $v = is_string($value) ? strtolower(trim($value)) : $value;
     if ($v === '' || $v === '0' || $v === 0 || $v === 'false' || $v === 'off' || $v === 'no') {
         return false;
@@ -3240,8 +3247,9 @@ function boolInput($value, $default = false): bool
 function parseMemoryToMB($val): float
 {
     $v = trim((string) $val);
-    if ($v === '')
+    if ($v === '') {
         return 0;
+    }
     $num = floatval($v);
     $unit = strtolower(preg_replace('/[0-9\.\s]/', '', $v));
     switch ($unit) {
