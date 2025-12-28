@@ -1946,7 +1946,7 @@ BASH;
 
             dbg("Identifying mod from filename '$filename' -> Query: '$query'");
 
-            $config = @include ('/boot/config/plugins/mcmm/config.php') ?: [];
+            $config = @include '/boot/config/plugins/mcmm/config.php' ?: [];
 
             // Try CurseForge first
             $cfResult = [];
