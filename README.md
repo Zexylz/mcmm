@@ -31,6 +31,6 @@ npm install -g stylelint stylelint-config-standard
 stylelint "**/*.css" --config .stylelintrc.json
 
 # JavaScript
-npm install -g eslint
-eslint "**/*.js" --config .eslintrc.json
+npm install -g eslint @eslint/js globals
+eslint "**/*.js"
 ```

@@ -110,7 +110,7 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install ESLint
-        run: npm install -g eslint@8
+        run: npm install -g eslint @eslint/js globals
 
       - name: Run ESLint
-        run: eslint "**/*.js" --config .eslintrc.json
+        run: eslint "**/*.js"
