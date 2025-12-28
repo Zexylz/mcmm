@@ -1,4 +1,4 @@
-Wname: Style Checks
+name: Style Checks
 
 on:
   push:
