@@ -24,8 +24,9 @@ function getContainerDataDir(string $containerName, string $containerId = ''): s
         }
     }
     // Prefer existing fallback dirs in order
-    if (is_dir($fallbackA))
+    if (is_dir($fallbackA)) {
         return $fallbackA;
+    }
     return $fallbackB;
 }
 
@@ -38,8 +39,9 @@ function getContainerCgroupStats(string $containerId): array
     $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
     $cmd = $dockerBin . ' stats --no-stream --format "{{.CPUPerc}}|{{.MemUsage}}" ' . escapeshellarg($containerId) . ' 2>/dev/null';
     $out = trim((string) @shell_exec($cmd));
-    if (!$out)
+    if (!$out) {
         return $stats;
+    }
 
     $parts = explode('|', $out);
     if (count($parts) >= 2) {
@@ -51,12 +53,15 @@ function getContainerCgroupStats(string $containerId): array
             $lUnit = strtoupper($m[4]);
 
             $toMb = function ($n, $u) {
-                if (strpos($u, 'G') !== false)
+                if (strpos($u, 'G') !== false) {
                     return $n * 1024;
-                if (strpos($u, 'K') !== false)
+                }
+                if (strpos($u, 'K') !== false) {
                     return $n / 1024;
-                if (strpos($u, 'B') !== false && strpos($u, 'M') === false)
+                }
+                if (strpos($u, 'B') !== false && strpos($u, 'M') === false) {
                     return $n / 1024 / 1024;
+                }
                 return $n;
             };
 
@@ -196,10 +201,11 @@ if (!function_exists('write_ini_file')) {
                         foreach ($elem2 as $elem3) {
                             $content .= $key2 . "[] = \"" . $elem3 . "\"\n";
                         }
-                    } else if ($elem2 == "")
+                    } elseif ($elem2 == "") {
                         $content .= $key2 . " = \n";
-                    else
+                    } else {
                         $content .= $key2 . " = \"" . $elem2 . "\"\n";
+                    }
                 }
             }
         } else {
@@ -208,10 +214,11 @@ if (!function_exists('write_ini_file')) {
                     foreach ($elem as $elem2) {
                         $content .= $key . "[] = \"" . $elem2 . "\"\n";
                     }
-                } else if ($elem == "")
+                } elseif ($elem == "") {
                     $content .= $key . " = \n";
-                else
+                } else {
                     $content .= $key . " = \"" . $elem . "\"\n";
+                }
             }
         }
         return file_put_contents($path, $content);
@@ -286,8 +293,9 @@ function getRequestData()
     if (!empty($input)) {
         dbg("Using php://input JSON");
         $json = json_decode($input, true);
-        if ($json)
+        if ($json) {
             return $json;
+        }
         dbg("Failed to decode JSON input: " . substr($input, 0, 100));
     }
 
@@ -295,8 +303,9 @@ function getRequestData()
 }
 
 // Ensure nothing is printed before JSON
-if (ob_get_length())
+if (ob_get_length()) {
     ob_clean();
+}
 
 dbg("API Loaded. Action: " . ($action ?? 'none'));
 
@@ -334,14 +343,18 @@ try {
             $apiDebugFile = '/tmp/mcmm_debug_api_servers.log';
 
             $content = "";
-            if (file_exists($logFile))
+            if (file_exists($logFile)) {
                 $content .= "Main Log:\n" . file_get_contents($logFile) . "\n\n";
-            if (file_exists($debugFile))
+            }
+            if (file_exists($debugFile)) {
                 $content .= "Debug Log:\n" . file_get_contents($debugFile) . "\n\n";
-            if (file_exists($pageDebugFile))
+            }
+            if (file_exists($pageDebugFile)) {
                 $content .= "Page Debug Log:\n" . file_get_contents($pageDebugFile) . "\n\n";
-            if (file_exists($apiDebugFile))
+            }
+            if (file_exists($apiDebugFile)) {
                 $content .= "API Servers Log:\n" . file_get_contents($apiDebugFile);
+            }
 
             jsonResponse(['success' => true, 'log' => $content ?: 'No logs found']);
             break;
@@ -359,8 +372,9 @@ try {
 
         case 'save_settings':
             // Clear buffer again just to be sure
-            if (ob_get_length())
+            if (ob_get_length()) {
                 ob_clean();
+            }
 
             dbg("Action: save_settings");
 
@@ -446,8 +460,9 @@ try {
 
         case 'console_logs':
             $id = $_GET['id'] ?? '';
-            if (!$id)
+            if (!$id) {
                 jsonResponse(['success' => false, 'error' => 'Missing ID'], 400);
+            }
 
             $output = shell_exec("docker logs --tail 200 " . escapeshellarg($id) . " 2>&1");
 
@@ -460,8 +475,9 @@ try {
         case 'console_command':
             $id = $_GET['id'] ?? '';
             $cmd = $_GET['cmd'] ?? '';
-            if (!$id || !$cmd)
+            if (!$id || !$cmd) {
                 jsonResponse(['success' => false, 'error' => 'Missing parameters'], 400);
+            }
 
             // Execute command via rcon-cli inside container
             $execCmd = "docker exec -i " . escapeshellarg($id) . " rcon-cli " . escapeshellarg($cmd);
@@ -498,8 +514,9 @@ try {
 
         case 'server_delete':
             $id = $_GET['id'] ?? '';
-            if (!$id)
+            if (!$id) {
                 jsonResponse(['success' => false, 'error' => 'Missing ID'], 400);
+            }
 
             // Stop then remove container
             $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
@@ -515,16 +532,19 @@ try {
 
         case 'check_updates':
             $id = $_GET['id'] ?? '';
-            if (!$id)
+            if (!$id) {
                 jsonResponse(['success' => false, 'error' => 'Missing server ID'], 400);
+            }
 
             $metaFile = "/boot/config/plugins/mcmm/servers/$id/installed_mods.json";
-            if (!file_exists($metaFile))
+            if (!file_exists($metaFile)) {
                 jsonResponse(['success' => true, 'updates' => []]);
+            }
 
             $installed = json_decode(file_get_contents($metaFile), true) ?: [];
-            if (empty($installed))
+            if (empty($installed)) {
                 jsonResponse(['success' => true, 'updates' => []]);
+            }
 
             // Group by platform
             $cfIds = [];
@@ -590,10 +610,12 @@ try {
                         // For Modrinth, we need to fetch the latest version for the specific MC version
                         $fileUrl = "https://api.modrinth.com/v2/project/{$proj['id']}/version";
                         $params = [];
-                        if ($mcVer)
+                        if ($mcVer) {
                             $params['game_versions'] = json_encode([$mcVer]);
-                        if ($loader)
+                        }
+                        if ($loader) {
                             $params['loaders'] = json_encode([strtolower($loader)]);
+                        }
 
                         $verQuery = !empty($params) ? '?' . http_build_query($params) : '';
                         $versions = mrRequest('/project/' . $proj['id'] . '/version' . $verQuery);
@@ -607,8 +629,9 @@ try {
                                     break;
                                 }
                             }
-                            if (!$primaryFile)
+                            if (!$primaryFile) {
                                 $primaryFile = $latest['files'][0] ?? null;
+                            }
 
                             if ($primaryFile) {
                                 $updates[$proj['id']] = [
@@ -751,8 +774,9 @@ try {
                             }
 
                             // Final fallbacks
-                            if ($playersOnline === null)
+                            if ($playersOnline === null) {
                                 $playersOnline = 0;
+                            }
                             if ($playersMax === null) {
                                 $playersMax = isset($config['default_max_players']) ? intval($config['default_max_players']) : 0;
                             }
@@ -794,8 +818,9 @@ try {
                             }
                             if ($ramLimitMb <= 0 && isset($config['default_memory'])) {
                                 $defaultMemMb = parseMemoryToMB($config['default_memory']);
-                                if ($defaultMemMb > 0)
+                                if ($defaultMemMb > 0) {
                                     $ramLimitMb = $defaultMemMb;
+                                }
                             }
                             $memDebugLog .= "  - Final ramLimitMb: $ramLimitMb\n";
 
@@ -902,8 +927,9 @@ try {
         case 'server_players':
             $id = $_GET['id'] ?? '';
             $port = $_GET['port'] ?? '25565';
-            if (!$id)
+            if (!$id) {
                 jsonResponse(['success' => false, 'error' => 'Missing server ID'], 400);
+            }
 
             // Inspect container env for fallbacks (MAX_PLAYERS, RCON_PASSWORD)
             $envMap = [];
@@ -936,8 +962,9 @@ try {
                     if (!empty($q['players']['list']) && is_array($q['players']['list'])) {
                         foreach ($q['players']['list'] as $p) {
                             $name = $sanitizeName(is_array($p) && isset($p['name']) ? $p['name'] : $p);
-                            if ($name !== '')
+                            if ($name !== '') {
                                 $players[] = ['name' => $name];
+                            }
                         }
                     }
                 }
@@ -970,8 +997,9 @@ try {
                         $names = array_map('trim', explode(',', $m[3]));
                         foreach ($names as $n) {
                             $name = $sanitizeName($n);
-                            if ($name !== '')
+                            if ($name !== '') {
                                 $players[] = ['name' => $name];
+                            }
                         }
                     } elseif (preg_match('/There are (\d+) of a max of (\d+) players online/i', $line, $m)) {
                         $online = intval($m[1]);
@@ -993,8 +1021,9 @@ try {
                         $names = array_map('trim', explode(',', $m[1]));
                         foreach ($names as $n) {
                             $name = $sanitizeName($n);
-                            if ($name !== '')
+                            if ($name !== '') {
                                 $ops[] = $name;
+                            }
                         }
                     }
                 }
@@ -1011,8 +1040,9 @@ try {
             } elseif (!empty($players)) {
                 // Normalize shape
                 $players = array_map(function ($p) {
-                    if (is_array($p) && isset($p['name']))
+                    if (is_array($p) && isset($p['name'])) {
                         return $p;
+                    }
                     return ['name' => is_string($p) ? $p : '', 'isOp' => false];
                 }, $players);
             }
@@ -1024,20 +1054,23 @@ try {
             $id = $_GET['id'] ?? '';
             $player = $_GET['player'] ?? '';
             $action = $_GET['action'] ?? '';
-            if (!$id || !$player || !$action)
+            if (!$id || !$player || !$action) {
                 jsonResponse(['success' => false, 'error' => 'Missing parameters'], 400);
+            }
 
             // Discover container name for exec
             $inspectJson = shell_exec("docker inspect " . escapeshellarg($id));
             $inspect = json_decode($inspectJson, true);
-            if (!$inspect || !isset($inspect[0]))
+            if (!$inspect || !isset($inspect[0])) {
                 jsonResponse(['success' => false, 'error' => 'Container not found'], 404);
+            }
             $envMap = [];
             if (!empty($inspect[0]['Config']['Env'])) {
                 foreach ($inspect[0]['Config']['Env'] as $e) {
                     $parts = explode('=', $e, 2);
-                    if (count($parts) === 2)
+                    if (count($parts) === 2) {
                         $envMap[$parts[0]] = $parts[1];
+                    }
                 }
             }
             if (isset($envMap['MAX_PLAYERS'])) {
@@ -1112,13 +1145,15 @@ try {
 
         case 'server_details':
             $id = $_GET['id'] ?? '';
-            if (!$id)
+            if (!$id) {
                 jsonResponse(['success' => false, 'error' => 'Missing ID'], 400);
+            }
 
             $json = shell_exec("docker inspect " . escapeshellarg($id));
             $data = json_decode($json, true);
-            if (!$data || !isset($data[0]))
+            if (!$data || !isset($data[0])) {
                 jsonResponse(['success' => false, 'error' => 'Failed to inspect container'], 500);
+            }
 
             $c = $data[0];
             $containerName = ltrim($c['Name'], '/');
@@ -1172,18 +1207,21 @@ try {
             break;
 
         case 'server_update':
-            if (ob_get_length())
+            if (ob_get_length()) {
                 ob_clean();
+            }
             $input = getRequestData();
             $id = $input['id'] ?? '';
-            if (!$id)
+            if (!$id) {
                 jsonResponse(['success' => false, 'error' => 'Missing ID'], 400);
+            }
 
             // Inspect existing
             $json = shell_exec("docker inspect " . escapeshellarg($id));
             $data = json_decode($json, true);
-            if (!$data || !isset($data[0]))
+            if (!$data || !isset($data[0])) {
                 jsonResponse(['success' => false, 'error' => 'Container not found'], 404);
+            }
             $c = $data[0];
 
             $oldName = ltrim($c['Name'], '/');
@@ -1199,8 +1237,9 @@ try {
                     }
                 }
             }
-            if (!$dataDir)
+            if (!$dataDir) {
                 jsonResponse(['success' => false, 'error' => 'Could not find /data mount'], 500);
+            }
 
             // Merge Env
             $currentEnv = [];
@@ -1334,10 +1373,12 @@ try {
                         }
                     }
                     $meta = getServerMetadata($envMap, $config, $containerName, $config['curseforge_api_key'] ?? '');
-                    if (!$version)
+                    if (!$version) {
                         $version = $meta['mcVersion'];
-                    if (!$loader)
+                    }
+                    if (!$loader) {
                         $loader = $meta['loader'];
+                    }
                 }
             }
 
@@ -1356,8 +1397,9 @@ try {
             break;
 
         case 'start_agents':
-            if (ob_get_length())
+            if (ob_get_length()) {
                 ob_clean();
+            }
             // Start metrics agents for all running itzg/mcmm containers
             $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
             $cmd = $dockerBin . ' ps --format "{{.ID}}|{{.Names}}|{{.Image}}|{{.Status}}"';
@@ -1366,11 +1408,13 @@ try {
             if ($out) {
                 $lines = explode("\n", trim($out));
                 foreach ($lines as $line) {
-                    if (!$line)
+                    if (!$line) {
                         continue;
+                    }
                     $parts = explode('|', $line);
-                    if (count($parts) < 4)
+                    if (count($parts) < 4) {
                         continue;
+                    }
                     $cid = $parts[0];
                     $cname = $parts[1];
                     $image = $parts[2];
@@ -1478,8 +1522,9 @@ BASH;
 
         case 'backups_list':
             $backupDir = '/mnt/user/appdata/mcmm/backups';
-            if (!is_dir($backupDir))
+            if (!is_dir($backupDir)) {
                 @mkdir($backupDir, 0755, true);
+            }
             $files = glob($backupDir . '/*.zip');
             $backups = [];
             foreach ($files as $file) {
@@ -1522,14 +1567,16 @@ BASH;
 
         case 'backup_create':
             $id = $_GET['id'] ?? '';
-            if (!$id)
+            if (!$id) {
                 jsonResponse(['success' => false, 'error' => 'Missing ID'], 400);
+            }
 
             // 1. Get container info
             $json = shell_exec("docker inspect " . escapeshellarg($id));
             $containers = json_decode($json, true);
-            if (!$containers || !isset($containers[0]))
+            if (!$containers || !isset($containers[0])) {
                 jsonResponse(['success' => false, 'error' => 'Container not found'], 404);
+            }
             $c = $containers[0];
             $serverName = ltrim($c['Name'], '/');
 
@@ -1549,8 +1596,9 @@ BASH;
 
             // 3. Prepare backup
             $backupDir = '/mnt/user/appdata/mcmm/backups';
-            if (!is_dir($backupDir))
+            if (!is_dir($backupDir)) {
                 @mkdir($backupDir, 0755, true);
+            }
             $ts = time();
             $backupName = "backup_{$serverName}_{$ts}.zip";
             $backupPath = $backupDir . '/' . $backupName;
@@ -1579,8 +1627,9 @@ BASH;
 
         case 'backup_delete':
             $name = $_GET['name'] ?? '';
-            if (!$name)
+            if (!$name) {
                 jsonResponse(['success' => false, 'error' => 'Missing filename'], 400);
+            }
             // Safety check: ensure no path traversal
             $name = basename($name);
             $path = '/mnt/user/appdata/mcmm/backups/' . $name;
@@ -1594,12 +1643,14 @@ BASH;
 
         case 'backup_reinstall':
             $name = $_GET['name'] ?? '';
-            if (!$name)
+            if (!$name) {
                 jsonResponse(['success' => false, 'error' => 'Missing filename'], 400);
+            }
             $name = basename($name);
             $backupPath = '/mnt/user/appdata/mcmm/backups/' . $name;
-            if (!file_exists($backupPath))
+            if (!file_exists($backupPath)) {
                 jsonResponse(['success' => false, 'error' => 'Backup file not found'], 404);
+            }
 
             // 1. Peek into ZIP for metadata
             $tempDir = '/tmp/mcmm_restore_' . uniqid();
@@ -1679,8 +1730,9 @@ BASH;
 
         case 'mod_list':
             $id = $_GET['id'] ?? '';
-            if (!$id)
+            if (!$id) {
                 jsonResponse(['success' => false, 'error' => 'Missing server ID'], 400);
+            }
 
             $modsDir = getContainerModsDir($id);
             if (!$modsDir || !is_dir($modsDir)) {
@@ -1744,8 +1796,9 @@ BASH;
             $loader = $_GET['loader'] ?? '';
             $serverId = $_GET['server_id'] ?? '';
 
-            if (!$modId)
+            if (!$modId) {
                 jsonResponse(['success' => false, 'error' => 'Missing mod ID'], 400);
+            }
 
             // Auto-detect version/loader if missing
             if (($mcVersion === '' || $loader === '') && $serverId) {
@@ -1762,10 +1815,12 @@ BASH;
                         }
                     }
                     $meta = getServerMetadata($envMap, $config, $containerName, $config['curseforge_api_key'] ?? '');
-                    if (!$mcVersion)
+                    if (!$mcVersion) {
                         $mcVersion = $meta['mcVersion'];
-                    if (!$loader)
+                    }
+                    if (!$loader) {
                         $loader = $meta['loader'];
+                    }
                 }
             }
 
@@ -1788,14 +1843,17 @@ BASH;
             $modId = $_REQUEST['mod_id'] ?? '';
             $fileId = $_REQUEST['file_id'] ?? '';
 
-            if (!$id || !$modId)
+            if (!$id || !$modId) {
                 jsonResponse(['success' => false, 'error' => 'Missing parameters'], 400);
+            }
 
             $modsDir = getContainerModsDir($id);
-            if (!$modsDir)
+            if (!$modsDir) {
                 jsonResponse(['success' => false, 'error' => 'Could not locate server data directory'], 500);
-            if (!is_dir($modsDir))
+            }
+            if (!is_dir($modsDir)) {
                 @mkdir($modsDir, 0775, true);
+            }
 
             // Get download URL
             if ($source === 'modrinth') {
@@ -1806,21 +1864,24 @@ BASH;
                     }
                 }
                 $fileUrl = getModrinthDownloadUrl($fileId);
-                if (!$fileUrl)
+                if (!$fileUrl) {
                     jsonResponse(['success' => false, 'error' => 'Could not get Modrinth download URL'], 502);
+                }
             } else {
                 if (empty($config['curseforge_api_key'])) {
                     jsonResponse(['success' => false, 'error' => 'CurseForge API key not configured'], 400);
                 }
                 $fileUrl = getModDownloadUrl((int) $modId, $fileId, $config['curseforge_api_key']);
-                if (!$fileUrl)
+                if (!$fileUrl) {
                     jsonResponse(['success' => false, 'error' => 'Could not get download URL'], 502);
+                }
             }
 
             // Download
             $fileName = basename(parse_url($fileUrl, PHP_URL_PATH));
-            if (!$fileName)
+            if (!$fileName) {
                 $fileName = "mod-$modId" . ($fileId ? "-$fileId" : "") . ".jar";
+            }
 
             if (file_put_contents("$modsDir/$fileName", fopen($fileUrl, 'r'))) {
                 // Fix permissions
@@ -1933,8 +1994,9 @@ BASH;
         case 'mod_delete':
             $id = $_GET['id'] ?? '';
             $file = $_GET['file'] ?? '';
-            if (!$id || !$file)
+            if (!$id || !$file) {
                 jsonResponse(['success' => false, 'error' => 'Missing parameters'], 400);
+            }
 
             $modsDir = getContainerModsDir($id);
             $filePath = "$modsDir/" . basename($file); // prevent directory traversal
@@ -2566,8 +2628,9 @@ function fetchModrinthFiles(string $projectId, string $version, string $loader):
                     break;
                 }
             }
-            if (!$primary)
+            if (!$primary) {
                 $primary = $files[0];
+            }
         }
 
         $mapped[] = [
@@ -2584,11 +2647,13 @@ function fetchModrinthFiles(string $projectId, string $version, string $loader):
 
 function getModrinthDownloadUrl(string $versionId): ?string
 {
-    if (!$versionId)
+    if (!$versionId) {
         return null;
+    }
     $payload = mrRequest('/version/' . $versionId);
-    if (!$payload || empty($payload['files']))
+    if (!$payload || empty($payload['files'])) {
         return null;
+    }
     $files = $payload['files'];
     $primary = null;
     foreach ($files as $f) {
@@ -2605,8 +2670,9 @@ function getModrinthDownloadUrl(string $versionId): ?string
             }
         }
     }
-    if (!$primary)
+    if (!$primary) {
         $primary = $files[0];
+    }
     return $primary['url'] ?? null;
 }
 
@@ -2652,20 +2718,23 @@ function getModDownloadUrl(int $modId, string $fileId, string $apiKey): ?string
 
     // Get mod details to find main file (fallback)
     $details = cfRequest('/mods/' . $modId, $apiKey);
-    if (!$details || empty($details['data']))
+    if (!$details || empty($details['data'])) {
         return null;
+    }
 
     // Ideally we filter by version here, but for MVP just get latest
     $data = $details['data'];
     $files = $data['latestFiles'];
 
-    if (empty($files))
+    if (empty($files)) {
         return null;
+    }
 
     // Simple logic: grab first available downloadUrl
     foreach ($files as $file) {
-        if (!empty($file['downloadUrl']))
+        if (!empty($file['downloadUrl'])) {
             return $file['downloadUrl'];
+        }
     }
 
     return null;
@@ -2734,12 +2803,15 @@ function getModpackDownload(int $modId, string $apiKey, ?int $preferredFileId = 
 
     // Helper to decide if file looks like a server pack
     $isServerPack = function ($file) use ($serverPackId) {
-        if (!$file)
+        if (!$file) {
             return false;
-        if (!empty($file['isServerPack']))
+        }
+        if (!empty($file['isServerPack'])) {
             return true;
-        if ($serverPackId && isset($file['id']) && intval($file['id']) === intval($serverPackId))
+        }
+        if ($serverPackId && isset($file['id']) && intval($file['id']) === intval($serverPackId)) {
             return true;
+        }
         $name = strtolower($file['displayName'] ?? $file['fileName'] ?? '');
         return (strpos($name, 'server') !== false) || (strpos($name, 'serverpack') !== false);
     };
@@ -3267,8 +3339,9 @@ function getCgroupStats(string $cid, ?float $configuredMemMb = null): array
     if ($cpuCount === null) {
         $cpuinfo = @file_get_contents('/proc/cpuinfo');
         $cpuCount = $cpuinfo ? substr_count($cpuinfo, 'processor') : 1;
-        if ($cpuCount < 1)
+        if ($cpuCount < 1) {
             $cpuCount = 1;
+        }
     }
 
     $paths = [
@@ -3286,8 +3359,9 @@ function getCgroupStats(string $cid, ?float $configuredMemMb = null): array
     }
     if (!$base) {
         $matches = glob("/sys/fs/cgroup/docker/$cid*");
-        if ($matches && is_dir($matches[0]))
+        if ($matches && is_dir($matches[0])) {
             $base = rtrim($matches[0], '/') . '/';
+        }
     }
 
     $memUsedMb = 0;
@@ -3307,8 +3381,9 @@ function getCgroupStats(string $cid, ?float $configuredMemMb = null): array
         // cgroup v1 fallback
         if ($memUsedMb <= 0) {
             $memUsage = @file_get_contents($base . 'memory.usage_in_bytes');
-            if ($memUsage !== false)
+            if ($memUsage !== false) {
                 $memUsedMb = floatval($memUsage) / (1024 * 1024);
+            }
         }
         if ($memCapMb <= 0) {
             $memLimit = @file_get_contents($base . 'memory.limit_in_bytes');
@@ -3336,8 +3411,9 @@ function getCgroupStats(string $cid, ?float $configuredMemMb = null): array
             foreach (explode("\n", trim($cpuStat)) as $line) {
                 if (strpos($line, 'usage_usec') === 0) {
                     $parts = explode(' ', $line);
-                    if (isset($parts[1]))
+                    if (isset($parts[1])) {
                         $usageVal = floatval($parts[1]) * 1000; // to ns
+                    }
                 }
             }
         }
@@ -3351,8 +3427,9 @@ function getCgroupStats(string $cid, ?float $configuredMemMb = null): array
 
     if ($usageVal > 0) {
         $stateDir = '/tmp/mcmm_cpu';
-        if (!is_dir($stateDir))
+        if (!is_dir($stateDir)) {
             @mkdir($stateDir, 0777, true);
+        }
         $stateFile = $stateDir . '/' . $cid . '.json';
         $now = microtime(true);
         $prev = null;
@@ -3411,8 +3488,9 @@ function findAvailablePort(int $start = 25565): int
 // Parse label value from docker ps labels string: key1=val1,key2=val2
 function getLabelValue(string $labels, string $key): ?string
 {
-    if ($labels === '')
+    if ($labels === '') {
         return null;
+    }
     foreach (explode(',', $labels) as $pair) {
         $parts = explode('=', $pair, 2);
         if (count($parts) === 2 && trim($parts[0]) === $key) {

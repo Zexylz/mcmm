@@ -37,7 +37,8 @@ $defaults = [
 $config = array_merge($defaults, $config);
 
 // Helper to get servers (view logic) - now uses config files like the API
-function getMinecraftServers() {
+function getMinecraftServers()
+{
     global $config;
     
     $servers = [];
@@ -81,7 +82,9 @@ function getMinecraftServers() {
         $debugLog .= "Found " . count($lines) . " lines\n";
         
         foreach ($lines as $line) {
-            if (empty($line)) continue;
+            if (empty($line)) {
+                continue;
+            }
             $parts = explode('|', $line);
             
             $debugLog .= "Processing line: $line\n";
@@ -162,7 +165,8 @@ function getMinecraftServers() {
 }
 
 // Backfill server icon for existing containers (page version) - simplified to avoid timeouts
-function backfillServerIconPage($containerId, $containerName, $serversDir, $config) {
+function backfillServerIconPage($containerId, $containerName, $serversDir, $config)
+{
     try {
         // Inspect container to get environment variables
         $inspectCmd = '/usr/bin/docker inspect ' . escapeshellarg($containerId) . ' 2>/dev/null';
