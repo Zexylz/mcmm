@@ -3323,12 +3323,13 @@ function getJavaHeapUsedMb(string $containerId, int $cacheTtlSec = 4): float
     } elseif (preg_match('/used\\s+([0-9.]+)\\s*([KMG])/i', $raw, $m)) {
         $uNum = floatval($m[1]);
         $uUnit = strtoupper($m[2]);
-        if ($uUnit === 'G')
+        if ($uUnit === 'G') {
             $usedKb = $uNum * 1024 * 1024;
-        elseif ($uUnit === 'M')
+        } elseif ($uUnit === 'M') {
             $usedKb = $uNum * 1024;
-        else
+        } else {
             $usedKb = $uNum;
+        }
     }
 
     $usedMb = $usedKb > 0 ? ($usedKb / 1024.0) : 0.0;

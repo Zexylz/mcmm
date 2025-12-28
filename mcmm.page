@@ -213,7 +213,6 @@ function backfillServerIconPage($containerId, $containerName, $serversDir, $conf
         // If no ICON env var, don't do slow API lookups on page load
         // These will be handled by the API endpoint instead
         return '';
-        
     } catch (Exception $e) {
         // Silently fail to avoid breaking page load
         return '';
