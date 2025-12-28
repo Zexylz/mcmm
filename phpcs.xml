@@ -2,6 +2,12 @@
 <ruleset name="Project Standards">
     <description>The coding standard for this project.</description>
     <rule ref="PSR12"/>
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="lineLimit" value="280"/>
+            <property name="absoluteLineLimit" value="300"/>
+        </properties>
+    </rule>
     <file>.</file>
     <exclude-pattern>vendor/</exclude-pattern>
     <exclude-pattern>node_modules/</exclude-pattern>
