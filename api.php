@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Resolve host data directory for a container by inspecting the /data mount.
  * Falls back to /mnt/user/appdata/<name> if not found.
@@ -435,7 +436,7 @@ try {
             // Write to mcmm.cfg
             dbg("Writing config to: $configPath");
 
-            // Temporarily enable error display for debugging this specific operation if needed, 
+            // Temporarily enable error display for debugging this specific operation if needed,
             // but we catch them via return value.
             $writeResult = write_ini_file($existing, $configPath);
 
@@ -449,7 +450,7 @@ try {
             dbg("Config written successfully ($writeResult bytes)");
 
             // Re-read config to ensure we have latest state
-            // $config = array_merge($defaults, $existing); 
+            // $config = array_merge($defaults, $existing);
 
             // Explicitly clear buffer just in case
             if (ob_get_length()) {
@@ -858,7 +859,7 @@ try {
                                 if ($ramSource === 'agent_heap') {
                                     $ramUsedMb = $ramLimitMb;
                                 }
-                                // If docker_stats, we allow it to exceed the limit slightly if configured that way, 
+                                // If docker_stats, we allow it to exceed the limit slightly if configured that way,
                                 // but for the percentage bar we will clamp.
                             }
 
@@ -1126,7 +1127,7 @@ try {
             }
 
             // Basic version detection from URL or metadata
-            // For now, return a default suggest based on common modpacks if possible, 
+            // For now, return a default suggest based on common modpacks if possible,
             // or just return success with a neutral value to be filled by frontend.
             $javaVersion = '17'; // Default for most modern packs
             if (strpos($url, '1.20') !== false || strpos($url, '1.21') !== false) {
@@ -2460,7 +2461,7 @@ function fetchCurseForgeFiles(int $modId, string $version, string $loader, strin
     // Explicit client-side filtering as a safety measure
     if ($version || $loaderInt) {
         $files = array_filter($files, function ($file) use ($version, $loaderInt) {
-            // Version check - allow exact match or prefix if needed, 
+            // Version check - allow exact match or prefix if needed,
             // but CF usually provides exact game versions in the array.
             $gameVersions = $file['gameVersions'] ?? [];
             if ($version && !in_array($version, $gameVersions)) {
@@ -3277,8 +3278,9 @@ function parseMemoryToMB($val): float
 function getJavaHeapUsedMb(string $containerId, int $cacheTtlSec = 4): float
 {
     $stateDir = '/tmp/mcmm_heap';
-    if (!is_dir($stateDir))
+    if (!is_dir($stateDir)) {
         @mkdir($stateDir, 0777, true);
+    }
     $stateFile = $stateDir . '/' . preg_replace('/[^a-zA-Z0-9_.-]/', '_', $containerId) . '.json';
     $now = time();
 
@@ -3312,10 +3314,12 @@ function getJavaHeapUsedMb(string $containerId, int $cacheTtlSec = 4): float
         $uNum = floatval($m[3]);
         $uUnit = strtoupper($m[4]);
         $toKb = function (float $n, string $u): float {
-            if ($u === 'G')
+            if ($u === 'G') {
                 return $n * 1024 * 1024;
-            if ($u === 'M')
+            }
+            if ($u === 'M') {
                 return $n * 1024;
+            }
             return $n; // K
         };
         $totalKb = $toKb($tNum, $tUnit);
