@@ -813,10 +813,17 @@
 }
 
 .mcmm-modpack-thumb::after {
-    content: '' !important;
-    position: absolute !important;
-    inset: 0 !important;
-    background: linear-gradient(to top, rgb(11 12 22 / 90%) 0%, transparent 60%) !important;
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 60%;
+    background: linear-gradient(
+        to top,
+        rgb(11 12 22 / 90%) 0%,
+        transparent 100%
+    );
 }
 
 .mcmm-modpack-info {
