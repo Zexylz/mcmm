@@ -991,7 +991,7 @@
     border-radius: 24px !important;
 }
 
-.mcmm-slider:before {
+.mcmm-slider::before {
     position: absolute !important;
     content: "" !important;
     height: 18px !important;
@@ -1007,7 +1007,7 @@
     background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%) !important;
 }
 
-.mcmm-switch input:checked+.mcmm-slider:before {
+.mcmm-switch input:checked+.mcmm-slider::before {
     transform: translateX(20px) !important;
 }
 
@@ -1126,7 +1126,6 @@
     display: flex !important;
     align-items: center !important;
     gap: 0.5rem !important;
-    text-transform: uppercase !important;
 }
 
 /* Status Message */
@@ -1224,16 +1223,13 @@
     border-radius: 8px !important;
     padding: 1rem !important;
     flex: 1 !important;
-    /* Allow it to grow */
-    overflow-y: auto !important;
+    overflow-y: auto !important;     /* Allow it to grow */
     font-family: 'Fira Code', monospace !important;
     font-size: 0.85rem !important;
     color: #c0caf5 !important;
     line-height: 1.4 !important;
-    white-space: pre-wrap !important;
-    /* Respect newlines and wrapping */
-    word-break: break-all !important;
-    /* Break long words if needed */
+    white-space: pre-wrap !important;    /* Respect newlines and wrapping */
+    word-break: break-all !important;   /* Break long words if needed */
 }
 
 .mcmm-console-input-container {
@@ -1243,8 +1239,8 @@
     padding: 1rem !important;
     background: #1a1b26 !important;
     border-top: 1px solid var(--border) !important;
-    flex-shrink: 0 !important;
-    /* Don't shrink */
+    flex-shrink: 0 !important;  /* Don't shrink */
+    
 }
 
 .mcmm-player-list {
@@ -1503,8 +1499,7 @@
     top: 1rem;
     right: 1rem;
     z-index: 5;
-    background: rgb(0, 0, 0, 50%);
-    /* Improve visibility over dark backgrounds */
+    background: rgb(0, 0, 0, 50%);  /* Improve visibility over dark backgrounds */
 }
 
 .mcmm-modpack-card:hover .mcmm-checkbox {
