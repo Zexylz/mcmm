@@ -91,7 +91,7 @@ jobs:
         run: npm install -g stylelint stylelint-config-standard
 
       - name: Run Stylelint
-        run: stylelint "**/*.css" --config .stylelintrc.json --fix
+        run: stylelint "**/*.css" --config .stylelintrc.json
 
   js-lint:
     name: JavaScript Linting (ESLint)
