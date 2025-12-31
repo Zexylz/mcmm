@@ -1,4 +1,6 @@
 // MCMM Plugin Logic
+/* global csrfToken, $, mcmmConfig */
+/* exported switchTab, filterModpacks, openModManager, closeModManager, switchModTab, switchSource, clearModFilters, setModSort, filterMods, checkForUpdates, toggleModSelection, removeModFromQueue, clearQueue, installSelectedMods, toggleImageFit, setRam, toggleSelect, selectOption, controlServer, deleteServer, saveSettings, openServerSettings, closeServerSettings, submitServerSettings, closeDeployProgress, finishDeployAndView, openPlayersModal, closePlayersModal, playerAction, openConsole, closeConsole, changeModsPage */
 console.log('MCMM Script Loaded');
 
 // Expose functions globally for inline HTML onclick handlers
@@ -102,7 +104,7 @@ let modSearchTimer;
 
 // Deploy progress state
 let deployLogInterval = null;
-let deployLogContainerId = null;
+// let deployLogContainerId = null;
 
 // Tab Switching
 function switchTab(tabId, element) {
@@ -132,7 +134,7 @@ function renderModpacks(data) {
     const grid = document.getElementById('modpackGrid');
     if (!grid) return;
 
-    if (typeof mcmmConfig !== 'undefined' && !mcmmConfig.has_api_key) {
+    if (typeof window.mcmmConfig !== 'undefined' && !window.mcmmConfig.has_api_key) {
         grid.innerHTML = `
             <div class="mcmm-empty">
                 <h3>CurseForge API key required</h3>
@@ -668,13 +670,18 @@ function renderMods() {
             const remoteLatestFileId = mod.latestFileId || (installedMod ? installedMod.latestFileId : null);
             const remoteLatestFileName = mod.latestFileName || (installedMod ? installedMod.latestFileName : null);
 
-            if (remoteLatestFileId && installedFileId) {
-                needsUpdate = String(remoteLatestFileId) !== String(installedFileId);
-            } else if (remoteLatestFileName && installedFileName) {
-                needsUpdate = remoteLatestFileName !== installedFileName;
+            if (installedMod) {
+                const installedFileId = installedMod.fileId || '';
+                const installedFileName = installedMod.fileName || installedMod.file || '';
+
+                if (remoteLatestFileId && installedFileId) {
+                    needsUpdate = String(remoteLatestFileId) !== String(installedFileId);
+                } else if (remoteLatestFileName && installedFileName) {
+                    needsUpdate = remoteLatestFileName !== installedFileName;
+                } else {
+                    needsUpdate = false;
+                }
             } else {
-                // If we don't know the remote latest version for sure, assume it's up to date 
-                // to avoid false "Update" buttons in search results.
                 needsUpdate = false;
             }
         }
@@ -819,7 +826,7 @@ function renderModsPagination() {
     bar.innerHTML = buttons.join('');
 }
 
-function changeModsPage(page) {
+function changeModsPage(page) { // eslint-disable-line no-unused-vars
     if (modState.loading) return;
     const target = parseInt(page, 10);
     if (!Number.isFinite(target) || target < 1) return;
@@ -891,7 +898,7 @@ async function fetchVersions(modId) {
                     if (!modState.mcVersion && srvData.data.mcVersion) modState.mcVersion = srvData.data.mcVersion;
                     if (!modState.loader && srvData.data.loader) modState.loader = srvData.data.loader;
                 }
-            } catch (_) {
+            } catch (e) { // eslint-disable-line no-unused-vars
                 // ignore refresh errors
             }
         }
@@ -1350,7 +1357,7 @@ function updateDeployStep(stepKey, state, desc) {
 }
 
 function startDeployLogPolling(containerId) {
-    deployLogContainerId = containerId;
+    // deployLogContainerId = containerId;
     if (!containerId) return;
     stopDeployLogPolling();
     deployLogInterval = setInterval(async () => {
@@ -1358,10 +1365,10 @@ function startDeployLogPolling(containerId) {
             const res = await fetch('/plugins/mcmm/api.php?action=console_logs&id=' + containerId);
             const data = await res.json();
             if (data.success) {
-                const clean = (data.logs || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+                const clean = (data.logs || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, ''); // eslint-disable-line no-control-regex
                 setDeployProgressConsole(clean || 'Waiting for logs...');
             }
-        } catch (e) {
+        } catch (e) { // eslint-disable-line no-unused-vars
             // swallow errors during polling
         }
     }, 2000);
@@ -1577,7 +1584,7 @@ function renderDeployVersions(files) {
                     <div class="mcmm-version-top">
                         <div class="mcmm-version-name">${file.displayName}</div>
                     </div>
-                    <div class="mcmm-version-meta">
+                    <div classmcmm-version-meta">
                         <span class="mcmm-chip subtle">MC ${mcVersions}</span>
                         <span class="mcmm-chip subtle" style="color: var(--primary-hover); border-color: var(--primary-dim);">Java ${javaVer}</span>
                     </div>
@@ -1626,7 +1633,7 @@ function setDeployVersion(fileId, buttonEl) {
             if (mcChip) mcHidden.value = mcChip.textContent.replace('MC ', '');
         }
         if (loaderHidden) {
-            const loaderChip = buttonEl.querySelector('.mcmm-chip.subtle:nth-child(2)'); // Wait, no, it's not nth-child(2) reliably
+            // const loaderChip = buttonEl.querySelector('.mcmm-chip.subtle:nth-child(2)'); // unused
             // Let's use text content search
             const chips = Array.from(buttonEl.querySelectorAll('.mcmm-chip.subtle'));
             const lChip = chips.find(c => c.textContent.includes('Loader:'));
@@ -1729,7 +1736,7 @@ async function submitDeploy() {
                     if (j.error) msg = j.error;
                     if (j.output && j.output.length) msg += '\n' + j.output.join('\n');
                     setDeployConsole(j.output || []);
-                } catch (e) {
+                } catch (e) { // eslint-disable-line no-unused-vars
                     if (xhr.responseText) msg = xhr.responseText.slice(0, 200);
                     setDeployConsole(xhr.responseText);
                 }
@@ -1754,7 +1761,7 @@ async function submitDeploy() {
                 let data;
                 try {
                     data = JSON.parse(text);
-                } catch (e) {
+                } catch (e) { // eslint-disable-line no-unused-vars
                     throw new Error('Server returned invalid JSON: ' + text.substring(0, 200));
                 }
                 if (!data.success) {
@@ -1816,7 +1823,7 @@ async function fetchLogs() {
 
             // Clean up logs: Strip ANSI color codes
             // ANSI escape codes regex: /\x1B\[[0-9;]*[a-zA-Z]/g
-            let cleanLogs = (data.logs || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+            let cleanLogs = (data.logs || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, ''); // eslint-disable-line no-control-regex
 
             output.textContent = cleanLogs;
 
@@ -1870,7 +1877,7 @@ async function openPlayersModal(serverId, serverName, port) {
             return `
                 <div class="mcmm-player-row">
                     <div class="mcmm-player-head" style="background-image: url('${headUrl}');"></div>
-                    <div class="mcmm-player-name">${name}</div>
+                    <div classmcmm-player-name">${name}</div>
                     <div class="mcmm-player-actions">
                         <button class="mcmm-btn warning" style="padding: 0.35rem 0.65rem;" onclick="playerAction('${serverId}', '${name}', 'kick')">Kick</button>
                         <button class="mcmm-btn danger" style="padding: 0.35rem 0.65rem;" onclick="playerAction('${serverId}', '${name}', 'ban')">Ban</button>
@@ -1895,7 +1902,7 @@ function closePlayersModal() {
     if (modal) modal.classList.remove('open');
 }
 
-async function playerAction(serverId, playerName, action) {
+async function playerAction(serverId, playerName, action) { // eslint-disable-line no-unused-vars
     try {
         const res = await fetch(`/plugins/mcmm/api.php?action=server_player_action&id=${encodeURIComponent(serverId)}&player=${encodeURIComponent(playerName)}&action=${encodeURIComponent(action)}`);
         const data = await res.json();
@@ -1987,9 +1994,10 @@ function saveSettings(e) {
                 try {
                     const json = JSON.parse(xhr.responseText);
                     if (json.error) msg = json.error;
-                } catch (e) { }
+                } catch (e) { // eslint-disable-line no-unused-vars
+                }
                 handleSaveError(new Error(msg), statusEl);
-            }
+            },
         });
     } else {
         // Fallback to fetch
@@ -2006,7 +2014,7 @@ function saveSettings(e) {
                 let result;
                 try {
                     result = JSON.parse(text);
-                } catch (e) {
+                } catch (e) { // eslint-disable-line no-unused-vars
                     console.error('API Error (Non-JSON response):', text);
                     throw new Error('Server returned invalid JSON. Raw output: ' + text.substring(0, 100));
                 }
@@ -2090,7 +2098,7 @@ function renderQueue() {
     const list = document.getElementById('queueList');
     const count = document.getElementById('queueCount');
     const btn = document.getElementById('btnInstallSelected');
-    const grid = document.getElementById('modList'); // The grid container
+    // const grid = document.getElementById('modList'); // unused
 
     if (!panel || !list) return;
 
@@ -2147,7 +2155,7 @@ async function startAgents() {
         let data;
         try {
             data = JSON.parse(text);
-        } catch (e) {
+        } catch (e) { // eslint-disable-line no-unused-vars
             console.error('Non-JSON response from start_agents:', text);
             alert('Error: start_agents did not return JSON. Check server logs.');
             return;
@@ -2171,7 +2179,7 @@ async function logRamDebug() {
         let data;
         try {
             data = JSON.parse(text);
-        } catch (e) {
+        } catch (e) { // eslint-disable-line no-unused-vars
             console.error('Non-JSON response from servers:', text);
             return;
         }
@@ -2203,7 +2211,7 @@ async function installSelectedMods() {
 
     const modsToInstall = Array.from(modState.selected.values());
     let successCount = 0;
-    let failCount = 0;
+    // let failCount = 0;
 
     // Process sequentially to avoid overwhelming server/API
     for (let i = 0; i < modsToInstall.length; i++) {
@@ -2228,11 +2236,11 @@ async function installSelectedMods() {
                 modState.installed.push(installedMod);
             } else {
                 console.error(`Failed to install ${mod.name}: ${data.error}`);
-                failCount++;
+                // failCount++;
             }
         } catch (e) {
             console.error(`Error installing ${mod.name}:`, e);
-            failCount++;
+            // failCount++;
         }
     }
 
@@ -2252,7 +2260,7 @@ async function installSelectedMods() {
         btn.style.background = ''; // Reset to default class style
     }, 2000);
 }
-function toggleImageFit(checkbox) {
+function toggleImageFit(checkbox) { // eslint-disable-line no-unused-vars
     const grid = document.getElementById('modpackGrid');
     if (checkbox.checked) {
         grid.classList.add('fit-images');
@@ -2484,7 +2492,7 @@ async function submitServerSettings() {
                 try {
                     const j = JSON.parse(xhr.responseText);
                     if (j.error) msg = j.error;
-                } catch (e) {
+                } catch (e) { // eslint-disable-line no-unused-vars
                     if (xhr.responseText) msg = xhr.responseText.slice(0, 200);
                 }
                 statusEl.className = 'mcmm-status error';
@@ -2544,7 +2552,7 @@ async function refreshServerPlayerCount(span, serverId, port) {
             const max = data.data.max ?? '?';
             span.textContent = `${online} / ${max} players`;
         }
-    } catch (_) {
+    } catch (exc) { // eslint-disable-line no-unused-vars
         // ignore failures
     }
 }
@@ -2694,18 +2702,5 @@ async function reinstallFromBackup(name) {
     } catch (e) {
         alert('Failed to reinstall: ' + e.message);
         container.innerHTML = originalHtml;
-    }
-}
-function changeModFilterVersion() {
-    const current = modState.mcVersion || '';
-    const newVer = prompt('Enter Minecraft version to filter for (e.g. 1.21.1):', current);
-    if (newVer !== null) {
-        modState.mcVersion = newVer.trim();
-        const filterText = document.getElementById('activeFilterText');
-        if (filterText) {
-            filterText.textContent = modState.mcVersion ? `Filtering: ${modState.mcVersion}` : 'Filtering: Detect...';
-        }
-        modState.page = 1;
-        loadMods(document.getElementById('modSearchInput').value || '');
     }
 }

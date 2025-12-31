@@ -3607,5 +3607,5 @@ function backfillServerIcon(string $containerId, string $containerName, string $
         @file_put_contents($serverDir . '/config.json', json_encode($serverConfig, JSON_PRETTY_PRINT));
     }
 
-    return $icon;
+    return $icon;d
 }
