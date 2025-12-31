@@ -122,7 +122,7 @@
     right: 2rem;            /* matches horizontal padding */   
     bottom: 0;
     height: 1px;
-    background: rgb(255 255 255 / 100%);
+    background: rgb(157 78 221 / 100%);
 }
 
 .mcmm-tab {
@@ -145,10 +145,8 @@
 }
 
 .mcmm-tab.active {
-    color: white !important;
-    background: linear-gradient(to top, rgb(157 78 221 / 10%), transparent) !important;
-    border-color: var(--border) !important;
-    border-bottom: 2px solid var(--primary) !important;
+    background: linear-gradient(to top, rgb(157 78 221 / 50%), transparent) !important;
+    border-color: rgb(157 78 221 / 100%) !important;
     box-shadow: 0 -4px 10px rgb(157 78 221 / 5%) !important;
 }
 
