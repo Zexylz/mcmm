@@ -14,7 +14,7 @@
     --primary: #9d4edd;
     --primary-hover: #c77dff;
     --primary-dim: rgb(157, 78, 221, 15%);
-    --text-main: #ffffff;
+    --text-main: #fff;
     --text-secondary: #94a3b8;
     --text-muted: #64748b;
     --border: rgb(255, 255, 255, 8%);
@@ -29,7 +29,7 @@
 
 /* ===== BASE STYLES ===== */
 .mcmm-app {
-    font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    font-family: Outfit, Inter, -apple-system, BlinkMacSystemFont, sans-serif !important;
     background: var(--bg-body) !important;
     color: var(--text-main) !important;
     min-height: 100vh;
@@ -131,7 +131,7 @@
 
 .mcmm-tab:hover {
     color: var(--text-main) !important;
-    background: rgb(255, 255, 255, 0.03) !important;
+    background: rgb(255, 255, 255, 3%) !important;
 }
 
 .mcmm-tab.active {
@@ -649,7 +649,7 @@
 .mcmm-metric-bar {
     width: 100% !important;
     height: 6px !important;
-    background: rgb(255, 255, 255, 0.05) !important;
+    background: rgb(255, 255, 255, 5%) !important;
     border-radius: 4px !important;
     overflow: hidden !important;
 }
