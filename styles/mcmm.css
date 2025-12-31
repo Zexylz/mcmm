@@ -8,16 +8,16 @@
 /* ===== THEME VARIABLES ===== */
 .mcmm-app {
     --bg-body: #0b0c16;
-    --bg-surface: rgba(22, 24, 35, 0.7);
-    --bg-surface-hover: rgba(30, 32, 45, 0.8);
-    --bg-input: rgba(10, 11, 16, 0.6);
+    --bg-surface: rgb(22, 24, 35, 70%);
+    --bg-surface-hover: rgb(30, 32, 45, 80%);
+    --bg-input: rgb(10, 11, 16, 60%);
     --primary: #9d4edd;
     --primary-hover: #c77dff;
-    --primary-dim: rgba(157, 78, 221, 0.15);
+    --primary-dim: rgb(157, 78, 221, 15%);
     --text-main: #ffffff;
     --text-secondary: #94a3b8;
     --text-muted: #64748b;
-    --border: rgba(255, 255, 255, 0.08);
+    --border: rgb(255, 255, 255, 8%);
     --success: #34d399;
     --danger: #f87171;
     --warning: #fbbf24;
@@ -64,8 +64,8 @@
     z-index: -1 !important;
     pointer-events: none !important;
     background:
-        radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15) 0%, transparent 50%),
-        radial-gradient(circle at 85% 30%, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 15% 50%, rgb(76, 29, 149, 15%) 0%, transparent 50%),
+        radial-gradient(circle at 85% 30%, rgb(124, 58, 237, 10%) 0%, transparent 50%),
         linear-gradient(to bottom, #0b0c16 0%, #11121f 100%) !important;
 }
 
@@ -89,7 +89,7 @@
     align-items: center !important;
     gap: 0.8rem !important;
     letter-spacing: -0.5px !important;
-    text-shadow: 0 0 20px rgba(157, 78, 221, 0.4) !important;
+    text-shadow: 0 0 20px rgb(157, 78, 221, 40%) !important;
 }
 
 .mcmm-brand span {
@@ -97,7 +97,7 @@
 }
 
 .mcmm-version {
-    background: rgba(255, 255, 255, 0.05) !important;
+    background: rgb(255, 255, 255, 5%) !important;
     color: var(--text-secondary) !important;
     padding: 0.4rem 0.8rem !important;
     border-radius: 6px !important;
@@ -131,15 +131,15 @@
 
 .mcmm-tab:hover {
     color: var(--text-main) !important;
-    background: rgba(255, 255, 255, 0.03) !important;
+    background: rgb(255, 255, 255, 0.03) !important;
 }
 
 .mcmm-tab.active {
     color: white !important;
-    background: linear-gradient(to top, rgba(157, 78, 221, 0.1), transparent) !important;
+    background: linear-gradient(to top, rgb(157, 78, 221, 10%), transparent) !important;
     border-color: var(--border) !important;
     border-bottom: 2px solid var(--primary) !important;
-    box-shadow: 0 -4px 10px rgba(157, 78, 221, 0.05) !important;
+    box-shadow: 0 -4px 10px rgb(157, 78, 221, 5%) !important;
 }
 
 /* ===== MAIN CONTENT ===== */
@@ -177,31 +177,31 @@
     line-height: normal !important;
 
     /* Default / Cancel Button Style - Force Override */
-    background: rgba(255, 255, 255, 0.05) !important;
+    background: rgb(255, 255, 255, 5%) !important;
     background-image: none !important;
-    background-color: rgba(255, 255, 255, 0.05) !important;
+    background-color: rgb(255, 255, 255, 5%) !important;
     color: var(--text-secondary) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgb(255, 255, 255, 10%) !important;
 }
 
 .mcmm-app .mcmm-btn:hover {
-    background: rgba(255, 255, 255, 0.1) !important;
-    background-color: rgba(255, 255, 255, 0.1) !important;
+    background: rgb(255, 255, 255, 10%) !important;
+    background-color: rgb(255, 255, 255, 10%) !important;
     color: white !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    border-color: rgb(255, 255, 255, 20%) !important;
+    box-shadow: 0 4px 12px rgb(0, 0, 0, 10%) !important;
 }
 
 .mcmm-app .mcmm-btn-primary {
     background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%) !important;
     color: white !important;
-    box-shadow: 0 4px 15px rgba(123, 44, 191, 0.4) !important;
+    box-shadow: 0 4px 15px rgb(123, 44, 191, 40%) !important;
     border: 1px solid transparent !important;
 }
 
 .mcmm-app .mcmm-btn-primary:hover {
     transform: translateY(-2px) !important;
-    box-shadow: 0 8px 25px rgba(123, 44, 191, 0.6) !important;
+    box-shadow: 0 8px 25px rgb(123, 44, 191, 60%) !important;
 }
 
 /* ===== SERVER LIST ===== */
@@ -227,7 +227,7 @@
 .mcmm-server-row:hover {
     transform: translateX(4px) !important;
     background: var(--bg-surface-hover) !important;
-    border-color: rgba(157, 78, 221, 0.4) !important;
+    border-color: rgb(157, 78, 221, 40%) !important;
 }
 
 .mcmm-server-row::before {
@@ -247,7 +247,7 @@
 
 .mcmm-server-row.stopped::before {
     background: var(--danger) !important;
-    box-shadow: 2px 0 8px rgba(248, 113, 113, 0.5) !important;
+    box-shadow: 2px 0 8px rgb(248, 113, 113, 50%) !important;
 }
 
 .mcmm-server-icon {
@@ -259,7 +259,7 @@
     background-position: center !important;
     background-repeat: no-repeat !important;
     margin-right: 1.5rem !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgb(255, 255, 255, 10%) !important;
     flex-shrink: 0 !important;
 }
 
@@ -277,7 +277,7 @@
     gap: 1rem;
     padding: 1rem 1.15rem;
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.035);
+    background: rgb(255, 255, 255, 3.5%);
     border: 1px solid var(--border);
     color: var(--text-main);
     text-align: left;
@@ -286,14 +286,14 @@
 
 .mcmm-version-card:hover {
     border-color: var(--primary);
-    background: rgba(157, 78, 221, 0.08);
+    background: rgb(157, 78, 221, 8%);
     transform: translateY(-1px);
 }
 
 .mcmm-version-card.selected {
     border-color: var(--primary);
-    background: rgba(157, 78, 221, 0.12);
-    box-shadow: 0 6px 24px rgba(157, 78, 221, 0.12);
+    background: rgb(157, 78, 221, 12%);
+    box-shadow: 0 6px 24px rgb(157, 78, 221, 12%);
 }
 
 .mcmm-version-thumb {
@@ -344,32 +344,32 @@
     font-weight: 800;
     letter-spacing: 0.03em;
     border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.07);
+    background: rgb(255, 255, 255, 7%);
     color: var(--text-secondary);
     text-transform: uppercase;
 }
 
 .mcmm-chip.subtle {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgb(255, 255, 255, 6%);
     color: var(--text-secondary);
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: rgb(255, 255, 255, 12%);
 }
 
 .mcmm-chip.release {
-    background: rgba(52, 211, 153, 0.18);
-    border-color: rgba(52, 211, 153, 0.45);
+    background: rgb(52, 211, 153, 18%);
+    border-color: rgb(52, 211, 153, 45%);
     color: #d2ffee;
 }
 
 .mcmm-chip.beta {
-    background: rgba(255, 200, 87, 0.22);
-    border-color: rgba(255, 200, 87, 0.5);
+    background: rgb(255, 200, 87, 22%);
+    border-color: rgb(255, 200, 87, 50%);
     color: #fff2ce;
 }
 
 .mcmm-chip.alpha {
-    background: rgba(255, 107, 107, 0.24);
-    border-color: rgba(255, 107, 107, 0.55);
+    background: rgb(255, 107, 107, 24%);
+    border-color: rgb(255, 107, 107, 55%);
     color: #ffe2de;
 }
 
@@ -399,22 +399,22 @@
     padding: 0.85rem 1rem;
     border: 1px solid var(--border);
     border-radius: 12px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.06));
+    background: linear-gradient(135deg, rgb(255, 255, 255, 2%), rgb(255, 255, 255, 6%));
     align-items: center;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 8px 22px rgb(0, 0, 0, 18%);
 }
 
 .mcmm-version-card:hover {
-    border-color: rgba(157, 78, 221, 0.55);
-    box-shadow: 0 12px 28px rgba(157, 78, 221, 0.2);
+    border-color: rgb(157, 78, 221, 55%);
+    box-shadow: 0 12px 28px rgb(157, 78, 221, 20%);
     transform: translateY(-1px);
 }
 
 .mcmm-version-card.selected {
     border-color: var(--primary);
-    box-shadow: 0 14px 34px rgba(157, 78, 221, 0.35);
+    box-shadow: 0 14px 34px rgb(157, 78, 221, 35%);
 }
 
 .mcmm-version-thumb {
@@ -455,32 +455,32 @@
     font-size: 0.75rem;
     font-weight: 700;
     border: 1px solid transparent;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgb(255, 255, 255, 8%);
     color: var(--text-secondary);
     white-space: nowrap;
 }
 
 .mcmm-version-pill.success {
-    background: rgba(34, 197, 94, 0.18);
-    border-color: rgba(34, 197, 94, 0.5);
+    background: rgb(34, 197, 94, 18%);
+    border-color: rgb(34, 197, 94, 50%);
     color: #bbf7d0;
 }
 
 .mcmm-version-pill.warning {
-    background: rgba(234, 179, 8, 0.16);
-    border-color: rgba(234, 179, 8, 0.5);
+    background: rgb(234, 179, 8, 16%);
+    border-color: rgb(234, 179, 8, 50%);
     color: #fef08a;
 }
 
 .mcmm-version-pill.danger {
-    background: rgba(239, 68, 68, 0.14);
-    border-color: rgba(239, 68, 68, 0.5);
+    background: rgb(239, 68, 68, 14%);
+    border-color: rgb(239, 68, 68, 50%);
     color: #fecdd3;
 }
 
 .mcmm-version-pill.muted {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: rgb(255, 255, 255, 8%);
+    border-color: rgb(255, 255, 255, 15%);
     color: var(--text-muted);
 }
 
@@ -510,7 +510,7 @@
 }
 
 .mcmm-chip {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgb(255, 255, 255, 6%);
     border: 1px solid var(--border);
     color: var(--text-secondary);
     font-size: 0.78rem;
@@ -538,11 +538,11 @@
     display: inline-flex;
     align-items: center;
     gap: 0.55rem;
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.25));
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: linear-gradient(145deg, rgb(255, 255, 255, 5%), rgb(0, 0, 0, 25%));
+    border: 1px solid rgb(255, 255, 255, 6%);
     border-radius: 12px;
     padding: 0.5rem 0.8rem;
-    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
+    box-shadow: 0 14px 36px rgb(0, 0, 0, 28%);
     z-index: 5;
 }
 
@@ -558,7 +558,7 @@
 }
 
 .mcmm-pagination-bar .mcmm-btn.subtle {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgb(255, 255, 255, 6%);
     border: 1px solid var(--border);
     color: var(--text-main);
 }
@@ -578,30 +578,30 @@
     min-width: 36px !important;
     height: 34px !important;
     padding: 0 0.65rem !important;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(0, 0, 0, 0.25));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgb(255, 255, 255, 7%), rgb(0, 0, 0, 25%));
+    border: 1px solid rgb(255, 255, 255, 8%);
     color: var(--text-main);
     border-radius: 9px;
     font-weight: 700;
     font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.18s ease;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+    box-shadow: 0 10px 24px rgb(0, 0, 0, 22%);
 }
 
 .mcmm-page-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, rgba(157, 78, 221, 0.28), rgba(157, 78, 221, 0.18));
-    border-color: rgba(157, 78, 221, 0.7);
+    background: linear-gradient(135deg, rgb(157, 78, 221, 28%), rgb(157, 78, 221, 18%));
+    border-color: rgb(157, 78, 221, 70%);
     color: white;
     transform: translateY(-1px);
-    box-shadow: 0 12px 26px rgba(157, 78, 221, 0.35);
+    box-shadow: 0 12px 26px rgb(157, 78, 221, 35%);
 }
 
 .mcmm-page-btn.active {
     background: linear-gradient(135deg, #9d4edd, #7b2cbf);
-    border-color: rgba(157, 78, 221, 0.95);
+    border-color: rgb(157, 78, 221, 95%);
     color: white;
-    box-shadow: 0 14px 30px rgba(157, 78, 221, 0.45);
+    box-shadow: 0 14px 30px rgb(157, 78, 221, 45%);
     transform: translateY(-1px);
 }
 
@@ -649,7 +649,7 @@
 .mcmm-metric-bar {
     width: 100% !important;
     height: 6px !important;
-    background: rgba(255, 255, 255, 0.05) !important;
+    background: rgb(255, 255, 255, 0.05) !important;
     border-radius: 4px !important;
     overflow: hidden !important;
 }
@@ -671,7 +671,7 @@
     align-items: center !important;
     justify-content: center !important;
     border-radius: 10px !important;
-    background: rgba(255, 255, 255, 0.05) !important;
+    background: rgb(255, 255, 255, 5%) !important;
     border: 1px solid var(--border) !important;
     color: var(--text-main) !important;
     cursor: pointer !important;
@@ -683,25 +683,25 @@
 .mcmm-btn-icon:hover {
     background: var(--primary) !important;
     border-color: var(--primary) !important;
-    box-shadow: 0 0 15px rgba(157, 78, 221, 0.4) !important;
+    box-shadow: 0 0 15px rgb(157, 78, 221, 40%) !important;
     transform: translateY(-2px) !important;
 }
 
 .mcmm-btn-icon.danger {
     color: var(--danger) !important;
-    border-color: rgba(248, 113, 113, 0.3) !important;
+    border-color: rgb(248, 113, 113, 30%) !important;
 }
 
 .mcmm-btn-icon.danger:hover {
     background: var(--danger) !important;
     border-color: var(--danger) !important;
     color: white !important;
-    box-shadow: 0 0 15px rgba(248, 113, 113, 0.4) !important;
+    box-shadow: 0 0 15px rgb(248, 113, 113, 40%) !important;
 }
 
 .mcmm-btn-icon.success {
     color: var(--success) !important;
-    border-color: rgba(52, 211, 153, 0.3) !important;
+    border-color: rgb(52, 211, 153, 30%) !important;
 }
 
 .mcmm-btn-icon.success:hover {
@@ -752,8 +752,8 @@
 
 .mcmm-search-input {
     width: 100% !important;
-    background: rgba(0, 0, 0, 0.4) !important;
-    border: 1px solid rgba(157, 78, 221, 0.3) !important;
+    background: rgb(0, 0, 0, 40%) !important;
+    border: 1px solid rgb(157, 78, 221, 30%) !important;
     border-radius: 50px !important;
     color: var(--text-main) !important;
     padding: 0.9rem 1rem 0.9rem 3rem !important;
@@ -765,7 +765,7 @@
 .mcmm-search-input:focus {
     outline: none !important;
     border-color: var(--primary) !important;
-    background: rgba(157, 78, 221, 0.1) !important;
+    background: rgb(157, 78, 221, 10%) !important;
 }
 
 .mcmm-search-icon {
@@ -795,8 +795,8 @@
 
 .mcmm-modpack-card:hover {
     transform: translateY(-8px) scale(1.02) !important;
-    border-color: rgba(157, 78, 221, 0.6) !important;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 25px rgba(157, 78, 221, 0.2) !important;
+    border-color: rgb(157, 78, 221, 60%) !important;
+    box-shadow: 0 20px 40px rgb(0, 0, 0, 40%), 0 0 25px rgb(157, 78, 221, 20%) !important;
 }
 
 .mcmm-modpack-thumb {
@@ -816,7 +816,7 @@
     content: '' !important;
     position: absolute !important;
     inset: 0 !important;
-    background: linear-gradient(to top, rgba(11, 12, 22, 0.9) 0%, transparent 60%) !important;
+    background: linear-gradient(to top, rgb(11, 12, 22, 90%) 0%, transparent 60%) !important;
 }
 
 .mcmm-modpack-info {
@@ -850,8 +850,8 @@
 .mcmm-tag {
     font-size: 0.7rem !important;
     padding: 0.2rem 0.6rem !important;
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgb(255, 255, 255, 5%) !important;
+    border: 1px solid rgb(255, 255, 255, 10%) !important;
     border-radius: 100px !important;
     color: var(--text-muted) !important;
 }
@@ -863,8 +863,8 @@
 }
 
 .mcmm-panel {
-    background: rgba(13, 14, 23, 0.6) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    background: rgb(13, 14, 23, 60%) !important;
+    border: 1px solid rgb(255, 255, 255, 5%) !important;
     border-radius: 12px !important;
     padding: 2rem !important;
     margin-bottom: 2rem !important;
@@ -881,7 +881,7 @@
     gap: 0.5rem !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-bottom: 1px solid rgb(255, 255, 255, 5%) !important;
     padding-bottom: 0.75rem !important;
 }
 
@@ -904,7 +904,7 @@
 }
 
 .mcmm-input {
-    background: rgba(0, 0, 0, 0.2) !important;
+    background: rgb(0, 0, 0, 20%) !important;
     border: 1px solid var(--border) !important;
     color: var(--text-main) !important;
     padding: 0.9rem 1rem !important;
@@ -918,7 +918,7 @@
 .mcmm-input:focus {
     outline: none !important;
     border-color: var(--primary) !important;
-    background: rgba(157, 78, 221, 0.05) !important;
+    background: rgb(157, 78, 221, 5%) !important;
 }
 
 .mcmm-input-hint {
@@ -937,7 +937,7 @@
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
-    background: rgba(255, 255, 255, 0.02) !important;
+    background: rgb(255, 255, 255, 2%) !important;
     padding: 0.9rem 1rem !important;
     border-radius: 8px !important;
     border: 1px solid var(--border) !important;
@@ -945,8 +945,8 @@
 }
 
 .mcmm-toggle-item:hover {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border-color: rgba(157, 78, 221, 0.3) !important;
+    background: rgb(255, 255, 255, 5%) !important;
+    border-color: rgb(157, 78, 221, 30%) !important;
 }
 
 .mcmm-toggle-label {
@@ -1020,8 +1020,8 @@
 }
 
 .mcmm-ram-pill {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgb(255, 255, 255, 5%) !important;
+    border: 1px solid rgb(255, 255, 255, 10%) !important;
     padding: 0.5rem 1rem !important;
     border-radius: 6px !important;
     font-size: 0.85rem !important;
@@ -1031,7 +1031,7 @@
 }
 
 .mcmm-ram-pill:hover {
-    background: rgba(255, 255, 255, 0.1) !important;
+    background: rgb(255, 255, 255, 10%) !important;
     color: white !important;
     padding: 0.5rem 1rem !important;
 }
@@ -1049,7 +1049,7 @@
 }
 
 .mcmm-select-trigger {
-    background: rgba(0, 0, 0, 0.2) !important;
+    background: rgb(0, 0, 0, 20%) !important;
     border: 1px solid var(--border) !important;
     color: var(--text-main) !important;
     padding: 0.9rem 1rem !important;
@@ -1063,7 +1063,7 @@
 }
 
 .mcmm-select-trigger:hover {
-    border-color: rgba(157, 78, 221, 0.4) !important;
+    border-color: rgb(157, 78, 221, 40%) !important;
 }
 
 .mcmm-select-trigger::after {
@@ -1104,13 +1104,13 @@
 }
 
 .mcmm-option:hover {
-    background: rgba(157, 78, 221, 0.1) !important;
+    background: rgb(157, 78, 221, 10%) !important;
     color: white !important;
 }
 
 .mcmm-option.selected {
     color: white !important;
-    background: rgba(157, 78, 221, 0.15) !important;
+    background: rgb(157, 78, 221, 15%) !important;
 }
 
 /* Section Title */
@@ -1122,7 +1122,7 @@
     letter-spacing: 0.5px !important;
     margin-bottom: 0.75rem !important;
     padding-bottom: 0.5rem !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-bottom: 1px solid rgb(255, 255, 255, 5%) !important;
     display: flex !important;
     align-items: center !important;
     gap: 0.5rem !important;
@@ -1139,14 +1139,14 @@
 }
 
 .mcmm-status.success {
-    background: rgba(16, 185, 129, 0.1) !important;
-    border: 1px solid rgba(16, 185, 129, 0.3) !important;
+    background: rgb(16, 185, 129, 10%) !important;
+    border: 1px solid rgb(16, 185, 129, 30%) !important;
     color: var(--success) !important;
 }
 
 .mcmm-status.error {
-    background: rgba(239, 68, 68, 0.1) !important;
-    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+    background: rgb(239, 68, 68, 10%) !important;
+    border: 1px solid rgb(239, 68, 68, 30%) !important;
     color: var(--danger) !important;
 }
 
@@ -1161,7 +1161,7 @@
 .mcmm-modal-overlay {
     position: fixed !important;
     inset: 0 !important;
-    background: rgba(0, 0, 0, 0.85) !important;
+    background: rgb(0, 0, 0, 85%) !important;
     backdrop-filter: blur(8px) !important;
     z-index: 1000 !important;
     display: none !important;
@@ -1175,7 +1175,7 @@
 
 .mcmm-modal {
     background: var(--bg-surface) !important;
-    border: 1px solid rgba(157, 78, 221, 0.3) !important;
+    border: 1px solid rgb(157, 78, 221, 30%) !important;
     border-radius: 16px !important;
     max-width: 95vw !important;
     width: 95% !important;
@@ -1261,7 +1261,7 @@
     padding: 0.75rem !important;
     border: 1px solid var(--border) !important;
     border-radius: 10px !important;
-    background: rgba(255, 255, 255, 0.03) !important;
+    background: rgb(255, 255, 255, 3%) !important;
 }
 
 .mcmm-player-head {
@@ -1286,24 +1286,24 @@
 }
 
 .mcmm-btn.warning {
-    background: rgba(255, 200, 87, 0.18) !important;
-    border: 1px solid rgba(255, 200, 87, 0.6) !important;
+    background: rgb(255, 200, 87, 18%) !important;
+    border: 1px solid rgb(255, 200, 87, 60%) !important;
     color: #ffe6a7 !important;
 }
 
 .mcmm-btn.warning:hover {
-    background: rgba(255, 200, 87, 0.28) !important;
+    background: rgb(255, 200, 87, 28%) !important;
     color: white !important;
 }
 
 .mcmm-btn.danger {
-    background: rgba(239, 68, 68, 0.18) !important;
-    border: 1px solid rgba(239, 68, 68, 0.6) !important;
+    background: rgb(239, 68, 68, 18%) !important;
+    border: 1px solid rgb(239, 68, 68, 60%) !important;
     color: #fecdd3 !important;
 }
 
 .mcmm-btn.danger:hover {
-    background: rgba(239, 68, 68, 0.28) !important;
+    background: rgb(239, 68, 68, 28%) !important;
     color: white !important;
 }
 
@@ -1350,7 +1350,7 @@
 /* Source Toggle (Pill) */
 .mcmm-source-toggle {
     display: flex;
-    background: rgba(0, 0, 0, 0.3);
+    background: rgb(0, 0, 0, 30%);
     border-radius: 8px;
     padding: 4px;
     border: 1px solid var(--border);
@@ -1388,7 +1388,7 @@
     position: relative;
     z-index: 20;
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-left-width 0.3s;
-    box-shadow: -5px 0 25px rgba(0, 0, 0, 0.5);
+    box-shadow: -5px 0 25px rgb(0, 0, 0, 50%);
     flex-shrink: 0;
 }
 
@@ -1403,7 +1403,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(255, 255, 255, 0.02);
+    background: rgb(255, 255, 255, 2%);
 }
 
 .mcmm-queue-list {
@@ -1418,7 +1418,7 @@
 .mcmm-queue-footer {
     padding: 1.25rem;
     border-top: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.02);
+    background: rgb(255, 255, 255, 2%);
 }
 
 /* Queue Item */
@@ -1427,15 +1427,15 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.03);
+    background: rgb(255, 255, 255, 3%);
     border: 1px solid var(--border);
     border-radius: 8px;
     transition: all 0.2s;
 }
 
 .mcmm-queue-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: rgb(255, 255, 255, 5%);
+    border-color: rgb(255, 255, 255, 20%);
 }
 
 .mcmm-queue-thumb {
@@ -1477,13 +1477,13 @@
 
 .mcmm-queue-remove:hover {
     color: var(--danger);
-    background: rgba(248, 113, 113, 0.1);
+    background: rgb(248, 113, 113, 10%);
 }
 
 /* Selected Card State */
 .mcmm-modpack-card.selected {
     border-color: var(--primary);
-    background: rgba(157, 78, 221, 0.1) !important;
+    background: rgb(157, 78, 221, 10%) !important;
     box-shadow: inset 0 0 0 1px var(--primary);
 }
 
@@ -1503,13 +1503,13 @@
     top: 1rem;
     right: 1rem;
     z-index: 5;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgb(0, 0, 0, 50%);
     /* Improve visibility over dark backgrounds */
 }
 
 .mcmm-modpack-card:hover .mcmm-checkbox {
     border-color: var(--text-secondary);
-    background: rgba(0, 0, 0, 0.8);
+    background: rgb(0, 0, 0, 80%);
 }
 
 .mcmm-modpack-card.selected .mcmm-checkbox {
@@ -1531,11 +1531,11 @@
 
 /* Version Selection Rows */
 .mcmm-version-row:hover {
-    background: rgba(255, 255, 255, 0.05) !important;
+    background: rgb(255, 255, 255, 5%) !important;
 }
 
 .mcmm-version-row.selected {
-    background: rgba(157, 78, 221, 0.15) !important;
+    background: rgb(157, 78, 221, 15%) !important;
     border-color: var(--primary) !important;
 }
 
@@ -1549,7 +1549,7 @@
 .mcmm-loader {
     width: 40px;
     height: 40px;
-    border: 3px solid rgba(157, 78, 221, 0.2);
+    border: 3px solid rgb(157, 78, 221, 20%);
     border-top-color: var(--primary);
     border-radius: 50%;
     animation: mcmm-spin 0.8s linear infinite;
@@ -1557,14 +1557,14 @@
 }
 
 .mcmm-ver-chip {
-    background: rgba(157, 78, 221, 0.15);
+    background: rgb(157, 78, 221, 15%);
     color: var(--primary-hover);
     padding: 2px 8px;
     border-radius: 6px;
     font-size: 0.75rem;
     font-weight: 700;
     white-space: nowrap;
-    border: 1px solid rgba(157, 78, 221, 0.2);
+    border: 1px solid rgb(157, 78, 221, 20%);
     display: inline-flex;
     align-items: center;
 }
@@ -1574,7 +1574,7 @@
 }
 
 #activeFilterContainer:hover {
-    background: rgba(157, 78, 221, 0.2) !important;
+    background: rgb(157, 78, 221, 20%) !important;
     border-color: var(--primary-hover) !important;
     transform: translateY(-1px);
 }
@@ -1594,7 +1594,7 @@
 .mcmm-modpack-card {
     background: var(--bg-card) !important;
     border-radius: 12px !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgb(255, 255, 255, 5%) !important;
     overflow: hidden !important;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     position: relative !important;
@@ -1603,7 +1603,7 @@
 .mcmm-modpack-card:hover {
     transform: translateY(-4px) !important;
     border-color: var(--primary-dim) !important;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2) !important;
+    box-shadow: 0 20px 25px -5px rgb(0, 0, 0, 20%) !important;
 }
 
 /* Info Trigger (!) */
@@ -1613,14 +1613,14 @@
     right: 10px !important;
     z-index: 25 !important;
     cursor: help !important;
-    color: rgba(255, 255, 255, 0.4) !important;
+    color: rgb(255, 255, 255, 40%) !important;
     transition: all 0.2s ease !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     width: 26px !important;
     height: 26px !important;
-    background: rgba(0, 0, 0, 0.3) !important;
+    background: rgb(0, 0, 0, 30%) !important;
     border-radius: 50% !important;
     backdrop-filter: blur(4px) !important;
 }
@@ -1637,11 +1637,11 @@
     top: 32px !important;
     right: 0 !important;
     width: 220px !important;
-    background: rgba(15, 16, 28, 0.98) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgb(15, 16, 28, 98%) !important;
+    border: 1px solid rgb(255, 255, 255, 10%) !important;
     border-radius: 8px !important;
     padding: 0.85rem !important;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4) !important;
+    box-shadow: 0 10px 15px -3px rgb(0, 0, 0, 40%) !important;
     opacity: 0 !important;
     visibility: hidden !important;
     transform: translateY(-5px) !important;
@@ -1689,7 +1689,7 @@
 .mcmm-backup-overlay {
     position: absolute !important;
     inset: 0 !important;
-    background: rgba(11, 12, 22, 0.8) !important;
+    background: rgb(11, 12, 22, 80%) !important;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
@@ -1714,7 +1714,7 @@
     width: 100% !important;
     background-size: cover !important;
     background-position: center !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
+    border-bottom: 1px solid rgb(255, 255, 255, 3%) !important;
 }
 
 .mcmm-modpack-info {
