@@ -104,15 +104,25 @@
     font-size: 0.85rem !important;
 }
 
-/* ===== TABS ===== */
+/* ===== TABS =====*/
 .mcmm-tabs {
     display: flex !important;
     gap: 0.5rem !important;
     padding: 1rem 2rem 0 !important;
-    border-bottom: 1px solid var(--border) !important;
     max-width: var(--content-max-width) !important;
-    width: 100% !important;
     margin: 0 auto 2rem !important;
+    position: relative !important;
+}
+
+/* bottom border aligned to first tab */
+.mcmm-tabs::before {
+    content: "";
+    position: absolute;
+    left: 2rem;              /* matches horizontal padding */
+    right: 2rem;            /* matches horizontal padding */   
+    bottom: 0;
+    height: 1px;
+    background: rgb(255 255 255 / 100%);
 }
 
 .mcmm-tab {
