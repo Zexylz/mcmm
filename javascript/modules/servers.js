@@ -37,7 +37,7 @@ export async function startAgents() {
         let data;
         try {
             data = JSON.parse(text);
-        } catch (e) {
+        } catch {
             console.error('Non-JSON response from start_agents:', text);
             alert('Error: start_agents did not return JSON. Check server logs.');
             return;
@@ -61,7 +61,7 @@ export async function logRamDebug() {
         let data;
         try {
             data = JSON.parse(text);
-        } catch (e) {
+        } catch {
             console.error('Non-JSON response from servers:', text);
             return;
         }
@@ -116,7 +116,7 @@ async function refreshServerMetricsOnce() {
             const cpuFill = row.querySelector('.mcmm-cpu-fill');
             if (cpuFill) cpuFill.style.width = `${cpuClamped}%`;
         });
-    } catch (_) {
+    } catch {
         // ignore polling failures
     }
 }
@@ -152,7 +152,7 @@ async function refreshServerPlayerCount(span, serverId, port) {
             const max = data.data.max ?? '?';
             span.textContent = `${online} / ${max} players`;
         }
-    } catch (_) {
+    } catch {
         // ignore failures
     }
 }

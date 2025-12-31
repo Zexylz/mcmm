@@ -6,13 +6,13 @@ export function openConsole(serverId, serverName) {
     const output = document.getElementById('consoleOutput');
     document.getElementById('consoleTitle').textContent = serverName + ' - Console';
     currentConsoleId = serverId;
-    
+
     modal.classList.add('open');
     output.innerHTML = '<div style="color: #666; padding: 1rem;">Loading logs...</div>';
-    
+
     fetchLogs();
     consoleInterval = setInterval(fetchLogs, 2000);
-    
+
     document.getElementById('consoleInput').focus();
 }
 
@@ -24,12 +24,12 @@ export async function fetchLogs() {
         if (data.success) {
             const output = document.getElementById('consoleOutput');
             const wasAtBottom = output.scrollTop + output.clientHeight >= output.scrollHeight - 50;
-            
+
             // Clean up logs: Strip ANSI color codes
-            let cleanLogs = (data.logs || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
-            
-            output.textContent = cleanLogs; 
-            
+            let cleanLogs = (data.logs || '').replace(/\\x1B\[[0-9;]*[a-zA-Z]/g, '');
+
+            output.textContent = cleanLogs;
+
             if (wasAtBottom) {
                 output.scrollTop = output.scrollHeight;
             }
@@ -56,30 +56,30 @@ export function closeConsole() {
 export function initConsole() {
     const input = document.getElementById('consoleInput');
     if (input) {
-        input.addEventListener('keypress', function(e) {
+        input.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 const cmd = this.value;
                 if (!cmd || !currentConsoleId) return;
-                
+
                 const inputField = this;
                 inputField.disabled = true;
-                
+
                 const output = document.getElementById('consoleOutput');
                 output.textContent += `\n> ${cmd}\n`;
                 output.scrollTop = output.scrollHeight;
-                
+
                 fetch('/plugins/mcmm/api.php?action=console_command&id=' + currentConsoleId + '&cmd=' + encodeURIComponent(cmd))
                     .then(r => r.json())
                     .then(d => {
                         if (d.success) {
-                             if(d.message) output.textContent += d.message + '\n';
+                            if (d.message) output.textContent += d.message + '\n';
                         } else {
-                             output.textContent += 'Error: ' + (d.error || 'Command failed') + '\n';
+                            output.textContent += 'Error: ' + (d.error || 'Command failed') + '\n';
                         }
                         output.scrollTop = output.scrollHeight;
                     })
                     .catch(err => {
-                         output.textContent += 'Error: ' + err.message + '\n';
+                        output.textContent += 'Error: ' + err.message + '\n';
                     })
                     .finally(() => {
                         inputField.value = '';
