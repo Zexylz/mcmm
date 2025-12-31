@@ -72,7 +72,7 @@
 /* ===== HEADER ===== */
 .mcmm-header {
     background: transparent !important;
-    padding: 2rem 2rem 0 2rem !important;
+    padding: 2rem 2rem 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
@@ -108,11 +108,11 @@
 .mcmm-tabs {
     display: flex !important;
     gap: 0.5rem !important;
-    padding: 1rem 2rem 0 2rem !important;
+    padding: 1rem 2rem 0 !important;
     border-bottom: 1px solid var(--border) !important;
     max-width: var(--content-max-width) !important;
     width: 100% !important;
-    margin: 0 auto 2rem auto !important;
+    margin: 0 auto 2rem !important;
 }
 
 .mcmm-tab {
@@ -982,10 +982,7 @@
 .mcmm-slider {
     position: absolute !important;
     cursor: pointer !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
+    inset: 0 !important;
     background-color: #2d2d30 !important;
     transition: 0.4s !important;
     border-radius: 24px !important;
@@ -1548,7 +1545,7 @@
     border-top-color: var(--primary);
     border-radius: 50%;
     animation: mcmm-spin 0.8s linear infinite;
-    margin: 0 auto 1.5rem auto;
+    margin: 0 auto 1.5rem;
 }
 
 .mcmm-ver-chip {
