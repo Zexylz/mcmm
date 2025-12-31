@@ -1,5 +1,8 @@
 /* global modState, renderMods, currentServerId, loadInstalledMods */
-/* exported toggleModSelection, removeModFromQueue, installSelectedMods */
+
+window.toggleModSelection = toggleModSelection;
+window.removeModFromQueue = removeModFromQueue;
+window.installSelectedMods = installSelectedMods;
 
 // --- Mod Selection Queue ---
 
