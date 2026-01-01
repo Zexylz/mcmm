@@ -261,7 +261,7 @@
     opacity: 0.45;
 }
 
-.mcmm-page-btn:hover:not(:disabled):not(.active) {
+.mcmm-page-btn:hover:not(:disabled, .active) {
     background: linear-gradient(135deg, rgb(157 78 221 / 28%), rgb(157 78 221 / 18%));
     border-color: rgb(157 78 221 / 70%);
     box-shadow: 0 12px 26px rgb(157 78 221 / 35%);
@@ -1497,6 +1497,7 @@
 #activeFilterContainer:active {
     transform: translateY(0);
 }
+
 /* stylelint-enable selector-id-pattern */
 
 /* ===== BACKUP CARD: INFO + OVERLAY (kept, but removed duplicate grid/card/thumb/info/name overrides) ===== */
