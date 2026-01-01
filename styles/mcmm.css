@@ -189,6 +189,95 @@
     transition: all 0.2s !important;
 }
 
+/* ===== PAGINATION (moved here to satisfy no-descending-specificity) ===== */
+.mcmm-pagination .mcmm-btn {
+    font-size: 0.9rem !important;
+    height: 34px !important;
+    padding: 0 0.65rem !important;
+}
+
+.mcmm-pagination-bar {
+    align-items: center;
+    background: linear-gradient(145deg, rgb(255 255 255 / 5%), rgb(0 0 0 / 25%));
+    border: 1px solid rgb(255 255 255 / 6%);
+    border-radius: 12px;
+    bottom: 1rem;
+    box-shadow: 0 14px 36px rgb(0 0 0 / 28%);
+    display: inline-flex;
+    gap: 0.55rem;
+    left: 50%;
+    padding: 0.5rem 0.8rem;
+    position: absolute;
+    transform: translateX(-50%);
+    z-index: 5;
+}
+
+.mcmm-pagination-bar .mcmm-btn {
+    align-items: center !important;
+    border-radius: 8px !important;
+    display: inline-flex;
+    font-weight: 800;
+    height: 32px !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    width: 36px !important;
+}
+
+.mcmm-pagination-bar .mcmm-btn.subtle {
+    background: rgb(255 255 255 / 6%);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+}
+
+.mcmm-pagination-bar .mcmm-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.mcmm-pagination-bar span {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.mcmm-page-btn {
+    background: linear-gradient(180deg, rgb(255 255 255 / 7%), rgb(0 0 0 / 25%));
+    border: 1px solid rgb(255 255 255 / 8%);
+    border-radius: 9px;
+    box-shadow: 0 10px 24px rgb(0 0 0 / 22%);
+    color: var(--text-main);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 700;
+    height: 34px !important;
+    min-width: 36px !important;
+    padding: 0 0.65rem !important;
+    transition: all 0.18s ease;
+}
+
+/* disabled BEFORE hover to satisfy no-descending-specificity */
+.mcmm-page-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.mcmm-page-btn:hover:not(:disabled):not(.active) {
+    background: linear-gradient(135deg, rgb(157 78 221 / 28%), rgb(157 78 221 / 18%));
+    border-color: rgb(157 78 221 / 70%);
+    box-shadow: 0 12px 26px rgb(157 78 221 / 35%);
+    color: white;
+    transform: translateY(-1px);
+}
+
+.mcmm-page-btn.active {
+    background: linear-gradient(135deg, #9d4edd, #7b2cbf);
+    border-color: rgb(157 78 221 / 95%);
+    box-shadow: 0 14px 30px rgb(157 78 221 / 45%);
+    color: white;
+    transform: translateY(-1px);
+}
+
+/* ===== BUTTON HOVER (after pagination-specific button rules) ===== */
 .mcmm-app .mcmm-btn:hover {
     background: rgb(255 255 255 / 10%) !important;
     background-color: rgb(255 255 255 / 10%) !important;
@@ -767,93 +856,6 @@
 .mcmm-version-row.selected {
     background: rgb(157 78 221 / 15%) !important;
     border-color: var(--primary) !important;
-}
-
-/* ===== PAGINATION ===== */
-.mcmm-pagination .mcmm-btn {
-    font-size: 0.9rem !important;
-    height: 34px !important;
-    padding: 0 0.65rem !important;
-}
-
-.mcmm-pagination-bar {
-    align-items: center;
-    background: linear-gradient(145deg, rgb(255 255 255 / 5%), rgb(0 0 0 / 25%));
-    border: 1px solid rgb(255 255 255 / 6%);
-    border-radius: 12px;
-    bottom: 1rem;
-    box-shadow: 0 14px 36px rgb(0 0 0 / 28%);
-    display: inline-flex;
-    gap: 0.55rem;
-    left: 50%;
-    padding: 0.5rem 0.8rem;
-    position: absolute;
-    transform: translateX(-50%);
-    z-index: 5;
-}
-
-.mcmm-pagination-bar .mcmm-btn {
-    align-items: center !important;
-    border-radius: 8px !important;
-    display: inline-flex;
-    font-weight: 800;
-    height: 32px !important;
-    justify-content: center !important;
-    padding: 0 !important;
-    width: 36px !important;
-}
-
-.mcmm-pagination-bar .mcmm-btn.subtle {
-    background: rgb(255 255 255 / 6%);
-    border: 1px solid var(--border);
-    color: var(--text-main);
-}
-
-.mcmm-pagination-bar .mcmm-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.4;
-}
-
-.mcmm-pagination-bar span {
-    color: var(--text-secondary);
-    font-size: 0.95rem;
-    font-weight: 700;
-}
-
-.mcmm-page-btn {
-    background: linear-gradient(180deg, rgb(255 255 255 / 7%), rgb(0 0 0 / 25%));
-    border: 1px solid rgb(255 255 255 / 8%);
-    border-radius: 9px;
-    box-shadow: 0 10px 24px rgb(0 0 0 / 22%);
-    color: var(--text-main);
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 700;
-    height: 34px !important;
-    min-width: 36px !important;
-    padding: 0 0.65rem !important;
-    transition: all 0.18s ease;
-}
-
-.mcmm-page-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, rgb(157 78 221 / 28%), rgb(157 78 221 / 18%));
-    border-color: rgb(157 78 221 / 70%);
-    box-shadow: 0 12px 26px rgb(157 78 221 / 35%);
-    color: white;
-    transform: translateY(-1px);
-}
-
-.mcmm-page-btn.active {
-    background: linear-gradient(135deg, #9d4edd, #7b2cbf);
-    border-color: rgb(157 78 221 / 95%);
-    box-shadow: 0 14px 30px rgb(157 78 221 / 45%);
-    color: white;
-    transform: translateY(-1px);
-}
-
-.mcmm-page-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.45;
 }
 
 /* ===== SETTINGS ===== */
@@ -1481,6 +1483,7 @@
 }
 
 /* ===== MISC: ACTIVE FILTER CONTAINER ===== */
+/* stylelint-disable selector-id-pattern */
 #activeFilterContainer {
     transition: all 0.2s ease;
 }
@@ -1494,6 +1497,7 @@
 #activeFilterContainer:active {
     transform: translateY(0);
 }
+/* stylelint-enable selector-id-pattern */
 
 /* ===== BACKUP CARD: INFO + OVERLAY (kept, but removed duplicate grid/card/thumb/info/name overrides) ===== */
 /* Info Trigger (!) */
