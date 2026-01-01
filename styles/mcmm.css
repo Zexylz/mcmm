@@ -1483,6 +1483,7 @@
 }
 
 /* ===== MISC: ACTIVE FILTER CONTAINER ===== */
+
 /* stylelint-disable selector-id-pattern */
 #activeFilterContainer {
     transition: all 0.2s ease;
@@ -1501,6 +1502,7 @@
 /* stylelint-enable selector-id-pattern */
 
 /* ===== BACKUP CARD: INFO + OVERLAY (kept, but removed duplicate grid/card/thumb/info/name overrides) ===== */
+
 /* Info Trigger (!) */
 .mcmm-backup-info-trigger {
     align-items: center !important;
