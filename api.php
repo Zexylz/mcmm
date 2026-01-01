@@ -1,10 +1,12 @@
 <?php
-require_once __DIR__ . '/include/lib.php';
 
 /**
  * MCMM API Handler
  * Handles all API requests for the Minecraft Modpack Manager
  */
+
+require_once __DIR__ . '/include/lib.php';
+
 
 // EMERGENCY DEBUG
 // file_put_contents('/tmp/mcmm_debug.txt', date('Y-m-d H:i:s') . " - HIT " . $_SERVER['REQUEST_METHOD'] . " " . $_SERVER['QUERY_STRING'] . "\n", FILE_APPEND);
@@ -2619,5 +2621,5 @@ function backfillServerIcon(string $containerId, string $containerName, string $
         @file_put_contents($serverDir . '/config.json', json_encode($serverConfig, JSON_PRETTY_PRINT));
     }
 
-    return $icon;d
+    return $icon;
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * MCMM API Library
  * Contains all helper functions for the MCMM API.
@@ -682,9 +683,7 @@ function backfillServerIcon(string $containerId, string $containerName, string $
 
 function jsonResponse($data, int $statusCode = 200): void
 {
-    // Always return 200 OK so the frontend receives the JSON "success": false payload
-    // instead of a generic browser error page or empty response for 500s.
-    http_response_code(200);
+    http_response_code($statusCode);
     echo json_encode($data);
     exit;
 }
