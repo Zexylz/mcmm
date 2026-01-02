@@ -228,12 +228,12 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
             <div class="mcmm-catalog-header">
                 <div class="mcmm-search">
                     <span class="mcmm-search-icon">🔍</span>
-                    <input type="text" class="mcmm-search-input" placeholder="Search modpacks..." id="modpackSearch" onkeyup="filterModpacks()">
+                    <input type="text" class="mcmm-search-input" placeholder="Search modpacks..." id="modpackSearch" onkeyup="filterModpacks()" />
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto;">
                     <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">Fit Images</span>
                     <label class="mcmm-switch">
-                        <input type="checkbox" onchange="toggleImageFit(this)">
+                        <input type="checkbox" onchange="toggleImageFit(this)" />
                         <span class="mcmm-slider"></span>
                     </label>
                 </div>
@@ -260,7 +260,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <label class="mcmm-label">CurseForge API Key</label>
                             <div style="display: flex; gap: 0.75rem; align-items: center;">
                                 <span style="font-size: 1.4rem;">🔑</span>
-                                <input type="text" id="curseforge_api_key" class="mcmm-input" placeholder="Enter your API Key..." autocomplete="off" style="flex: 1;" value="<?php echo htmlspecialchars($config['curseforge_api_key']); ?>">
+                                <input type="text" id="curseforge_api_key" class="mcmm-input" placeholder="Enter your API Key..." autocomplete="off" style="flex: 1;" value="<?php echo htmlspecialchars($config['curseforge_api_key']); ?>" />
                             </div>
                             <div class="mcmm-input-hint">Required to browse and download modpacks from CurseForge.</div>
                         </div>
@@ -272,23 +272,23 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                         <div class="mcmm-form-grid">
                             <div class="mcmm-form-group">
                                 <label class="mcmm-label">Default Server Name</label>
-                                <input type="text" id="default_server_name" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_server_name']); ?>">
+                                <input type="text" id="default_server_name" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_server_name']); ?>" />
                             </div>
                             <div class="mcmm-form-group">
                                 <label class="mcmm-label">Default Port</label>
-                                <input type="number" id="default_port" class="mcmm-input" value="<?php echo $config['default_port']; ?>">
+                                <input type="number" id="default_port" class="mcmm-input" value="<?php echo $config['default_port']; ?>" />
                             </div>
                             <div class="mcmm-form-group">
                                 <label class="mcmm-label">Default Whitelist</label>
-                                <input type="text" id="default_whitelist" class="mcmm-input" placeholder="User1, User2..." value="<?php echo htmlspecialchars($config['default_whitelist']); ?>">
+                                <input type="text" id="default_whitelist" class="mcmm-input" placeholder="User1, User2..." value="<?php echo htmlspecialchars($config['default_whitelist']); ?>" />
                             </div>
                             <div class="mcmm-form-group">
                                 <label class="mcmm-label">Default Icon URL</label>
-                                <input type="text" id="default_icon_url" class="mcmm-input" placeholder="https://..." value="<?php echo htmlspecialchars($config['default_icon_url']); ?>">
+                                <input type="text" id="default_icon_url" class="mcmm-input" placeholder="https://..." value="<?php echo htmlspecialchars($config['default_icon_url']); ?>" />
                             </div>
                             <div class="mcmm-form-group">
                                 <label class="mcmm-label">Default Max Players</label>
-                                <input type="number" id="default_max_players" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_max_players']); ?>">
+                                <input type="number" id="default_max_players" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_max_players']); ?>" />
                             </div>
                         </div>
                     </div>
@@ -299,7 +299,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                         <div class="mcmm-form-grid">
                             <div class="mcmm-form-group">
                                 <label class="mcmm-label">Default Memory</label>
-                                <input type="text" id="default_memory" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_memory']); ?>">
+                                <input type="text" id="default_memory" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_memory']); ?>"/>
                                 <div class="mcmm-ram-presets">
                                     <?php foreach (['4G', '6G', '8G', '10G', '12G'] as $ram) : ?>
                                         <div class="mcmm-ram-pill <?php echo $config['default_memory'] == $ram ? 'active' : ''; ?>" onclick="setRam('<?php echo $ram; ?>')"><?php echo $ram; ?></div>
@@ -321,7 +321,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                         <span class="mcmm-toggle-desc">JVM optimization</span>
                                     </div>
                                     <label class="mcmm-switch">
-                                        <input type="checkbox" id="default_aikar_flags" <?php echo $config['default_aikar_flags'] ? 'checked' : ''; ?>>
+                                        <input type="checkbox" id="default_aikar_flags" <?php echo $config['default_aikar_flags'] ? 'checked' : ''; ?> />
                                         <span class="mcmm-slider"></span>
                                     </label>
                                 </div>
@@ -331,7 +331,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                         <span class="mcmm-toggle-desc">Server optimization</span>
                                     </div>
                                     <label class="mcmm-switch">
-                                        <input type="checkbox" id="default_meowice_flags" <?php echo $config['default_meowice_flags'] ? 'checked' : ''; ?>>
+                                        <input type="checkbox" id="default_meowice_flags" <?php echo $config['default_meowice_flags'] ? 'checked' : ''; ?> />
                                         <span class="mcmm-slider"></span>
                                     </label>
                                 </div>
@@ -341,7 +341,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                         <span class="mcmm-toggle-desc">GC settings</span>
                                     </div>
                                     <label class="mcmm-switch">
-                                        <input type="checkbox" id="default_graalvm_flags" <?php echo $config['default_graalvm_flags'] ? 'checked' : ''; ?>>
+                                        <input type="checkbox" id="default_graalvm_flags" <?php echo $config['default_graalvm_flags'] ? 'checked' : ''; ?> />
                                         <span class="mcmm-slider"></span>
                                     </label>
                                 </div>
@@ -361,7 +361,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                     <span class="mcmm-toggle-desc">Permanent death</span>
                                 </div>
                                 <label class="mcmm-switch">
-                                    <input type="checkbox" id="default_hardcore" <?php echo $config['default_hardcore'] ? 'checked' : ''; ?>>
+                                    <input type="checkbox" id="default_hardcore" <?php echo $config['default_hardcore'] ? 'checked' : ''; ?> />
                                     <span class="mcmm-slider"></span>
                                 </label>
                             </div>
@@ -371,7 +371,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                     <span class="mcmm-toggle-desc">Flight permissions</span>
                                 </div>
                                 <label class="mcmm-switch">
-                                    <input type="checkbox" id="default_allow_flight" <?php echo $config['default_allow_flight'] ? 'checked' : ''; ?>>
+                                    <input type="checkbox" id="default_allow_flight" <?php echo $config['default_allow_flight'] ? 'checked' : ''; ?> />
                                     <span class="mcmm-slider"></span>
                                 </label>
                             </div>
@@ -381,7 +381,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                     <span class="mcmm-toggle-desc">Player combat</span>
                                 </div>
                                 <label class="mcmm-switch">
-                                    <input type="checkbox" id="default_pvp" <?php echo $config['default_pvp'] ? 'checked' : ''; ?>>
+                                    <input type="checkbox" id="default_pvp" <?php echo $config['default_pvp'] ? 'checked' : ''; ?> />
                                     <span class="mcmm-slider"></span>
                                 </label>
                             </div>
@@ -391,7 +391,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                     <span class="mcmm-toggle-desc">Enable command blocks</span>
                                 </div>
                                 <label class="mcmm-switch">
-                                    <input type="checkbox" id="default_command_blocks" <?php echo $config['default_command_blocks'] ? 'checked' : ''; ?>>
+                                    <input type="checkbox" id="default_command_blocks" <?php echo $config['default_command_blocks'] ? 'checked' : ''; ?> />
                                     <span class="mcmm-slider"></span>
                                 </label>
                             </div>
@@ -405,7 +405,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                     <span class="mcmm-toggle-desc">Log rotation</span>
                                 </div>
                                 <label class="mcmm-switch">
-                                    <input type="checkbox" id="default_rolling_logs" <?php echo $config['default_rolling_logs'] ? 'checked' : ''; ?>>
+                                    <input type="checkbox" id="default_rolling_logs" <?php echo $config['default_rolling_logs'] ? 'checked' : ''; ?> />
                                     <span class="mcmm-slider"></span>
                                 </label>
                             </div>
@@ -415,7 +415,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                     <span class="mcmm-toggle-desc">Timestamps</span>
                                 </div>
                                 <label class="mcmm-switch">
-                                    <input type="checkbox" id="default_log_timestamp" <?php echo $config['default_log_timestamp'] ? 'checked' : ''; ?>>
+                                    <input type="checkbox" id="default_log_timestamp" <?php echo $config['default_log_timestamp'] ? 'checked' : ''; ?> />
                                     <span class="mcmm-slider"></span>
                                 </label>
                             </div>
@@ -425,7 +425,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                     <span class="mcmm-toggle-desc">Console access</span>
                                 </div>
                                 <label class="mcmm-switch">
-                                    <input type="checkbox" id="default_direct_console" <?php echo $config['default_direct_console'] ? 'checked' : ''; ?>>
+                                    <input type="checkbox" id="default_direct_console" <?php echo $config['default_direct_console'] ? 'checked' : ''; ?> />
                                     <span class="mcmm-slider"></span>
                                 </label>
                             </div>
@@ -456,7 +456,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
             <div class="mcmm-modal-body" style="display: grid; gap: 1rem; padding: 1.25rem;">
                 <div>
                     <label class="mcmm-label">Server Name</label>
-                    <input type="text" id="deploy_name" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_server_name']); ?>">
+                    <input type="text" id="deploy_name" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_server_name']); ?>" />
                 </div>
 
                 <div class="mcmm-form-group">
@@ -465,10 +465,10 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                         <!-- version buttons injected -->
                     </div>
                     <div id="deployVersionStatus" style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.4rem;">Loading versions...</div>
-                    <input type="hidden" id="deploy_version" value="">
-                    <input type="hidden" id="deploy_java_version" value="">
-                    <input type="hidden" id="deploy_mc_version" value="">
-                    <input type="hidden" id="deploy_loader" value="">
+                    <input type="hidden" id="deploy_version" value="" />
+                    <input type="hidden" id="deploy_java_version" value="" />
+                    <input type="hidden" id="deploy_mc_version" value="" />
+                    <input type="hidden" id="deploy_loader" value="" />
                 </div>
 
                 <div class="mcmm-form-group">
@@ -481,30 +481,30 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                 <div class="mcmm-form-grid">
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Server IP</label>
-                        <input type="text" id="deploy_ip" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_ip']); ?>">
+                        <input type="text" id="deploy_ip" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_ip']); ?>" />
                     </div>
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Port</label>
-                        <input type="number" id="deploy_port" class="mcmm-input" value="<?php echo $config['default_port']; ?>">
+                        <input type="number" id="deploy_port" class="mcmm-input" value="<?php echo $config['default_port']; ?>" />
                     </div>
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Memory</label>
-                        <input type="text" id="deploy_memory" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_memory']); ?>">
+                        <input type="text" id="deploy_memory" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_memory']); ?>" />
                     </div>
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Max Players</label>
-                        <input type="number" id="deploy_max_players" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_max_players']); ?>">
+                        <input type="number" id="deploy_max_players" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_max_players']); ?>" />
                     </div>
                 </div>
 
                 <div class="mcmm-form-grid">
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Whitelist Users</label>
-                        <input type="text" id="deploy_whitelist" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_whitelist']); ?>" placeholder="user1, user2">
+                        <input type="text" id="deploy_whitelist" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_whitelist']); ?>" placeholder="user1, user2" />
                     </div>
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Server Icon URL</label>
-                        <input type="text" id="deploy_icon_url" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_icon_url']); ?>" placeholder="https://...">
+                        <input type="text" id="deploy_icon_url" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_icon_url']); ?>" placeholder="https://..." />
                     </div>
                 </div>
 
@@ -515,7 +515,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-desc">Enable player combat</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="deploy_pvp" <?php echo $config['default_pvp'] ? 'checked' : ''; ?>>
+                            <input type="checkbox" id="deploy_pvp" <?php echo $config['default_pvp'] ? 'checked' : ''; ?> />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -525,7 +525,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-desc">Permanent death</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="deploy_hardcore" <?php echo $config['default_hardcore'] ? 'checked' : ''; ?>>
+                            <input type="checkbox" id="deploy_hardcore" <?php echo $config['default_hardcore'] ? 'checked' : ''; ?> />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -535,7 +535,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-desc">Permit flying in survival</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="deploy_allow_flight" <?php echo $config['default_allow_flight'] ? 'checked' : ''; ?>>
+                            <input type="checkbox" id="deploy_allow_flight" <?php echo $config['default_allow_flight'] ? 'checked' : ''; ?> />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -545,7 +545,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-desc">Enable command blocks</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="deploy_command_blocks" <?php echo $config['default_command_blocks'] ? 'checked' : ''; ?>>
+                            <input type="checkbox" id="deploy_command_blocks" <?php echo $config['default_command_blocks'] ? 'checked' : ''; ?> />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -555,7 +555,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-desc">Rotate logs automatically</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="deploy_rolling_logs" <?php echo $config['default_rolling_logs'] ? 'checked' : ''; ?>>
+                            <input type="checkbox" id="deploy_rolling_logs" <?php echo $config['default_rolling_logs'] ? 'checked' : ''; ?> />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -565,7 +565,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-desc">Add time to logs</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="deploy_log_timestamp" <?php echo $config['default_log_timestamp'] ? 'checked' : ''; ?>>
+                            <input type="checkbox" id="deploy_log_timestamp" <?php echo $config['default_log_timestamp'] ? 'checked' : ''; ?> />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -575,7 +575,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-desc">Use Aikar JVM tuning</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="deploy_aikar_flags" <?php echo $config['default_aikar_flags'] ? 'checked' : ''; ?>>
+                            <input type="checkbox" id="deploy_aikar_flags" <?php echo $config['default_aikar_flags'] ? 'checked' : ''; ?> />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -585,7 +585,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-desc">Extra JVM tweaks</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="deploy_meowice_flags" <?php echo $config['default_meowice_flags'] ? 'checked' : ''; ?>>
+                            <input type="checkbox" id="deploy_meowice_flags" <?php echo $config['default_meowice_flags'] ? 'checked' : ''; ?> />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -595,7 +595,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-desc">Use GraalVM JDK</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="deploy_graalvm_flags" <?php echo $config['default_graalvm_flags'] ? 'checked' : ''; ?>>
+                            <input type="checkbox" id="deploy_graalvm_flags" <?php echo $config['default_graalvm_flags'] ? 'checked' : ''; ?> />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -686,7 +686,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
             <div style="padding: 1rem 1.5rem 0.5rem; display: flex; gap: 1rem; align-items: center;">
                 <div class="mcmm-search" style="flex: 1; max-width: none;">
                     <span class="mcmm-search-icon">🔍</span>
-                    <input type="text" class="mcmm-search-input" placeholder="Search for mods..." id="modSearchInput" onkeyup="filterMods()">
+                    <input type="text" class="mcmm-search-input" placeholder="Search for mods..." id="modSearchInput" onkeyup="filterMods()" />
         </div>
 
                 <!-- Sort Selector (custom dropdown) -->
@@ -700,7 +700,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <div class="mcmm-option" onclick="selectOption('modSortSelect', 'name_desc', 'Sort: Name (Z–A)'); setModSort('name_desc');">Name (Z–A)</div>
                             <div class="mcmm-option" onclick="selectOption('modSortSelect', 'author', 'Sort: Author (A–Z)'); setModSort('author');">Author (A–Z)</div>
                         </div>
-                        <input type="hidden" id="mod_sort_value" value="popular">
+                        <input type="hidden" id="mod_sort_value" value="popular" />
                     </div>
                 </div>
 </div>
@@ -771,35 +771,35 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
             </div>
 
             <div class="mcmm-modal-body" style="display: grid; gap: 1rem; padding: 1.25rem;">
-                <input type="hidden" id="edit_server_id">
+                <input type="hidden" id="edit_server_id" />
 
                 <div class="mcmm-form-grid">
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Server IP</label>
-                        <input type="text" id="edit_ip" class="mcmm-input">
+                        <input type="text" id="edit_ip" class="mcmm-input" />
                     </div>
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Port</label>
-                        <input type="number" id="edit_port" class="mcmm-input">
+                        <input type="number" id="edit_port" class="mcmm-input" />
                     </div>
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Memory</label>
-                        <input type="text" id="edit_memory" class="mcmm-input">
+                        <input type="text" id="edit_memory" class="mcmm-input" />
                     </div>
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Max Players</label>
-                        <input type="number" id="edit_max_players" class="mcmm-input">
+                        <input type="number" id="edit_max_players" class="mcmm-input" />
                     </div>
                 </div>
 
                 <div class="mcmm-form-grid">
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Whitelist Users</label>
-                        <input type="text" id="edit_whitelist" class="mcmm-input" placeholder="user1, user2">
+                        <input type="text" id="edit_whitelist" class="mcmm-input" placeholder="user1, user2" />
                     </div>
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Server Icon URL</label>
-                        <input type="text" id="edit_icon_url" class="mcmm-input" placeholder="https://...">
+                        <input type="text" id="edit_icon_url" class="mcmm-input" placeholder="https://..." />
                         <div id="edit_icon_preview" style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.75rem;">
                             <div style="width:48px; height:48px; border:1px solid var(--border); border-radius:10px; background: rgba(255,255,255,0.04); display:flex; align-items:center; justify-content:center; color: var(--text-muted); font-size:0.8rem;">No Image</div>
                             <div style="color: var(--text-secondary); font-size: 0.85rem;">Preview</div>
@@ -813,7 +813,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-name">PVP</span>
                 </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="edit_pvp">
+                            <input type="checkbox" id="edit_pvp" />
                             <span class="mcmm-slider"></span>
                         </label>
             </div>
@@ -822,7 +822,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-name">Hardcore</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="edit_hardcore">
+                            <input type="checkbox" id="edit_hardcore" />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -831,7 +831,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-name">Allow Flight</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="edit_allow_flight">
+                            <input type="checkbox" id="edit_allow_flight" />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -840,7 +840,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-name">Command Blocks</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="edit_command_blocks">
+                            <input type="checkbox" id="edit_command_blocks" />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -849,7 +849,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-name">Rolling Logs</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="edit_rolling_logs">
+                            <input type="checkbox" id="edit_rolling_logs" />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -858,7 +858,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-name">Log Timestamp</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="edit_log_timestamp">
+                            <input type="checkbox" id="edit_log_timestamp" />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -867,7 +867,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-name">Aikar Flags</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="edit_aikar_flags">
+                            <input type="checkbox" id="edit_aikar_flags" />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -876,7 +876,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-name">Meowice Flags</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="edit_meowice_flags">
+                            <input type="checkbox" id="edit_meowice_flags" />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -885,7 +885,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                             <span class="mcmm-toggle-name">GraalVM</span>
                         </div>
                         <label class="mcmm-switch">
-                            <input type="checkbox" id="edit_graalvm_flags">
+                            <input type="checkbox" id="edit_graalvm_flags" />
                             <span class="mcmm-slider"></span>
                         </label>
                     </div>
@@ -920,7 +920,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
             <div class="mcmm-console-output" id="consoleOutput"></div>
             <div class="mcmm-console-input-container">
                 <span class="mcmm-console-prompt">&gt;_</span>
-                <input type="text" class="mcmm-console-input" id="consoleInput" placeholder="Send command...">
+                <input type="text" class="mcmm-console-input" id="consoleInput" placeholder="Send command..." />
             </div>
         </div>
     </div>
