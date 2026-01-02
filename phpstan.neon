@@ -3,9 +3,9 @@ parameters:
     paths:
         - .
     excludePaths:
-        - vendor
-        - node_modules
-        - .git
+        - vendor (?)
+        - node_modules (?)
+        - .git (?)
     fileExtensions:
         - php
         - page
