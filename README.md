@@ -1,9 +1,9 @@
 ![Style Checks](https://github.com/Zexylz/MCMM/actions/workflows/style-checks.yml/badge.svg)
+![PHP](https://github.com/Zexylz/MCMM/actions/workflows/style-checks.yml/badge.svg?job=php-lint)
+![HTML](https://github.com/Zexylz/MCMM/actions/workflows/style-checks.yml/badge.svg?job=html-lint)
+![CSS](https://github.com/Zexylz/MCMM/actions/workflows/style-checks.yml/badge.svg?job=css-lint)
+![JS](https://github.com/Zexylz/MCMM/actions/workflows/style-checks.yml/badge.svg?job=js-lint)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![PHP Checks](https://github.com/Zexylz/MCMM/actions/workflows/style-checks.yml/badge.svg?job=php-lint)
-![HTMLHint](https://github.com/Zexylz/MCMM/actions/workflows/style-checks.yml/badge.svg?job=html-lint)
-![Stylelint](https://github.com/Zexylz/MCMM/actions/workflows/style-checks.yml/badge.svg?job=css-lint)
-![ESLint](https://github.com/Zexylz/MCMM/actions/workflows/style-checks.yml/badge.svg?job=js-lint)
 
 
 <h1>Modpack Manager (MCMM)</h1>
