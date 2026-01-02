@@ -1,0 +1,37 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Release Package
+        run: |
+          mkdir -p release/mcmm
+          cp -r include release/mcmm/
+          cp -r javascript release/mcmm/
+          cp -r styles release/mcmm/
+          cp api.php release/mcmm/
+          cp default.cfg release/mcmm/
+          cp .htaccess release/mcmm/
+          cp mcmm.page release/mcmm/
+          cp mcmm.plg release/mcmm/
+          cd release
+          zip -r ../mcmm-plugin.zip mcmm
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: mcmm-plugin.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
