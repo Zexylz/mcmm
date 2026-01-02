@@ -1,0 +1,119 @@
+name: Style Checks
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  php-lint:
+    name: PHP Linting (PHPCS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: phpcs, phpstan
+          coverage: none
+
+      - name: Get Composer Cache Directory
+        id: composer-cache
+        run: |
+          echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache PHP dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-php
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Run PHPCS (Style)
+        # Check both .php and .page files
+        run: phpcs --standard=phpcs.xml --extensions=php,page --report=full .
+
+      - name: Run PHPStan (Static Analysis)
+        run: phpstan analyse --memory-limit=1G
+
+  html-lint:
+    name: HTML Linting (HTMLHint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Cache NPM packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-htmlhint
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install HTMLHint
+        run: npm install -g htmlhint
+
+      - name: Run HTMLHint
+        # Check .html files. If none exist, this might fail or do nothing.
+        # Adding a check to only run if files exist creates complexity, 
+        # so we run it and allow failure if it genuinely finds errors in existing files.
+        run: htmlhint "**/*.html"
+
+  css-lint:
+    name: CSS Linting (Stylelint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Cache NPM packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-stylelint
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install Stylelint
+        run: npm install -g stylelint stylelint-config-standard
+
+      - name: Run Stylelint
+        run: stylelint "**/*.css" --config .stylelintrc.json
+
+  js-lint:
+    name: JavaScript Linting (ESLint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Cache NPM packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-eslint
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install ESLint
+        run: npm install -g eslint @eslint/js globals
+
+      - name: Run ESLint
+        run: eslint "**/*.js"
