@@ -127,11 +127,7 @@ function getMinecraftServers()
     }
 
     $debugLog .= "Total servers found: " . count($servers) . "\n";
-<<<<<<< HEAD
     @file_put_contents('/tmp/mcmm_debug_page.log', $debugLog);
-=======
-    @file_put_contents('/tmp/mcmm_page_debug.log', $debugLog);
->>>>>>> 1aaf0a4e21e0718a6efba40976e17f83460360f4
 
     return $servers;
 }
