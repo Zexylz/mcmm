@@ -1,3 +1,11 @@
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![PHP PSR-12](https://img.shields.io/badge/PHP-PSR--12-blue)
+![PHPStan](https://img.shields.io/badge/PHPStan-enabled-brightgreen)
+![ESLint](https://img.shields.io/badge/ESLint-enabled-4B32C3)
+![Stylelint](https://img.shields.io/badge/Stylelint-enabled-263238)
+![HTMLHint](https://img.shields.io/badge/HTMLHint-enabled-orange)
+
+
 <h1>Modpack Manager (MCMM)</h1>
 
 <h2>Overview</h2>
