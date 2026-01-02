@@ -2600,25 +2600,58 @@ function renderBackups(backups) {
         html += `
             <div class="mcmm-modpack-card" style="position: relative; height: 100%;">
                 <div class="mcmm-backup-info-trigger" title="Technical Details">
-                    <span class="material-symbols-outlined">info</span>
                     <div class="mcmm-backup-info-panel">
+                        <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.4; margin-bottom: 0.75rem; font-weight: 800; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">System Manifest</div>
+                        
                         <div class="mcmm-backup-panel-item">
                             <span class="material-symbols-outlined">dns</span>
-                            <span>${serverName}</span>
+                            <div class="mcmm-backup-panel-text">
+                                <label>Container</label>
+                                <span>${serverName}</span>
+                            </div>
                         </div>
                         <div class="mcmm-backup-panel-item">
                             <span class="material-symbols-outlined">database</span>
-                            <span>${sizeMb} MB</span>
+                            <div class="mcmm-backup-panel-text">
+                                <label>Archive Size</label>
+                                <span>${sizeMb} MB</span>
+                            </div>
                         </div>
                         <div class="mcmm-backup-panel-item">
-                            <span class="material-symbols-outlined">schedule</span>
-                            <span>${dateStr} ${timeStr}</span>
+                            <span class="material-symbols-outlined">calendar_today</span>
+                            <div class="mcmm-backup-panel-text">
+                                <label>Created</label>
+                                <span>${dateStr} ${timeStr}</span>
+                            </div>
                         </div>
+                        ${b.mc_version ? `
+                        <div class="mcmm-backup-panel-item">
+                            <span class="material-symbols-outlined">layers</span>
+                            <div class="mcmm-backup-panel-text">
+                                <label>Version</label>
+                                <span>Minecraft ${b.mc_version}</span>
+                            </div>
+                        </div>` : ''}
+                        ${b.loader ? `
+                        <div class="mcmm-backup-panel-item">
+                            <span class="material-symbols-outlined">settings_input_component</span>
+                            <div class="mcmm-backup-panel-text">
+                                <label>Loader</label>
+                                <span style="text-transform: capitalize;">${b.loader}</span>
+                            </div>
+                        </div>` : ''}
                     </div>
                 </div>
 
-                <div class="mcmm-modpack-thumb" style="background-image: url('${iconUrl}'); background-color: rgba(255,255,255,0.03); height: 180px !important;">
-                    ${!iconUrl ? `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);"><span class="material-symbols-outlined" style="font-size: 2.5rem; opacity: 0.5;">inventory</span></div>` : ''}
+                <div class="mcmm-backup-card-thumb-container">
+                    <div class="mcmm-backup-card-bg-blur" style="background-image: url('${iconUrl}');"></div>
+                    <div class="mcmm-backup-card-icon" style="background-image: url('${iconUrl}');">
+                        ${!iconUrl ? `
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); gap: 0.25rem;">
+                                <span class="material-symbols-outlined" style="font-size: 1.8rem; opacity: 0.3;">inventory_2</span>
+                            </div>
+                        ` : ''}
+                    </div>
                 </div>
                 <div class="mcmm-modpack-info">
                     <div class="mcmm-modpack-name" title="${modpackName}">${modpackName}</div>

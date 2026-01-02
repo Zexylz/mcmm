@@ -119,9 +119,11 @@
     bottom: 0;
     content: "";
     height: 1px;
-    left: 2rem;   /* matches horizontal padding */
+    left: 2rem;
+    /* matches horizontal padding */
     position: absolute;
-    right: 2rem;  /* matches horizontal padding */
+    right: 2rem;
+    /* matches horizontal padding */
 }
 
 .mcmm-tab {
@@ -1002,11 +1004,11 @@
     width: 18px !important;
 }
 
-.mcmm-switch input:checked + .mcmm-slider {
+.mcmm-switch input:checked+.mcmm-slider {
     background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%) !important;
 }
 
-.mcmm-switch input:checked + .mcmm-slider::before {
+.mcmm-switch input:checked+.mcmm-slider::before {
     transform: translateX(20px) !important;
 }
 
@@ -1503,48 +1505,64 @@
 
 /* ===== BACKUP CARD: INFO + OVERLAY (kept, but removed duplicate grid/card/thumb/info/name overrides) ===== */
 
-/* Info Trigger (!) */
+/* Info Trigger (i) */
 .mcmm-backup-info-trigger {
     align-items: center !important;
-    backdrop-filter: blur(4px) !important;
-    background: rgb(0 0 0 / 30%) !important;
+    backdrop-filter: blur(12px) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 50% !important;
-    color: rgb(255 255 255 / 40%) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
+    color: white !important;
     cursor: help !important;
     display: flex !important;
-    height: 26px !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 14px !important;
+    font-style: italic !important;
+    font-weight: 900 !important;
+    height: 30px !important;
     justify-content: center !important;
     position: absolute !important;
-    right: 10px !important;
-    top: 10px !important;
-    transition: all 0.2s ease !important;
-    width: 26px !important;
+    right: 12px !important;
+    top: 12px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    width: 30px !important;
     z-index: 25 !important;
+}
+
+.mcmm-backup-info-trigger::before {
+    content: 'i';
+    margin-right: 1px;
+}
+
+.mcmm-backup-info-trigger .material-symbols-outlined {
+    display: none !important;
 }
 
 .mcmm-backup-info-trigger:hover {
     background: var(--primary) !important;
-    color: white !important;
+    border-color: var(--primary-hover) !important;
+    box-shadow: 0 0 15px var(--primary-dim) !important;
     transform: scale(1.1) !important;
 }
 
 /* Floating Info Panel */
 .mcmm-backup-info-panel {
-    backdrop-filter: blur(12px) !important;
-    background: rgb(15 16 28 / 98%) !important;
-    border: 1px solid rgb(255 255 255 / 10%) !important;
-    border-radius: 8px !important;
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 40%) !important;
+    backdrop-filter: blur(20px) !important;
+    background: rgba(10, 11, 20, 0.98) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6) !important;
     opacity: 0 !important;
-    padding: 0.85rem !important;
+    padding: 1.25rem !important;
     position: absolute !important;
     right: 0 !important;
     text-align: left !important;
-    top: 32px !important;
-    transform: translateY(-5px) !important;
-    transition: all 0.2s ease !important;
+    top: 42px !important;
+    transform: translateY(-10px) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     visibility: hidden !important;
-    width: 220px !important;
+    width: 260px !important;
     z-index: 30 !important;
 }
 
@@ -1555,22 +1573,44 @@
 }
 
 .mcmm-backup-panel-item {
-    align-items: center !important;
+    align-items: flex-start !important;
     color: var(--text-secondary) !important;
     display: flex !important;
-    font-size: 0.75rem !important;
-    gap: 0.6rem !important;
-    margin-bottom: 0.5rem !important;
+    gap: 0.85rem !important;
+    margin-bottom: 0.85rem !important;
 }
 
 .mcmm-backup-panel-item:last-child {
     margin-bottom: 0 !important;
 }
 
+.mcmm-backup-panel-text {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+}
+
+.mcmm-backup-panel-text label {
+    font-size: 0.6rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    color: var(--text-muted) !important;
+    font-weight: 700 !important;
+}
+
+.mcmm-backup-panel-text span {
+    font-size: 0.8rem !important;
+    color: var(--text-main) !important;
+    font-weight: 500 !important;
+}
+
 .mcmm-backup-panel-item .material-symbols-outlined {
-    color: var(--primary) !important;
-    font-size: 1rem !important;
-    opacity: 0.8 !important;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 1.15rem !important;
+    margin-top: 2px !important;
 }
 
 /* Tag */
@@ -1582,16 +1622,51 @@
     opacity: 0.8 !important;
 }
 
+/* Thumbnail Area */
+.mcmm-backup-card-thumb-container {
+    height: 180px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.mcmm-backup-card-icon {
+    width: 90px !important;
+    height: 90px !important;
+    border-radius: 20px !important;
+    background-size: cover !important;
+    background-position: center !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    z-index: 2 !important;
+    position: relative !important;
+}
+
+/* Background Blur Effect */
+.mcmm-backup-card-bg-blur {
+    position: absolute !important;
+    inset: -20px !important;
+    background-size: cover !important;
+    background-position: center !important;
+    filter: blur(40px) brightness(0.3) !important;
+    opacity: 0.4 !important;
+    z-index: 1 !important;
+}
+
 /* Actions Overlay - Minimal */
 .mcmm-backup-overlay {
     align-items: center !important;
-    backdrop-filter: blur(4px) !important;
-    background: rgb(11 12 22 / 80%) !important;
+    backdrop-filter: blur(12px) !important;
+    background: rgb(11 12 22 / 70%) !important;
     display: flex !important;
     inset: 0 !important;
     justify-content: center !important;
     opacity: 0 !important;
-    padding: 2rem !important;
+    padding: 2.5rem !important;
     position: absolute !important;
     transition: all 0.3s ease !important;
     z-index: 10 !important;

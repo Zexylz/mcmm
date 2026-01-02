@@ -1295,44 +1295,105 @@ BASH;
             jsonResponse(['success' => true, 'logs' => $data]);
             break;
 
+        case 'debug_backups':
+            $backupDir = '/mnt/user/appdata/mcmm/backups';
+            $files = glob($backupDir . '/*.zip');
+            jsonResponse([
+                'dir' => $backupDir,
+                'exists' => is_dir($backupDir),
+                'files' => $files,
+                'files_count' => count($files ?: [])
+            ]);
+            break;
+
         case 'backups_list':
             $backupDir = '/mnt/user/appdata/mcmm/backups';
             if (!is_dir($backupDir)) {
                 @mkdir($backupDir, 0755, true);
             }
+
+            // Fetch live container info as a fallback for icons/metadata
+            $liveMetadata = [];
+            $dockerOutput = shell_exec('docker ps -a --format "{{.Names}}|{{.Labels}}" 2>/dev/null');
+            if ($dockerOutput) {
+                foreach (explode("\n", trim($dockerOutput)) as $line) {
+                    if (!$line) {
+                        continue;
+                    }
+                    $parts = explode('|', $line, 2);
+                    if (count($parts) < 2) {
+                        continue;
+                    }
+                    $cName = $parts[0];
+                    $labels = $parts[1];
+                    $icon = getLabelValue($labels, 'net.unraid.docker.icon') ?: getLabelValue($labels, 'mcmm.icon') ?: '';
+                    if ($icon) {
+                        $liveMetadata[$cName] = ['icon' => $icon];
+                    }
+                }
+            }
+
             $files = glob($backupDir . '/*.zip');
             $backups = [];
             foreach ($files as $file) {
                 $serverName = '';
                 $stat = stat($file);
                 $name = basename($file);
-                if (preg_match('/backup_(.*)_\d+\.zip/', $name, $m)) {
+                if (preg_match('/backup_(.*)_(\d+)\.zip/', $name, $m)) {
                     $serverName = $m[1];
-                }
+                    $timestamp = $m[2];
 
-                // Load server config for metadata by searching through all server folders
-                $cfg = [];
-                $serversDir = '/boot/config/plugins/mcmm/servers';
-                $serversSearch = glob($serversDir . '/*/config.json');
-                if ($serversSearch) {
-                    foreach ($serversSearch as $cfgFile) {
-                        $tempCfg = json_decode(@file_get_contents($cfgFile), true);
-                        if ($tempCfg && isset($tempCfg['containerName']) && $tempCfg['containerName'] === $serverName) {
-                            $cfg = $tempCfg;
-                            break;
+                    // Identify slug for fallback lookup
+                    $slugCandidate = $serverName;
+                    if (preg_match('/^(.*?)-[a-f0-9]{6}$/', $serverName, $sm)) {
+                        $slugCandidate = $sm[1];
+                    }
+
+                    // Load server config for metadata
+                    $cfg = [];
+                    $serversDir = '/boot/config/plugins/mcmm/servers';
+                    $serversSearch = glob($serversDir . '/*/config.json');
+
+                    if ($serversSearch) {
+                        // Pass 1: Direct container name match (Best)
+                        foreach ($serversSearch as $cfgFile) {
+                            $tempCfg = json_decode(@file_get_contents($cfgFile), true);
+                            if ($tempCfg && isset($tempCfg['containerName']) && $tempCfg['containerName'] === $serverName) {
+                                $cfg = $tempCfg;
+                                break;
+                            }
+                        }
+
+                        // Pass 2: Slug match (Fallback)
+                        if (empty($cfg)) {
+                            foreach ($serversSearch as $cfgFile) {
+                                $tempCfg = json_decode(@file_get_contents($cfgFile), true);
+                                if ($tempCfg && ((isset($tempCfg['slug']) && $tempCfg['slug'] === $slugCandidate) || (isset($tempCfg['name']) && safeContainerName($tempCfg['name']) === safeContainerName($serverName)))) {
+                                    $cfg = $tempCfg;
+                                    break;
+                                }
+                            }
                         }
                     }
-                }
 
-                $backups[] = [
-                    'name' => $name,
-                    'size' => $stat['size'],
-                    'date' => $stat['mtime'],
-                    'server' => $serverName,
-                    'icon' => $cfg['icon'] ?? $cfg['logo'] ?? $cfg['icon_url'] ?? '',
-                    'author' => $cfg['author'] ?? 'Unknown',
-                    'modpack' => $cfg['modpackName'] ?? $cfg['modpack'] ?? $cfg['name'] ?? $serverName
-                ];
+                    // Pass 3: Live Docker match (Fallback if still no icon)
+                    $icon = $cfg['icon'] ?? $cfg['logo'] ?? $cfg['icon_url'] ?? '';
+                    if (!$icon && isset($liveMetadata[$serverName])) {
+                        $icon = $liveMetadata[$serverName]['icon'];
+                    }
+
+                    $backups[] = [
+                        'name' => $name,
+                        'size' => $stat['size'],
+                        'date' => (int)$timestamp ?: $stat['mtime'],
+                        'server' => $serverName,
+                        'icon' => $icon,
+                        'author' => $cfg['author'] ?? 'Unknown',
+                        'modpack' => $cfg['modpackName'] ?? $cfg['modpack'] ?? $cfg['name'] ?? $serverName,
+                        'mc_version' => $cfg['mc_version'] ?? '',
+                        'loader' => $cfg['loader'] ?? ''
+                    ];
+                }
             }
             // Sort by date desc
             usort($backups, function ($a, $b) {
