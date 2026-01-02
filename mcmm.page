@@ -63,7 +63,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
     <title>Modpack Manager</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
-    <link rel="stylesheet" href="/plugins/mcmm/styles/mcmm.css">
+    <link rel="stylesheet" href="/plugins/mcmm/styles/mcmm.css?v=<?php echo time(); ?>">
     <style>
         /* Narrower deploy modal override */
         #deployModal .mcmm-modal {
