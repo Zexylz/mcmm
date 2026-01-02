@@ -120,9 +120,11 @@
     content: "";
     height: 1px;
     left: 2rem;
+
     /* matches horizontal padding */
     position: absolute;
     right: 2rem;
+
     /* matches horizontal padding */
 }
 
@@ -1509,14 +1511,14 @@
 .mcmm-backup-info-trigger {
     align-items: center !important;
     backdrop-filter: blur(12px) !important;
-    background: rgba(255, 255, 255, 0.1) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgb(255 255 255 / 10%) !important;
+    border: 1px solid rgb(255 255 255 / 10%) !important;
     border-radius: 50% !important;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 4px 10px rgb(0 0 0 / 30%) !important;
     color: white !important;
     cursor: help !important;
     display: flex !important;
-    font-family: 'Outfit', sans-serif !important;
+    font-family: Outfit, sans-serif !important;
     font-size: 14px !important;
     font-style: italic !important;
     font-weight: 900 !important;
@@ -1549,10 +1551,10 @@
 /* Floating Info Panel */
 .mcmm-backup-info-panel {
     backdrop-filter: blur(20px) !important;
-    background: rgba(10, 11, 20, 0.98) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgb(10 11 20 / 98%) !important;
+    border: 1px solid rgb(255 255 255 / 10%) !important;
     border-radius: 14px !important;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6) !important;
+    box-shadow: 0 15px 35px rgb(0 0 0 / 60%) !important;
     opacity: 0 !important;
     padding: 1.25rem !important;
     position: absolute !important;
@@ -1607,6 +1609,7 @@
 .mcmm-backup-panel-item .material-symbols-outlined {
     background: linear-gradient(135deg, var(--primary), var(--secondary));
     background-clip: text;
+    /* stylelint-disable-next-line property-no-vendor-prefix */
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-size: 1.15rem !important;
@@ -1628,8 +1631,8 @@
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    background: rgba(255, 255, 255, 0.02) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    background: rgb(255 255 255 / 2%) !important;
+    border-bottom: 1px solid rgb(255 255 255 / 5%) !important;
     position: relative !important;
     overflow: hidden !important;
 }
@@ -1640,8 +1643,8 @@
     border-radius: 20px !important;
     background-size: cover !important;
     background-position: center !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 50%) !important;
+    border: 1px solid rgb(255 255 255 / 15%) !important;
     z-index: 2 !important;
     position: relative !important;
 }
