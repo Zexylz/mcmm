@@ -6,6 +6,15 @@ on:
       - main
     tags:
       - 'v*'
+    paths:
+      - include/**
+      - javascript/**
+      - styles/**
+      - api.php
+      - default.cfg
+      - .htaccess
+      - mcmm.page
+      - mcmm.plg
   workflow_dispatch:
 
 jobs:
@@ -13,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
