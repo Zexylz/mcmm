@@ -11,6 +11,7 @@ Icon="cubes"
 
 // Load Config
 $plugin = 'mcmm';
+// @phpstan-ignore-next-line
 $config = parse_plugin_cfg($plugin);
 $docroot = $_SERVER['DOCUMENT_ROOT'] ?? '/usr/local/emhttp';
 
@@ -966,7 +967,8 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
 
 <script>
     const mcmmConfig = <?php echo json_encode($clientConfig); ?>;
-    const csrfToken = "<?php echo $var['csrf_token']; ?>";
+    // @phpstan-ignore-next-line
+    const csrfToken = "<?php echo $var['csrf_token'] ?? ''; ?>";
 </script>
 <script src="/plugins/mcmm/javascript/mcmm.js?v=<?php echo time(); ?>"></script>
 </body>

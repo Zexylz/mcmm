@@ -79,7 +79,7 @@ if (ob_get_length()) {
     ob_clean();
 }
 
-dbg("API Loaded. Action: " . ($action ?? 'none'));
+dbg("API Loaded. Action: " . ($action ? $action : 'none'));
 
 // Ensure log dir exists (no longer needed for /tmp, but keeping structure safe)
 // if (!is_dir('/var/log/plugins')) @mkdir('/var/log/plugins', 0755, true);
@@ -394,7 +394,7 @@ try {
                         $verQuery = !empty($params) ? '?' . http_build_query($params) : '';
                         $versions = mrRequest('/project/' . $proj['id'] . '/version' . $verQuery);
 
-                        if ($versions && !empty($versions)) {
+                        if (!empty($versions)) {
                             $latest = $versions[0];
                             $primaryFile = null;
                             foreach ($latest['files'] as $f) {
@@ -667,7 +667,7 @@ try {
                                 'ports' => $port,
                                 'image' => $image,
                                 'icon' => $icon,
-                                'ram' => round(min(max($ramUsagePercent ?? 0, 0), 100), 1),
+                                'ram' => round(min(max((float)$ramUsagePercent, 0), 100), 1),
                                 'ramUsedMb' => round($ramUsedMb, 1),
                                 'ramLimitMb' => $ramLimitMb,
                                 'ramConfigMb' => $configMem,
@@ -1303,6 +1303,7 @@ BASH;
             $files = glob($backupDir . '/*.zip');
             $backups = [];
             foreach ($files as $file) {
+                $serverName = '';
                 $stat = stat($file);
                 $name = basename($file);
                 if (preg_match('/backup_(.*)_\d+\.zip/', $name, $m)) {
@@ -1717,7 +1718,11 @@ BASH;
 
             dbg("Identifying mod from filename '$filename' -> Query: '$query'");
 
-            $config = @include '/boot/config/plugins/mcmm/config.php' ?: [];
+            $configPath = '/boot/config/plugins/mcmm/config.php';
+            $config = file_exists($configPath) ? @include $configPath : [];
+            if (!is_array($config)) {
+                $config = [];
+            }
 
             // Try CurseForge first
             $cfResult = [];
