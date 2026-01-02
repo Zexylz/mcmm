@@ -34,11 +34,10 @@ jobs:
             ${{ runner.os }}-composer-
 
       - name: Run PHPCS (Style)
-        # Check both .php and .page files
-        run: phpcs --standard=phpcs.xml --extensions=php,page --report=full .
+        run: phpcs --standard=.github/linters/phpcs.xml --extensions=php,page --report=full .
 
       - name: Run PHPStan (Static Analysis)
-        run: phpstan analyse --memory-limit=1G
+        run: phpstan analyse --configuration=.github/linters/phpstan.neon --memory-limit=1G
 
   html-lint:
     name: HTML Linting (HTMLHint)
@@ -63,10 +62,7 @@ jobs:
         run: npm install -g htmlhint
 
       - name: Run HTMLHint
-        # Check .html files. If none exist, this might fail or do nothing.
-        # Adding a check to only run if files exist creates complexity, 
-        # so we run it and allow failure if it genuinely finds errors in existing files.
-        run: htmlhint "**/*.html"
+        run: htmlhint --config .github/linters/.htmlhintrc "**/*.html"
 
   css-lint:
     name: CSS Linting (Stylelint)
@@ -91,7 +87,7 @@ jobs:
         run: npm install -g stylelint stylelint-config-standard
 
       - name: Run Stylelint
-        run: stylelint "**/*.css" --config .stylelintrc.json
+        run: stylelint "**/*.css" --config .github/linters/.stylelintrc.json
 
   js-lint:
     name: JavaScript Linting (ESLint)
@@ -112,8 +108,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Install ESLint
-        run: npm install -g eslint @eslint/js globals
+      - name: Install ESLint (Flat Config)
+        run: npm install -g eslint@^9 @eslint/js globals
 
       - name: Run ESLint
-        run: eslint "**/*.js"
+        run: eslint "**/*.js" --config .github/linters/eslint.config.mjs
