@@ -186,7 +186,11 @@ if (!function_exists('write_ini_file')) {
 // Debug log function
 function dbg($msg)
 {
+<<<<<<< HEAD
     $logFile = '/tmp/mcmm.log';
+=======
+    $logFile = dirname(__DIR__) . '/mcmm.log';
+>>>>>>> 1aaf0a4e21e0718a6efba40976e17f83460360f4
     $timestamp = date('Y-m-d H:i:s');
     file_put_contents($logFile, "[$timestamp] $msg\n", FILE_APPEND);
 }
