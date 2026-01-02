@@ -40,25 +40,55 @@ jobs:
         run: phpstan analyse --configuration=.github/linters/phpstan.neon --memory-limit=1G
 
   node-lint:
-    name: Web Linting (ESLint + Stylelint + HTMLHint)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+      name: Web Linting (ESLint + Stylelint + HTMLHint)
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
+        - name: Setup Node.js
+          uses: actions/setup-node@v4
+          with:
+            node-version: '20'
+            cache: 'npm'
 
-      - name: Install Node dependencies
-        run: npm ci
+        - name: Install Node dependencies
+          run: npm ci --no-audit --no-fund
 
-      - name: Run ESLint
-        run: npx eslint "**/*.js" --config .github/linters/eslint.config.mjs
+        - name: Run ESLint
+          run: npx eslint "**/*.js" --config .github/linters/eslint.config.mjs
 
-      - name: Run Stylelint
-        run: npx stylelint "**/*.css" --config .github/linters/.stylelintrc.json
+        - name: Run Stylelint
+          run: npx stylelint "**/*.css" --config .github/linters/.stylelintrc.json
 
-      - name: Run HTMLHint
-        run: npx htmlhint --config .github/linters/.htmlhintrc "**/*.html"
+        - name: Prepare .page files for HTMLHint (strip frontmatter + PHP)
+          shell: bash
+          run: |
+            set -euo pipefail
+            mkdir -p .tmp-htmlhint
+            shopt -s globstar nullglob
+
+            for f in **/*.page; do
+              out=".tmp-htmlhint/${f%.page}.html"
+              mkdir -p "$(dirname "$out")"
+
+              # 1) Frontmatter entfernen: alles bis zum ersten "---" nach den Header-Zeilen
+              # 2) Nur den HTML-Teil behalten: ab <!DOCTYPE ... oder <html ... bis zum Ende
+              #    (damit PHP vor dem HTML nicht stört)
+              awk '
+                BEGIN { in_front=1; in_html=0; dash_count=0 }
+                {
+                  if (in_front) {
+                    if ($0 ~ /^---[[:space:]]*$/) { dash_count++; if (dash_count>=1) in_front=0 }
+                    next
+                  }
+                  if (!in_html) {
+                    if (tolower($0) ~ /<!doctype html/ || tolower($0) ~ /<html[[:space:]>]/) { in_html=1 }
+                    else next
+                  }
+                  print
+                }
+              ' "$f" > "$out"
+            done
+
+        - name: Run HTMLHint (on extracted HTML)
+          run: npx htmlhint --config .github/linters/.htmlhintrc ".tmp-htmlhint/**/*.html"
