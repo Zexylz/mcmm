@@ -3,9 +3,10 @@ parameters:
     paths:
         - ../../.
     excludePaths:
-        - ../../vendor
-        - ../../node_modules
-        - ../../.git
+        analyseAndScan:
+            - ../../vendor (?)
+            - ../../node_modules (?)
+            - ../../.git (?)
     fileExtensions:
         - php
         - page
