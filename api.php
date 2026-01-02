@@ -1718,12 +1718,6 @@ BASH;
 
             dbg("Identifying mod from filename '$filename' -> Query: '$query'");
 
-            $configPath = '/boot/config/plugins/mcmm/config.php';
-            $config = file_exists($configPath) ? @include $configPath : [];
-            if (!is_array($config)) {
-                $config = [];
-            }
-
             // Try CurseForge first
             $cfResult = [];
             if (!empty($config['curseforge_api_key'])) {
