@@ -1,4 +1,5 @@
 ![Style Checks](https://github.com/Zexylz/MCMM/actions/workflows/style-checks.yml/badge.svg)
+![Open Issues](https://img.shields.io/github/issues/Zexylz/MCMM)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
 ![PHP PSR-12](https://img.shields.io/badge/PHP-PSR--12-blue)
