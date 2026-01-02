@@ -49,20 +49,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
 
-      - name: Cache NPM packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-htmlhint
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install HTMLHint
-        run: npm install -g htmlhint
+      - name: Install Node dependencies
+        run: npm ci
 
       - name: Run HTMLHint
-        run: htmlhint --config .github/linters/.htmlhintrc "**/*.html"
+        run: npx htmlhint --config .github/linters/.htmlhintrc "**/*.html"
 
   css-lint:
     name: CSS Linting (Stylelint)
@@ -74,20 +67,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
 
-      - name: Cache NPM packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-stylelint
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install Stylelint
-        run: npm install -g stylelint stylelint-config-standard
+      - name: Install Node dependencies
+        run: npm ci
 
       - name: Run Stylelint
-        run: stylelint "**/*.css" --config .github/linters/.stylelintrc.json
+        run: npx stylelint "**/*.css" --config .github/linters/.stylelintrc.json
 
   js-lint:
     name: JavaScript Linting (ESLint)
@@ -99,17 +85,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
 
-      - name: Cache NPM packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-eslint
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install ESLint (Flat Config)
-        run: npm install -g eslint@^9 @eslint/js globals
+      - name: Install Node dependencies
+        run: npm ci
 
       - name: Run ESLint
-        run: eslint "**/*.js" --config .github/linters/eslint.config.mjs
+        run: npx eslint "**/*.js" --config .github/linters/eslint.config.mjs
