@@ -1,6 +1,22 @@
 name: Style Checks
 
 on:
+  workflow_dispatch:
+    inputs:
+      run_mode:
+        description: "Select what to run"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - phpcs
+          - phpstan
+          - php
+          - eslint
+          - stylelint
+          - htmlhint
+          - web
   push:
     branches: [ "main" ]
   pull_request:
@@ -10,6 +26,8 @@ jobs:
   php-lint:
     name: PHP Linting (PHPCS + PHPStan)
     runs-on: ubuntu-latest
+    # Push/PR => immer. Manuell => nur bei all/php/phpcs/phpstan
+    if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","php","phpcs","phpstan"]'), inputs.run_mode) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -34,61 +52,70 @@ jobs:
             ${{ runner.os }}-composer-
 
       - name: Run PHPCS (Style)
+        if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","php","phpcs"]'), inputs.run_mode) }}
         run: phpcs --standard=.github/linters/phpcs.xml --extensions=php,page --report=full .
 
       - name: Run PHPStan (Static Analysis)
+        if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","php","phpstan"]'), inputs.run_mode) }}
         run: phpstan analyse --configuration=.github/linters/phpstan.neon --memory-limit=1G
 
   node-lint:
-      name: Web Linting (ESLint + Stylelint + HTMLHint)
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
+    name: Web Linting (ESLint + Stylelint + HTMLHint)
+    runs-on: ubuntu-latest
+    # Push/PR => immer. Manuell => nur bei all/web/eslint/stylelint/htmlhint
+    if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","web","eslint","stylelint","htmlhint"]'), inputs.run_mode) }}
+    steps:
+      - uses: actions/checkout@v4
 
-        - name: Setup Node.js
-          uses: actions/setup-node@v4
-          with:
-            node-version: '20'
-            cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-        - name: Install Node dependencies
-          run: npm ci --no-audit --no-fund
+      - name: Install Node dependencies
+        run: npm ci --no-audit --no-fund
 
-        - name: Run ESLint
-          run: npx eslint "**/*.js" --config .github/linters/eslint.config.mjs
+      - name: Run ESLint
+        if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","web","eslint"]'), inputs.run_mode) }}
+        run: npx eslint "**/*.js" --config .github/linters/eslint.config.mjs
 
-        - name: Run Stylelint
-          run: npx stylelint "**/*.css" --config .github/linters/.stylelintrc.json
+      - name: Run Stylelint
+        if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","web","stylelint"]'), inputs.run_mode) }}
+        run: npx stylelint "**/*.css" --config .github/linters/.stylelintrc.json
 
-        - name: Prepare .page files for HTMLHint (strip frontmatter + PHP)
-          shell: bash
-          run: |
-            set -euo pipefail
-            mkdir -p .tmp-htmlhint
-            shopt -s globstar nullglob
+      - name: Prepare .page files for HTMLHint (strip frontmatter + PHP)
+        # Nur nötig, wenn HTMLHint überhaupt laufen soll (Push/PR immer; manuell bei all/web/htmlhint)
+        if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","web","htmlhint"]'), inputs.run_mode) }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp-htmlhint
+          shopt -s globstar nullglob
 
-            for f in **/*.page; do
-              out=".tmp-htmlhint/${f%.page}.html"
-              mkdir -p "$(dirname "$out")"
+          for f in **/*.page; do
+            out=".tmp-htmlhint/${f%.page}.html"
+            mkdir -p "$(dirname "$out")"
 
-              # 1) Frontmatter entfernen: alles bis zum ersten "---" nach den Header-Zeilen
-              # 2) Nur den HTML-Teil behalten: ab <!DOCTYPE ... oder <html ... bis zum Ende
-              #    (damit PHP vor dem HTML nicht stört)
-              awk '
-                BEGIN { in_front=1; in_html=0; dash_count=0 }
-                {
-                  if (in_front) {
-                    if ($0 ~ /^---[[:space:]]*$/) { dash_count++; if (dash_count>=1) in_front=0 }
-                    next
-                  }
-                  if (!in_html) {
-                    if (tolower($0) ~ /<!doctype html/ || tolower($0) ~ /<html[[:space:]>]/) { in_html=1 }
-                    else next
-                  }
-                  print
+            # 1) Frontmatter entfernen: alles bis zum ersten "---" nach den Header-Zeilen
+            # 2) Nur den HTML-Teil behalten: ab <!DOCTYPE ... oder <html ... bis zum Ende
+            #    (damit PHP vor dem HTML nicht stört)
+            awk '
+              BEGIN { in_front=1; in_html=0; dash_count=0 }
+              {
+                if (in_front) {
+                  if ($0 ~ /^---[[:space:]]*$/) { dash_count++; if (dash_count>=1) in_front=0 }
+                  next
                 }
-              ' "$f" > "$out"
-            done
+                if (!in_html) {
+                  if (tolower($0) ~ /<!doctype html/ || tolower($0) ~ /<html[[:space:]>]/) { in_html=1 }
+                  else next
+                }
+                print
+              }
+            ' "$f" > "$out"
+          done
 
-        - name: Run HTMLHint (on extracted HTML)
-          run: npx htmlhint --config .github/linters/.htmlhintrc ".tmp-htmlhint/**/*.html"
+      - name: Run HTMLHint (on extracted HTML)
+        if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","web","htmlhint"]'), inputs.run_mode) }}
+        run: npx htmlhint --config .github/linters/.htmlhintrc ".tmp-htmlhint/**/*.html"
