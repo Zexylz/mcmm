@@ -8,7 +8,7 @@ on:
 
 jobs:
   php-lint:
-    name: PHP Linting (PHPCS)
+    name: PHP Linting (PHPCS + PHPStan)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,44 +39,8 @@ jobs:
       - name: Run PHPStan (Static Analysis)
         run: phpstan analyse --configuration=.github/linters/phpstan.neon --memory-limit=1G
 
-  html-lint:
-    name: HTML Linting (HTMLHint)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install Node dependencies
-        run: npm ci
-
-      - name: Run HTMLHint
-        run: npx htmlhint --config .github/linters/.htmlhintrc "**/*.html"
-
-  css-lint:
-    name: CSS Linting (Stylelint)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install Node dependencies
-        run: npm ci
-
-      - name: Run Stylelint
-        run: npx stylelint "**/*.css" --config .github/linters/.stylelintrc.json
-
-  js-lint:
-    name: JavaScript Linting (ESLint)
+  node-lint:
+    name: Web Linting (ESLint + Stylelint + HTMLHint)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -92,3 +56,9 @@ jobs:
 
       - name: Run ESLint
         run: npx eslint "**/*.js" --config .github/linters/eslint.config.mjs
+
+      - name: Run Stylelint
+        run: npx stylelint "**/*.css" --config .github/linters/.stylelintrc.json
+
+      - name: Run HTMLHint
+        run: npx htmlhint --config .github/linters/.htmlhintrc "**/*.html"
