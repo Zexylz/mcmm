@@ -37,20 +37,24 @@ jobs:
           php-version: '8.5'
           tools: phpcs, phpstan
           coverage: none
-          cache: composer
 
       - name: Get Composer Cache Directory
         id: composer-cache
-        run: |
-          echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
-      - name: Cache PHP dependencies
-        uses: actions/cache@v3
+      - name: Ensure Composer cache directory exists
+        run: mkdir -p "${{ steps.composer-cache.outputs.dir }}"
+
+      - name: Cache Composer files
+        uses: actions/cache@v4
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-php
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: |
             ${{ runner.os }}-composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
 
       - name: Run PHPCS (Style)
         if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","php","phpcs"]'), inputs.run_mode) }}
