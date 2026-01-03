@@ -18,9 +18,9 @@ on:
           - htmlhint
           - web
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   php-lint:
@@ -34,22 +34,9 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
+          php-version: "8.5"
           tools: phpcs, phpstan
           coverage: none
-
-      - name: Get Composer Cache Directory
-        id: composer-cache
-        run: |
-          echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-
-      - name: Cache PHP dependencies
-        uses: actions/cache@v3
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-php
-          restore-keys: |
-            ${{ runner.os }}-composer-
 
       - name: Run PHPCS (Style)
         if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","php","phpcs"]'), inputs.run_mode) }}
@@ -70,8 +57,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install Node dependencies
         run: npm ci --no-audit --no-fund
@@ -85,7 +72,6 @@ jobs:
         run: npx stylelint "**/*.css" --config .github/linters/.stylelintrc.json
 
       - name: Prepare .page files for HTMLHint (strip frontmatter + PHP)
-        # Nur nötig, wenn HTMLHint überhaupt laufen soll (Push/PR immer; manuell bei all/web/htmlhint)
         if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","web","htmlhint"]'), inputs.run_mode) }}
         shell: bash
         run: |
@@ -97,9 +83,6 @@ jobs:
             out=".tmp-htmlhint/${f%.page}.html"
             mkdir -p "$(dirname "$out")"
 
-            # 1) Frontmatter entfernen: alles bis zum ersten "---" nach den Header-Zeilen
-            # 2) Nur den HTML-Teil behalten: ab <!DOCTYPE ... oder <html ... bis zum Ende
-            #    (damit PHP vor dem HTML nicht stört)
             awk '
               BEGIN { in_front=1; in_html=0; dash_count=0 }
               {
