@@ -37,6 +37,7 @@ jobs:
           php-version: '8.5'
           tools: phpcs, phpstan
           coverage: none
+          cache: composer
 
       - name: Get Composer Cache Directory
         id: composer-cache
