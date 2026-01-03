@@ -34,27 +34,22 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.5'
+          php-version: '8.1'
           tools: phpcs, phpstan
           coverage: none
 
       - name: Get Composer Cache Directory
         id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+        run: |
+          echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
-      - name: Ensure Composer cache directory exists
-        run: mkdir -p "${{ steps.composer-cache.outputs.dir }}"
-
-      - name: Cache Composer files
-        uses: actions/cache@v4
+      - name: Cache PHP dependencies
+        uses: actions/cache@v3
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          key: ${{ runner.os }}-composer-php
           restore-keys: |
             ${{ runner.os }}-composer-
-
-      - name: Install Composer dependencies
-        run: composer install --no-interaction --no-progress --prefer-dist
 
       - name: Run PHPCS (Style)
         if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","php","phpcs"]'), inputs.run_mode) }}
