@@ -37,7 +37,7 @@ jobs:
         if: github.ref_type != 'tag'
         run: echo "DATE=$(date -u +%Y%m%d)" >> $GITHUB_ENV
 
-      # Nightly changelog generieren (schön & technisch, robust gegen EOF-Probleme)
+      # Nightly changelog generieren (stabil, squash-friendly, mit PR-Links)
       - name: Generate Nightly Changelog (pretty, squash-friendly)
         if: github.ref_type != 'tag'
         shell: bash
