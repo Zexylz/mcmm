@@ -71,7 +71,9 @@ jobs:
               echo "No previous nightly tag found. This is the first nightly release."
               echo
               echo "### Changes"
+              echo
               git log -n 50 --no-merges --pretty=format:"- %s (\`%h\`, %an)"
+              echo
             } >> "$OUT"
           else
             {
@@ -124,14 +126,20 @@ jobs:
               if [[ -n "${sections[$key]}" ]]; then
                 echo "### $key" >> "$OUT"
                 echo >> "$OUT"
-                echo "${sections[$key]}" >> "$OUT"
+                printf "%s\n" "${sections[$key]}" >> "$OUT"
+                echo >> "$OUT"
               fi
             done
           fi
 
+          # Wichtig: Stelle sicher, dass die Datei mit Newline endet
+          echo >> "$OUT"
+
+          # Robust in GITHUB_ENV schreiben: Delimiter garantiert in eigener Zeile
           {
             echo "CHANGELOG<<EOF"
             cat "$OUT"
+            echo ""     # garantiert Zeilenumbruch vor EOF
             echo "EOF"
           } >> "$GITHUB_ENV"
 
