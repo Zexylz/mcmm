@@ -15,8 +15,6 @@
 
     <!-- Sauberkeit -->
     <rule ref="Squiz.WhiteSpace.SuperfluousWhitespace"/>
-    <rule ref="SlevomatCodingStandard.Namespaces.UnusedUses"/>
-    <rule ref="Generic.WhiteSpace.DisallowMultipleSpaces"/>
 
     <file>.</file>
 </ruleset>
