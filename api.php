@@ -314,17 +314,17 @@ try {
                 jsonResponse(['success' => true, 'updates' => []]);
             }
 
-            $installed = json_decode(file_get_contents($metaFile), true) ?: [];
-            if (empty($installed)) {
-                jsonResponse(['success' => true, 'updates' => []]);
-            }
+            // Fetch server config and env
+            $cfgFile = "/boot/config/plugins/mcmm/servers/$id/config.json";
+            $srvCfg = file_exists($cfgFile) ? json_decode(file_get_contents($cfgFile), true) : [];
+            $env = []; // In check_updates we primarily rely on stored config, but initialize to avoid errors
 
             // Group by platform
             $cfIds = [];
             $mrIds = [];
             foreach ($installed as $mid => $info) {
-                $platform = $srvCfg['platform'] ?? ($env['MODRINTH_ID'] ? 'modrinth' : ($env['CF_MODPACK_ID'] ? 'curseforge' : ''));
-                if (($info['platform'] ?? '') === 'modrinth') {
+                $platform = $info['platform'] ?? $srvCfg['platform'] ?? ($env['MODRINTH_ID'] ?? null ? 'modrinth' : ($env['CF_MODPACK_ID'] ?? null ? 'curseforge' : ''));
+                if ($platform === 'modrinth') {
                     $mrIds[] = $mid;
                 } else {
                     $cfIds[] = (int) $mid;
