@@ -1844,3 +1844,82 @@ XML;
         'download' => $downloadUrl
     ]);
 }
+
+/**
+ * Get internal players and max players using multiple check methods
+ */
+function getMinecraftLiveStats($containerId, $hostPort, $env)
+{
+    $online = 0;
+    $max = isset($env['MAX_PLAYERS']) ? intval($env['MAX_PLAYERS']) : 20;
+    $log = "--- Player Ping Diagnostics for $containerId (" . date('H:i:s') . ") ---\n";
+
+    // 1. Try Internal mc-monitor (TCP) - Fastest and very reliable
+    $internalPort = isset($env['SERVER_PORT']) ? intval($env['SERVER_PORT']) : 25565;
+    $cmd = "docker exec " . escapeshellarg($containerId) . " mc-monitor status --json 127.0.0.1:$internalPort 2>/dev/null";
+    $statusRes = shell_exec($cmd);
+    $log .= "Method 1 (mc-monitor): " . ($statusRes ? "SUCCESS" : "FAILED") . "\n";
+    if ($statusRes) {
+        $jd = json_decode($statusRes, true);
+        if (isset($jd['players'])) {
+            @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $jd['players']['online'] . "/" . $jd['players']['max'] . "\n\n", FILE_APPEND);
+            return ['online' => intval($jd['players']['online']), 'max' => intval($jd['players']['max'])];
+        }
+    }
+
+    // 2. Try RCON (Authoritative)
+    $rconPass = $env['RCON_PASSWORD'] ?? '';
+    if ($rconPass) {
+        $rconPort = isset($env['RCON_PORT']) ? intval($env['RCON_PORT']) : 25575;
+        $rconCmd = "docker exec " . escapeshellarg($containerId) . " rcon-cli --port $rconPort --password " . escapeshellarg($rconPass) . " list 2>/dev/null";
+        $rconOut = shell_exec($rconCmd);
+        $log .= "Method 2 (RCON): " . ($rconOut ? "SUCCESS" : "FAILED") . "\n";
+        // Flexible regex for both Vanilla and Modded "list" outputs
+        if ($rconOut && preg_match('/(?:There are|online:?) (\d+) (?:of|out of|\/) a max of (\d+)/i', $rconOut, $m)) {
+            @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $m[1] . "/" . $m[2] . "\n\n", FILE_APPEND);
+            return ['online' => intval($m[1]), 'max' => intval($m[2])];
+        }
+        // Fallback for just the number if regex above is too strict
+        if ($rconOut && preg_match('/There are (\d+) /i', $rconOut, $m)) {
+            @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $m[1] . "/20 (partial match)\n\n", FILE_APPEND);
+            return ['online' => intval($m[1]), 'max' => $max];
+        }
+    }
+
+    // 3. Try Host-Level Ping (Native PHP) - Fallback for networking issues
+    $log .= "Method 3 (Host Ping): Pinging 127.0.0.1:$hostPort\n";
+    $hostPing = getMinecraftStatus('127.0.0.1', intval($hostPort));
+    if ($hostPing) {
+        $log .= "Result: SUCCESS (Host Loopback)\n";
+        @file_put_contents('/tmp/mcmm_ping.log', $log . "\n", FILE_APPEND);
+        return $hostPing;
+    }
+
+    // 4. Try Container IP Ping (Native PHP) - Bypass bridge mapping issues
+    $inspectJson = shell_exec("docker inspect " . escapeshellarg($containerId) . " 2>/dev/null");
+    $inspect = json_decode((string)$inspectJson, true);
+    if ($inspect && isset($inspect[0]['NetworkSettings'])) {
+        $cIp = $inspect[0]['NetworkSettings']['IPAddress'] ?? '';
+        if (!$cIp) {
+            foreach ($inspect[0]['NetworkSettings']['Networks'] ?? [] as $nw) {
+                if (!empty($nw['IPAddress'])) {
+                    $cIp = $nw['IPAddress'];
+                    break;
+                }
+            }
+        }
+        if ($cIp) {
+            $log .= "Method 4 (Bridge IP): Pinging $cIp:$internalPort\n";
+            $bridgePing = getMinecraftStatus($cIp, $internalPort);
+            if ($bridgePing) {
+                $log .= "Result: SUCCESS (Bridge IP)\n";
+                @file_put_contents('/tmp/mcmm_ping.log', $log . "\n", FILE_APPEND);
+                return $bridgePing;
+            }
+        }
+    }
+
+    $log .= "Result: FINAL FAIL (Returning 0/$max)\n";
+    @file_put_contents('/tmp/mcmm_ping.log', $log . "\n", FILE_APPEND);
+    return ['online' => 0, 'max' => $max];
+}
