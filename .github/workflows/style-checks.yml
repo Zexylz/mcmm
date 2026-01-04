@@ -3,20 +3,48 @@ name: Style Checks
 on:
   workflow_dispatch:
     inputs:
-      run_mode:
-        description: "Select what to run"
-        required: true
-        default: "all"
+      php:
+        description: "Run all PHP checks (PHPCS + PHPStan)"
         type: boolean
-        options:
-          - all
-          - phpcs
-          - phpstan
-          - php
-          - eslint
-          - stylelint
-          - htmlhint
-          - web
+        default: true
+        required: false
+
+      phpcs:
+        description: "Run PHPCS"
+        type: boolean
+        default: true
+        required: false
+
+      phpstan:
+        description: "Run PHPStan"
+        type: boolean
+        default: true
+        required: false
+
+      web:
+        description: "Run all Web checks (ESLint + Stylelint + HTMLHint)"
+        type: boolean
+        default: true
+        required: false
+
+      eslint:
+        description: "Run ESLint"
+        type: boolean
+        default: true
+        required: false
+
+      stylelint:
+        description: "Run Stylelint"
+        type: boolean
+        default: true
+        required: false
+
+      htmlhint:
+        description: "Run HTMLHint"
+        type: boolean
+        default: true
+        required: false
+
   push:
     branches: ["main"]
   pull_request:
@@ -26,8 +54,8 @@ jobs:
   php-lint:
     name: PHP Linting (PHPCS + PHPStan)
     runs-on: ubuntu-latest
-    # Push/PR => immer. Manuell => nur bei all/php/phpcs/phpstan
-    if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","php","phpcs","phpstan"]'), inputs.run_mode) }}
+    # Push/PR => immer. Manuell => wenn php oder phpcs oder phpstan
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.php || inputs.phpcs || inputs.phpstan }}
     steps:
       - uses: actions/checkout@v4
 
@@ -39,18 +67,18 @@ jobs:
           coverage: none
 
       - name: Run PHPCS (Style)
-        if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","php","phpcs"]'), inputs.run_mode) }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.php || inputs.phpcs }}
         run: phpcs --standard=.github/linters/phpcs.xml --extensions=php,page --report=full .
 
       - name: Run PHPStan (Static Analysis)
-        if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","php","phpstan"]'), inputs.run_mode) }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.php || inputs.phpstan }}
         run: phpstan analyse --configuration=.github/linters/phpstan.neon --memory-limit=1G
 
   node-lint:
     name: Web Linting (ESLint + Stylelint + HTMLHint)
     runs-on: ubuntu-latest
-    # Push/PR => immer. Manuell => nur bei all/web/eslint/stylelint/htmlhint
-    if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","web","eslint","stylelint","htmlhint"]'), inputs.run_mode) }}
+    # Push/PR => immer. Manuell => wenn web oder eslint oder stylelint oder htmlhint
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.web || inputs.eslint || inputs.stylelint || inputs.htmlhint }}
     steps:
       - uses: actions/checkout@v4
 
@@ -64,15 +92,15 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Run ESLint
-        if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","web","eslint"]'), inputs.run_mode) }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.web || inputs.eslint }}
         run: npx eslint "**/*.js" --config .github/linters/eslint.config.mjs
 
       - name: Run Stylelint
-        if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","web","stylelint"]'), inputs.run_mode) }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.web || inputs.stylelint }}
         run: npx stylelint "**/*.css" --config .github/linters/.stylelintrc.json
 
       - name: Prepare .page files for HTMLHint (strip frontmatter + PHP)
-        if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","web","htmlhint"]'), inputs.run_mode) }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.web || inputs.htmlhint }}
         shell: bash
         run: |
           set -euo pipefail
@@ -100,5 +128,5 @@ jobs:
           done
 
       - name: Run HTMLHint (on extracted HTML)
-        if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJson('["all","web","htmlhint"]'), inputs.run_mode) }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.web || inputs.htmlhint }}
         run: npx htmlhint --config .github/linters/.htmlhintrc ".tmp-htmlhint/**/*.html"
