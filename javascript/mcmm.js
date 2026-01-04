@@ -70,7 +70,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("%c MCMM %c Hydrating from cache...", "background:#7c3aed;color:#fff;font-weight:700;padding:2px 6px;border-radius:4px;", "");
                 renderServers(data);
             }
-        } catch (e) { }
+        } catch (err) {
+            console.warn('MCMM: Failed to hydrate from cache', err);
+        }
     }
 
     if (document.getElementById('tab-servers')?.classList.contains('active')) {
