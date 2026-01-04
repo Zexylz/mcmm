@@ -1,14 +1,22 @@
 <?xml version="1.0"?>
-<ruleset name="Project Standards">
-    <description>The coding standard for this project.</description>
+<ruleset name="Unraid Plugin Standards">
+    <description>Coding standard for Unraid OS plugins.</description>
+
+    <arg name="extensions" value="php,inc,page"/>
+
     <rule ref="PSR12"/>
+
     <rule ref="Generic.Files.LineLength">
         <properties>
             <property name="lineLimit" value="340"/>
             <property name="absoluteLineLimit" value="350"/>
         </properties>
     </rule>
+
+    <!-- Sauberkeit -->
+    <rule ref="Squiz.WhiteSpace.SuperfluousWhitespace"/>
+    <rule ref="SlevomatCodingStandard.Namespaces.UnusedUses"/>
+    <rule ref="Generic.WhiteSpace.DisallowMultipleSpaces"/>
+
     <file>.</file>
-    <exclude-pattern>vendor/</exclude-pattern>
-    <exclude-pattern>node_modules/</exclude-pattern>
 </ruleset>
