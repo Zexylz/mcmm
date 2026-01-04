@@ -108,6 +108,36 @@ function getMinecraftServers()
                         }
                     }
 
+                    // Try to hydrate basic stats from cached metrics files (extremely fast)
+                    $ramUsedMb = 0;
+                    $cpuUsage = 0;
+                    $mcVer = 'Unknown';
+                    $loaderVer = 'Vanilla';
+
+                    $dataDir = "/mnt/user/appdata/mcmm/servers/$containerName";
+                    if (!is_dir($dataDir)) {
+                        $dataDir = "/mnt/user/appdata/binaries/$containerName";
+                    }
+
+                    $metricsFile = $dataDir . '/mcmm_metrics.json';
+                    if (file_exists($metricsFile)) {
+                        $metrics = json_decode(file_get_contents($metricsFile), true);
+                        if ($metrics) {
+                            $ramUsedMb = $metrics['heap_used_mb'] ?? 0;
+                            $cpuUsage = ($metrics['cpu_milli'] ?? 0) / 1000.0;
+                        }
+                    }
+
+                    // Metadata cache
+                    $metaFile = "/boot/config/plugins/mcmm/servers/" . md5($containerName) . "/metadata.json";
+                    if (file_exists($metaFile)) {
+                        $meta = json_decode(file_get_contents($metaFile), true);
+                        if ($meta) {
+                            $mcVer = $meta['mcVersion'] ?? 'Unknown';
+                            $loaderVer = $meta['loader'] ?? 'Vanilla';
+                        }
+                    }
+
                     $servers[] = [
                         'id' => $containerId,
                         'name' => $containerName,
@@ -115,7 +145,11 @@ function getMinecraftServers()
                         'isRunning' => $isRunning,
                         'ports' => $port,
                         'image' => $image,
-                        'icon' => $icon
+                        'icon' => $icon,
+                        'ramUsedMb' => $ramUsedMb,
+                        'cpu' => $cpuUsage,
+                        'mcVersion' => $mcVer,
+                        'loader' => $loaderVer
                     ];
 
                     $debugLog .= "Added server: $containerName\n";

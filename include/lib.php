@@ -87,8 +87,9 @@ function ensureMetricsAgent(string $containerName, string $containerId, string $
 #!/bin/sh
 DATA_FILE="/data/mcmm_metrics.json"
 INTERVAL=10
-CPU_PREV=""
-TOTAL_PREV=""
+CPU_USAGE_PREV=""
+SYSTEM_USAGE_PREV=""
+TIMESTAMP_PREV=""
 
 while true; do
   PID=$(pidof java | awk '{print $1}')
@@ -101,41 +102,47 @@ while true; do
       STATS=$(jstat -gc "$PID" 1 1 | tail -n 1)
       HEAP_USED_KB=$(echo "$STATS" | awk '{print int($3 + $4 + $6 + $8)}')
     fi
-    # 3. CPU
-    CPU_LINE=$(head -n1 /proc/stat)
-    TOTAL=0
-    for v in $(echo "$CPU_LINE" | cut -d ' ' -f2-); do TOTAL=$((TOTAL + v)); done
-    STAT=$(cat /proc/$PID/stat)
-    PROC_UTIME=$(echo "$STAT" | awk '{print $14}')
-    PROC_STIME=$(echo "$STAT" | awk '{print $15}')
-    PROC_TOTAL=$((PROC_UTIME + PROC_STIME))
-    CPU_PCT=0
-    if [ -n "$CPU_PREV" ] && [ -n "$TOTAL_PREV" ]; then
-      DPROC=$((PROC_TOTAL - CPU_PREV))
-      DTOTAL=$((TOTAL - TOTAL_PREV))
-      if [ "$DTOTAL" -gt 0 ]; then
-        CPU_PCT=$((DPROC * 100 / DTOTAL))
+    # 3. CPU Percent (Per-Core to match 'docker stats' where 100% = 1 full core)
+    SYSTEM_CPU_LINE=$(head -n1 /proc/stat)
+    SYSTEM_TOTAL_USAGE=0
+    for v in $(echo "$SYSTEM_CPU_LINE" | cut -d ' ' -f2-); do SYSTEM_TOTAL_USAGE=$((SYSTEM_TOTAL_USAGE + v)); done
+    
+    # Get number of cores
+    NPROC=$(grep -c ^processor /proc/cpuinfo)
+    [ "$NPROC" -lt 1 ] && NPROC=1
+
+    PROC_STAT=$(cat /proc/$PID/stat)
+    PROC_UTIME=$(echo "$PROC_STAT" | awk '{print $14}')
+    PROC_STIME=$(echo "$PROC_STAT" | awk '{print $15}')
+    PROC_CPU_USAGE=$((PROC_UTIME + PROC_STIME))
+
+    CPU_VAL=0
+    if [ -n "$CPU_USAGE_PREV" ] && [ -n "$SYSTEM_USAGE_PREV" ]; then
+      D_PROC_USAGE=$((PROC_CPU_USAGE - CPU_USAGE_PREV))
+      D_SYSTEM_USAGE=$((SYSTEM_TOTAL_USAGE - SYSTEM_USAGE_PREV))
+      if [ "$D_SYSTEM_USAGE" -gt 0 ]; then
+        # CPU % = (process_delta / system_delta) * 100 * NPROC
+        # Multiply by 1000 for 3 decimal places in the final divided-by-1000 value
+        CPU_VAL=$(( (D_PROC_USAGE * 100000 * NPROC) / D_SYSTEM_USAGE ))
       fi
     fi
-    CPU_PREV=$PROC_TOTAL
-    TOTAL_PREV=$TOTAL
+    CPU_USAGE_PREV=$PROC_CPU_USAGE
+    SYSTEM_USAGE_PREV=$SYSTEM_TOTAL_USAGE
+    
     TS=$(date +%s)
-    echo "{\"ts\":$TS,\"pid\":\"$PID\",\"heap_used_mb\":$((HEAP_USED_KB / 1024)),\"rss_mb\":$((RSS_KB / 1024)),\"cpu_percent\":$CPU_PCT}" > "$DATA_FILE"
+    echo "{\"ts\":$TS,\"pid\":\"$PID\",\"heap_used_mb\":$((HEAP_USED_KB / 1024)),\"rss_mb\":$((RSS_KB / 1024)),\"cpu_milli\":$CPU_VAL}" > "$DATA_FILE"
   fi
-  sleep $INTERVAL
+  sleep 5
 done
 BASH;
-    if (!file_exists($scriptPath)) {
-        file_put_contents($scriptPath, $script);
-        chmod($scriptPath, 0755);
-    }
-    // Try to start it in background if not running
-    $checkCmd = "docker exec " . escapeshellarg($containerId) . " ps aux | grep mcmm_agent.sh | grep -v grep";
-    $running = shell_exec($checkCmd);
-    if (!$running) {
-        $startCmd = "docker exec -d " . escapeshellarg($containerId) . " sh -c \"nohup /data/mcmm_agent.sh > /data/mcmm_agent.log 2>&1 &\"";
-        shell_exec($startCmd);
-    }
+    // Always update the script to ensure latest version is running
+    file_put_contents($scriptPath, $script);
+    chmod($scriptPath, 0755);
+    // Restart it if it's running to apply new logic, or just start if missing
+    $killCmd = "docker exec " . escapeshellarg($containerId) . " pkill -f mcmm_agent.sh";
+    shell_exec($killCmd);
+    $startCmd = "docker exec -d " . escapeshellarg($containerId) . " sh -c \"nohup /data/mcmm_agent.sh > /data/mcmm_agent.log 2>&1 &\"";
+    shell_exec($startCmd);
 }
 
 // Helper to write INI file
@@ -1356,7 +1363,61 @@ function getMinecraftVersion(string $platform, string $id, string $versionId, st
     return null;
 }
 
-function getServerMetadata(array $env, array $config, string $containerName, string $apiKey): array
+function getMinecraftStatus(string $host, int $port, int $timeout = 1): ?array
+{
+    if ($port <= 0) {
+        return null;
+    }
+    $socket = @fsockopen($host, $port, $errno, $errstr, $timeout);
+    if (!$socket) {
+        return null;
+    }
+
+    stream_set_timeout($socket, $timeout);
+
+    // Minecraft 1.6.1+ Legacy Ping (UTF-16BE)
+    // See: https://wiki.vg/Server_List_Ping#1.6
+    $channel = "MC|PingHost";
+    $protocol = 74; // 1.7.2
+    $c_host = mb_convert_encoding($host, 'UTF-16BE');
+    $c_channel = mb_convert_encoding($channel, 'UTF-16BE');
+
+    // Robust 1.6.1 compatible ping payload
+    $payload = "\xFE\x01\xFA" .
+               pack('n', 11) . mb_convert_encoding("MC|PingHost", "UTF-16BE") .
+               pack('n', 7 + (strlen($host) * 2)) .
+               pack('C', $protocol) .
+               pack('n', strlen($host)) . mb_convert_encoding($host, "UTF-16BE") .
+               pack('N', $port);
+
+    fwrite($socket, $payload);
+    $data = fread($socket, 4096);
+    @fclose($socket);
+
+    if (!$data || ord($data[0]) !== 0xFF) {
+        return null;
+    }
+
+    // Response starts with 0xFF, then length (short), then string (UTF-16BE)
+    $response = substr($data, 3);
+    $response = @mb_convert_encoding($response, 'UTF-8', 'UTF-16BE');
+
+    // Format: §1\0PROTOCOL\0VERSION\0MOTD\0ONLINE\0MAX
+    if (strpos($response, "\x00") !== false) {
+        $parts = explode("\x00", $response);
+        if (count($parts) >= 6) {
+            return [
+                'online'  => intval($parts[4]),
+                'max'     => intval($parts[5]),
+                'version' => $parts[2]
+            ];
+        }
+    }
+
+    return null;
+}
+
+function getServerMetadata(array $env, array $config, string $containerName, string $apiKey, string $image = '', int $port = 0): array
 {
     $mcVersion = '';
     $loader = '';
@@ -1390,6 +1451,15 @@ function getServerMetadata(array $env, array $config, string $containerName, str
             $mcVersion = $m[0];
         }
     }
+
+    // 2b. Image Tag Fallback
+    if (!$mcVersion && $image) {
+        // e.g. itzg/minecraft-server:1.20.1 or my-repo/mc-1.18.2:latest
+        if (preg_match('/:(\d+\.\d+(\.\d+)?)/', $image, $im)) {
+            $mcVersion = $im[1];
+        }
+    }
+
     if (!$loader) {
         $envType = strtolower($env['TYPE'] ?? $env['GAME_TYPE'] ?? $env['MODRINTH_LOADER'] ?? '');
         if (strpos($envType, 'neoforge') !== false) {
@@ -1498,6 +1568,18 @@ function getServerMetadata(array $env, array $config, string $containerName, str
                 $loader = !empty($loaders) ? strtolower($loaders[0]) : '';
             }
             $debug['mrBackfill'] = ['mcVersion' => $mcVersion, 'loader' => $loader];
+        }
+    }
+
+    // 4. Live Ping Fallback (Absolute last resort for running servers)
+    if (!$mcVersion && $port > 0) {
+        $status = getMinecraftStatus('127.0.0.1', $port, 1);
+        if ($status && !empty($status['version'])) {
+            // Version might be "1.21" or "1.21.1" or "Forge 1.21-51.0.4"
+            if (preg_match('/\d+\.\d+(\.\d+)?/', $status['version'], $pv)) {
+                $mcVersion = $pv[0];
+                $debug['livePing'] = ['version' => $status['version'], 'detected' => $mcVersion];
+            }
         }
     }
 

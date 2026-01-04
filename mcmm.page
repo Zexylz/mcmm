@@ -130,6 +130,8 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                         $icon = isset($server['icon']) && $server['icon'] ? $server['icon'] : "https://media.forgecdn.net/avatars/855/527/638260492657788102.png";
                         $ramUsage = isset($server['ram']) ? $server['ram'] : 0;
                         $cpuUsage = isset($server['cpu']) ? $server['cpu'] : 0;
+                        $mcVersion = $server['mcVersion'] ?? 'Unknown';
+                        $loader = $server['loader'] ?? 'Vanilla';
                         $statusClass = $server['isRunning'] ? 'running' : 'stopped';
                         $playersOnline = isset($server['players']['online']) ? intval($server['players']['online']) : 0;
                         $playersMax = isset($server['players']['max']) ? intval($server['players']['max']) : (isset($config['default_max_players']) ? intval($config['default_max_players']) : 0);
@@ -140,19 +142,23 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                         $ramCapMb = $ramConfigMb > 0 ? $ramConfigMb : ($ramLimitMb > 0 ? $ramLimitMb : 0);
                         $ramPercent = $ramCapMb > 0 ? ($ramUsedMb / $ramCapMb * 100) : $ramUsage;
                         $ramPercent = round($ramPercent, 1);
-                        $ramUsedLabel = $ramUsedMb > 0 ? round($ramUsedMb / 1024, 1) . ' GB' : '0 GB';
-                        $ramCapLabel = $ramCapMb > 0 ? round($ramCapMb / 1024, 1) . ' GB' : 'N/A';
+                        $ramUsedLabel = $ramUsedMb > 0 ? number_format($ramUsedMb / 1024, 1) . ' GB' : '0 GB';
+                        $ramCapLabel = $ramCapMb > 0 ? number_format($ramCapMb / 1024, 1) . ' GB' : 'N/A';
                         ?>
-                        <!-- DEBUG: Icon for <?php echo htmlspecialchars($server['name']); ?>: <?php echo htmlspecialchars($icon); ?> -->
                         <div class="mcmm-server-row <?php echo $statusClass; ?>">
                             <div class="mcmm-server-icon" style="background-image: url('<?php echo htmlspecialchars($icon); ?>');"></div>
 
                             <div class="mcmm-server-info">
-                                <div class="mcmm-server-title"><?php echo htmlspecialchars($server['name']); ?></div>
+                                <div class="mcmm-server-title">
+                                    <?php echo htmlspecialchars($server['name']); ?>
+                                    <span class="mcmm-badge"><?php echo htmlspecialchars($mcVersion); ?></span>
+                                    <span class="mcmm-badge secondary"><?php echo htmlspecialchars($loader); ?></span>
+                                </div>
                                 <div class="mcmm-server-subtitle">
-                                    <span>Port: <?php echo htmlspecialchars($server['ports']); ?></span>
-                                    <span style="opacity:0.5;">|</span>
+                                    <span class="mcmm-status-dot"></span>
                                     <span><?php echo $server['isRunning'] ? 'Online' : 'Offline'; ?></span>
+                                    <span style="opacity:0.5;">|</span>
+                                    <span>Port: <?php echo htmlspecialchars($server['ports']); ?></span>
                                     <?php if ($server['isRunning']) : ?>
                                         <span style="opacity:0.5;">|</span>
                                         <span id="players-<?php echo $server['id']; ?>" data-server-id="<?php echo $server['id']; ?>" data-port="<?php echo htmlspecialchars($server['ports']); ?>" data-running="<?php echo $server['isRunning'] ? '1' : '0'; ?>">
@@ -175,10 +181,10 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                 <div class="mcmm-metric">
                                     <div class="mcmm-metric-label">
                                         <span>CPU</span>
-                                        <span><?php echo $cpuUsage; ?>%</span>
+                                        <span><?php echo number_format($cpuUsage, 2); ?>%</span>
                                     </div>
                                     <div class="mcmm-metric-bar">
-                                        <div class="mcmm-metric-fill" style="width: <?php echo $cpuUsage; ?>%; background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
+                                        <div class="mcmm-metric-fill" style="width: <?php echo min(max($cpuUsage, 0), 100); ?>%; background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
                                     </div>
                                 </div>
                             </div>

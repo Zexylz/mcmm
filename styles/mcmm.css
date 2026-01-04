@@ -398,10 +398,64 @@
 }
 
 .mcmm-server-subtitle {
+    align-items: center !important;
     color: var(--text-secondary) !important;
     display: flex !important;
     font-size: 0.9rem !important;
-    gap: 1rem !important;
+    gap: 0.75rem !important;
+}
+
+.mcmm-badge {
+    background: rgb(255 255 255 / 6%) !important;
+    border: 1px solid rgb(255 255 255 / 10%) !important;
+    border-radius: 6px !important;
+    color: var(--text-secondary) !important;
+    display: inline-block !important;
+    font-family: "Fira Code", monospace !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    margin-left: 0.6rem !important;
+    padding: 0.1rem 0.6rem !important;
+    vertical-align: middle !important;
+}
+
+.mcmm-badge.secondary {
+    background: rgb(157 78 221 / 10%) !important;
+    border-color: rgb(157 78 221 / 30%) !important;
+    color: var(--primary-hover) !important;
+}
+
+.mcmm-status-dot {
+    background: #64748b !important;
+    border-radius: 50% !important;
+    box-shadow: 0 0 0 0 rgb(100 116 139 / 40%) !important;
+    display: inline-block !important;
+    height: 8px !important;
+    width: 8px !important;
+}
+
+.mcmm-server-row.running .mcmm-status-dot {
+    animation: mcmm-dot-pulse 2s infinite !important;
+    background: var(--success) !important;
+    box-shadow: 0 0 10px var(--success) !important;
+}
+
+.mcmm-server-row.stopped .mcmm-status-dot {
+    background: var(--danger) !important;
+}
+
+@keyframes mcmm-dot-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgb(52 211 153 / 70%) !important;
+    }
+
+    70% {
+        box-shadow: 0 0 0 6px rgb(52 211 153 / 0%) !important;
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgb(52 211 153 / 0%) !important;
+    }
 }
 
 .mcmm-server-metrics {
@@ -427,16 +481,41 @@
 }
 
 .mcmm-metric-bar {
-    background: rgb(255 255 255 / 5%) !important;
-    border-radius: 4px !important;
-    height: 6px !important;
+    background: rgb(255 255 255 / 4%) !important;
+    border: 1px solid rgb(255 255 255 / 5%) !important;
+    border-radius: 6px !important;
+    height: 8px !important;
     overflow: hidden !important;
+    position: relative !important;
     width: 100% !important;
 }
 
 .mcmm-metric-fill {
-    border-radius: 4px !important;
+    border-radius: 6px !important;
     height: 100% !important;
+    position: relative !important;
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.mcmm-metric-fill::after {
+    animation: mcmm-pulse 2s infinite linear;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 20%), transparent);
+    content: "";
+    height: 100%;
+    left: -100%;
+    position: absolute;
+    top: 0;
+    width: 100%;
+}
+
+@keyframes mcmm-pulse {
+    from {
+        left: -100%;
+    }
+
+    to {
+        left: 100%;
+    }
 }
 
 .mcmm-server-actions {

@@ -449,6 +449,51 @@ try {
             // Then, get running containers from Docker
             $cmd = '/usr/bin/docker ps -a --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Image}}|{{.Ports}}|{{.Labels}}"';
             $output = shell_exec($cmd . ' 2>/dev/null');
+            // Batch gather docker stats for ALL containers (authoritative & fast)
+            $allStats = [];
+            $statsCmd = '/usr/bin/docker stats --no-stream --format "{{.ID}}|{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}"';
+            $statsOutput = shell_exec($statsCmd . ' 2>/dev/null');
+            if ($statsOutput) {
+                $statsLines = explode("\n", trim($statsOutput));
+                foreach ($statsLines as $sLine) {
+                    $sParts = explode('|', $sLine);
+                    if (count($sParts) >= 3) {
+                        $sId = $sParts[0];
+                        $sName = $sParts[1];
+                        $sCpuStr = str_replace('%', '', $sParts[2]);
+                        $sMemParts = explode(' / ', $sParts[3]);
+                        $sUsedMb = parseMemoryToMB($sMemParts[0]);
+                        $sCapMb = isset($sMemParts[1]) ? parseMemoryToMB($sMemParts[1]) : 0;
+
+                        $statsData = [
+                            'cpu_percent' => floatval($sCpuStr),
+                            'mem_used_mb' => $sUsedMb,
+                            'mem_cap_mb' => $sCapMb
+                        ];
+                        $allStats[$sId] = $statsData;
+                        $allStats[$sName] = $statsData;
+                    }
+                }
+            }
+
+            // Batch gather docker inspect for ALL containers (extremely fast compared to loop)
+            $allInspect = [];
+            $inspectIds = trim((string)shell_exec('/usr/bin/docker ps -a -q | tr "\n" " "'));
+            if (!empty($inspectIds)) {
+                $inspectOutput = shell_exec("/usr/bin/docker inspect $inspectIds 2>/dev/null");
+                if ($inspectOutput) {
+                    $inspectData = json_decode($inspectOutput, true);
+                    if ($inspectData) {
+                        foreach ($inspectData as $item) {
+                            $shortId = substr($item['Id'], 7, 12); // standard short ID
+                            $name = ltrim($item['Name'], '/');
+                            $allInspect[$item['Id']] = $item;
+                            $allInspect[$shortId] = $item;
+                            $allInspect[$name] = $item;
+                        }
+                    }
+                }
+            }
 
             if ($output) {
                 $lines = explode("\n", trim($output));
@@ -481,87 +526,50 @@ try {
                                 $port = $matches[1];
                             }
 
-                            // Try to get icon from config file first, then from Docker labels
-                            $icon = '';
-                            if (isset($serverConfigs[$containerName]['logo'])) {
-                                $icon = $serverConfigs[$containerName]['logo'];
-                            } else {
-                                $icon = getLabelValue($labels, 'net.unraid.docker.icon') ?: getLabelValue($labels, 'mcmm.icon') ?: '';
-
-                                // If still no icon, try to backfill from Docker environment variables
-                                if (empty($icon)) {
-                                    $icon = backfillServerIcon($containerId, $containerName, $serversDir, $config);
-                                }
-                            }
-
-                            // Players: best effort
-                            $playersOnline = null;
-                            $playersMax = $serverConfigs[$containerName]['maxPlayers'] ?? null;
-
-                            // Inspect env
-                            $inspectJson = shell_exec('/usr/bin/docker inspect ' . escapeshellarg($containerId) . ' 2>/dev/null');
-                            $envMemoryMb = null;
+                            // Use pre-batched inspect data (massive speedup)
+                            $inspect = $allInspect[$containerId] ?? $allInspect[$containerName] ?? null;
                             $env = [];
-                            if ($inspectJson) {
-                                $inspect = json_decode($inspectJson, true);
-                                if ($inspect && isset($inspect[0]['Config']['Env'])) {
-                                    foreach ($inspect[0]['Config']['Env'] as $e) {
-                                        $partsEnv = explode('=', $e, 2);
-                                        if (count($partsEnv) === 2) {
-                                            $env[$partsEnv[0]] = $partsEnv[1];
-                                            if ($partsEnv[0] === 'MAX_PLAYERS') {
-                                                $envMax = intval($partsEnv[1]);
-                                                if ($envMax > 0) {
-                                                    $playersMax = $playersMax ?? $envMax;
-                                                }
-                                            } elseif ($partsEnv[0] === 'MEMORY') {
-                                                $parsed = parseMemoryToMB($partsEnv[1]);
-                                                if ($parsed > 0) {
-                                                    $envMemoryMb = $parsed;
-                                                }
-                                            }
+                            $envMemoryMb = null;
+                            if ($inspect && isset($inspect['Config']['Env'])) {
+                                foreach ($inspect['Config']['Env'] as $e) {
+                                    $partsEnv = explode('=', $e, 2);
+                                    if (count($partsEnv) === 2) {
+                                        $env[$partsEnv[0]] = $partsEnv[1];
+                                        if ($partsEnv[0] === 'MEMORY') {
+                                            $envMemoryMb = parseMemoryToMB($partsEnv[1]);
                                         }
                                     }
                                 }
                             }
 
-                            // Get MC version and loader via unified function
-                            $metadata = getServerMetadata($env, $config, $containerName, $config['curseforge_api_key'] ?? '');
+                            // Get metadata from batched env, image tag, or live ping
+                            $metadata = getServerMetadata(
+                                $env,
+                                $config,
+                                $containerName,
+                                $config['curseforge_api_key'] ?? '',
+                                $image,
+                                (int)$port
+                            );
                             $mcVer = $metadata['mcVersion'];
                             $loaderVer = $metadata['loader'];
 
-                            if ($isRunning) {
-                                $statusJson = shell_exec('mc-monitor status --json localhost:' . escapeshellarg($port) . ' 2>/dev/null');
-                                if ($statusJson) {
-                                    $statusData = json_decode($statusJson, true);
-                                    if (isset($statusData['players'])) {
-                                        $playersOnline = $statusData['players']['online'] ?? null;
-                                        $playersMax = $statusData['players']['max'] ?? $playersMax;
-                                    }
-                                    // Try to get version from live ping if missing
-                                    if (!$mcVer && isset($statusData['version']) && preg_match('/\d+\.\d+(\.\d+)?/', $statusData['version'], $mv)) {
-                                        $mcVer = $mv[0];
-                                    }
-                                }
-                            } else {
-                                $playersOnline = 0;
-                            }
+                            // Players: Default to 0, will be updated asynchronously by JS to keep this list instant
+                            $playersOnline = 0;
+                            $playersMax = intval(
+                                $env['MAX_PLAYERS'] ??
+                                $serverConfigs[$containerName]['maxPlayers'] ??
+                                $config['default_max_players'] ??
+                                20
+                            );
 
-                            // Final fallbacks
-                            if ($playersOnline === null) {
-                                $playersOnline = 0;
-                            }
-                            if ($playersMax === null) {
-                                $playersMax = isset($config['default_max_players']) ? intval($config['default_max_players']) : 0;
-                            }
+                            // Icon handling
+                            $icon = $serverConfigs[$containerName]['logo'] ?? getLabelValue($labels, 'net.unraid.docker.icon') ?: getLabelValue($labels, 'mcmm.icon') ?: $env['ICON'] ?? '';
 
-                            // Configured memory from config file if present
-                            $configMem = null;
-                            if (isset($serverConfigs[$containerName]['memory'])) {
-                                $configMem = parseMemoryToMB($serverConfigs[$containerName]['memory']);
-                            }
+                            // Configured memory from config file or env
+                            $configMem = isset($serverConfigs[$containerName]['memory']) ? parseMemoryToMB($serverConfigs[$containerName]['memory']) : $envMemoryMb;
 
-                            // Read metrics from agent file if present; always try to fetch a RAM cap
+                            // Read metrics from agent file if present
                             $dataDir = getContainerDataDir($containerName, $containerId);
                             $agentPath = rtrim($dataDir, '/') . '/mcmm_metrics.json';
                             $metrics = readAgentMetrics($containerName, $containerId, $dataDir);
@@ -570,59 +578,37 @@ try {
                             $agentAgeSec = $agentMtime ? (time() - $agentMtime) : null;
                             $agentTs = isset($metrics['ts']) ? intval($metrics['ts']) : null;
 
-                            // Priority 1: Agent Metrics (Actual objects from inside JVM)
-                            // Priority 2: On-demand JCMD (Actual objects)
-                            $javaHeapUsedMb = 0;
-                            if ($isRunning) {
-                                if (isset($metrics['heap_used_mb']) && $metrics['heap_used_mb'] > 0) {
-                                    $javaHeapUsedMb = floatval($metrics['heap_used_mb']);
-                                } else {
-                                    $javaHeapUsedMb = getJavaHeapUsedMb($containerId);
-                                }
-                            }
+                            // RAM Used: Use agent if healthy, else batch stats (zero shell_exec in loop)
+                            $javaHeapUsedMb = ($isRunning && isset($metrics['heap_used_mb'])) ? floatval($metrics['heap_used_mb']) : 0;
 
-                            $memDebugLog = "[" . date('H:i:s') . "] RAM Detection for $containerName:\n";
-                            $memDebugLog .= "  - $configMem (config_file), $envMemoryMb (env), " . ($config['default_memory'] ?? 'none') . " (default)\n";
-                            $memDebugLog .= "  - javaHeapUsedMb: $javaHeapUsedMb\n";
-
-                            // Determine configured RAM "cap" (what user allocated), independent of cgroup limit
                             $ramLimitMb = $configMem ?? 0;
-                            if ($ramLimitMb <= 0 && $envMemoryMb) {
-                                $ramLimitMb = $envMemoryMb;
-                            }
                             if ($ramLimitMb <= 0 && isset($config['default_memory'])) {
-                                $defaultMemMb = parseMemoryToMB($config['default_memory']);
-                                if ($defaultMemMb > 0) {
-                                    $ramLimitMb = $defaultMemMb;
-                                }
+                                $ramLimitMb = parseMemoryToMB($config['default_memory']);
                             }
-                            $memDebugLog .= "  - Final ramLimitMb: $ramLimitMb\n";
 
-                            // Container cgroup usage (host-side) is still useful for debugging and CPU.
-                            $cg = getContainerCgroupStats($containerId);
-                            $memDebugLog .= "  - Cgroup: Used=" . ($cg['mem_used_mb'] ?? 0) . ", Cap=" . ($cg['mem_cap_mb'] ?? 0) . "\n";
+                            $cg = $allStats[$containerId] ?? $allStats[$containerName] ?? ['cpu_percent' => 0, 'mem_used_mb' => 0, 'mem_cap_mb' => 0];
 
-                            // Displayed RAM logic with fallbacks
                             $ramUsedMb = 0;
                             $ramSource = 'unavailable';
-
                             if ($javaHeapUsedMb > 0) {
                                 $ramUsedMb = $javaHeapUsedMb;
                                 $ramSource = 'agent_heap';
                             } elseif (($cg['mem_used_mb'] ?? 0) > 0) {
-                                // Fallback to Docker stats if agent is missing, but clamp to cap
                                 $ramUsedMb = $cg['mem_used_mb'];
                                 $ramSource = 'docker_stats';
                             }
 
-                            $memDebugLog .= "  - Used: $ramUsedMb (Source: $ramSource)\n";
-                            dbg($memDebugLog);
-
                             $cpuUsage = 0;
-                            if (isset($metrics['cpu_percent'])) {
+                            // Priority 1: Official Docker stats (matches Dozzle/Unraid)
+                            if (isset($allStats[$containerId])) {
+                                $cpuUsage = $allStats[$containerId]['cpu_percent'];
+                            } elseif (isset($allStats[$containerName])) {
+                                $cpuUsage = $allStats[$containerName]['cpu_percent'];
+                            } elseif (isset($metrics['cpu_milli'])) {
+                                // Fallback to agent if docker stats failed to return this container
+                                $cpuUsage = $metrics['cpu_milli'] / 1000.0;
+                            } elseif (isset($metrics['cpu_percent'])) {
                                 $cpuUsage = floatval($metrics['cpu_percent']);
-                            } elseif (isset($cg['cpu_percent'])) {
-                                $cpuUsage = $cg['cpu_percent'];
                             }
 
                             // Safety clamp for display
@@ -671,7 +657,7 @@ try {
                                 'ramUsedMb' => round($ramUsedMb, 1),
                                 'ramLimitMb' => $ramLimitMb,
                                 'ramConfigMb' => $configMem,
-                                'cpu' => round($cpuUsage, 1),
+                                'cpu' => round($cpuUsage, 2),
                                 'ramDetails' => $ramDetails,
                                 'debug' => [
                                     'dataDir' => $dataDir,
@@ -690,6 +676,19 @@ try {
                                 'mcVersion' => $mcVer,
                                 'loader' => $loaderVer
                             ];
+
+                            // Persistent metadata cache for helpers.php (Initial Page Load)
+                            $metaDir = $serversDir . '/' . md5($containerName);
+                            if (!is_dir($metaDir)) {
+                                @mkdir($metaDir, 0755, true);
+                            }
+                            $metaFile = $metaDir . '/metadata.json';
+                            $metadataCache = [
+                                'mcVersion' => $mcVer ?: 'Unknown',
+                                'loader' => $loaderVer ?: 'Vanilla',
+                                'lastUpdated' => time()
+                            ];
+                            @file_put_contents($metaFile, json_encode($metadataCache));
                         }
                     }
                 }
@@ -705,79 +704,78 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Missing server ID'], 400);
             }
 
-            // Inspect container env for fallbacks (MAX_PLAYERS, RCON_PASSWORD)
-            $envMap = [];
             $inspectJson = shell_exec("docker inspect " . escapeshellarg($id));
             $inspectData = json_decode($inspectJson, true);
+            $envMap = [];
             if ($inspectData && isset($inspectData[0]['Config']['Env'])) {
                 foreach ($inspectData[0]['Config']['Env'] as $e) {
-                    $parts = explode('=', $e, 2);
-                    if (count($parts) === 2) {
-                        $envMap[$parts[0]] = $parts[1];
+                    $ev = explode('=', $e, 2);
+                    if (count($ev) === 2) {
+                        $envMap[$ev[0]] = $ev[1];
                     }
                 }
             }
 
-            $players = [];
-            $online = 0;
-            $max = isset($envMap['MAX_PLAYERS']) ? intval($envMap['MAX_PLAYERS']) : (isset($config['default_max_players']) ? intval($config['default_max_players']) : 0);
+            $rconPass = $envMap['RCON_PASSWORD'] ?? '';
+            $rconPort = isset($envMap['RCON_PORT']) ? intval($envMap['RCON_PORT']) : 25575;
             $sanitizeName = function ($n) {
-                $n = preg_replace('/\e\[[\d;]*[A-Za-z]/', '', $n);
-                return trim($n);
+                return trim(preg_replace('/\e\[[\d;]*[A-Za-z]/', '', $n));
             };
 
-            // Try query first
-            $queryJson = shell_exec('mc-monitor query --json localhost:' . escapeshellarg($port) . ' 2>/dev/null');
-            if ($queryJson) {
-                $q = json_decode($queryJson, true);
-                if ($q && isset($q['players'])) {
-                    $online = $q['players']['online'] ?? $online;
-                    $max = $q['players']['max'] ?? $max;
-                    if (!empty($q['players']['list']) && is_array($q['players']['list'])) {
-                        foreach ($q['players']['list'] as $p) {
-                            $name = $sanitizeName(is_array($p) && isset($p['name']) ? $p['name'] : $p);
-                            if ($name !== '') {
-                                $players[] = ['name' => $name];
-                            }
+            $stats = getMinecraftLiveStats($id, intval($port), $envMap);
+            $online = $stats['online'];
+            $max = $stats['max'];
+
+            // Add player listing if RCON available
+            $players = [];
+            if ($rconPass && $online > 0) {
+                $rconOut = shell_exec("docker exec " . escapeshellarg($id) . " rcon-cli --port $rconPort --password " . escapeshellarg($rconPass) . " list 2>/dev/null");
+                $rconOut = trim($rconOut);
+
+                // Pattern 1 & 2: Standard "online: Name1, Name2" or "players: Name1, Name2"
+                if (preg_match('/(?:online|players): (.*)$/i', $rconOut, $m)) {
+                    $names = explode(', ', $m[1]);
+                    foreach ($names as $name) {
+                        $clean = $sanitizeName($name);
+                        if ($clean !== '') {
+                            $players[] = ['name' => $clean];
                         }
                     }
                 }
-            }
+                // Pattern 3: If no colon but we have text and online > 0, try to treat the whole thing as names
+                // This handles Forge/Fabric servers that might just return "Name1 Name2" or "Name1, Name2"
+                if (empty($players) && !empty($rconOut)) {
+                    // Remove "There are X/Y players online" prefix if it exists but regex missed it
+                    $cleanOut = preg_replace('/^There are .* online: /i', '', $rconOut);
+                    $cleanOut = preg_replace('/^Players online: /i', '', $cleanOut);
 
-            // If still missing counts, fallback to status
-            if (!$online && !$max) {
-                $statusJson = shell_exec('mc-monitor status --json localhost:' . escapeshellarg($port) . ' 2>/dev/null');
-                if ($statusJson) {
-                    $s = json_decode($statusJson, true);
-                    if ($s && isset($s['players'])) {
-                        $online = $s['players']['online'] ?? $online;
-                        $max = $s['players']['max'] ?? $max;
+                    // Split by comma or space
+                    $names = preg_split('/[,\s]+/', $cleanOut);
+                    foreach ($names as $name) {
+                        $clean = $sanitizeName($name);
+                        // Filter out common words that aren't names if they leaked in
+                        if ($clean !== '' && !in_array(strtolower($clean), ['there', 'are', 'players', 'online', 'max', 'out', 'of'])) {
+                            $players[] = ['name' => $clean];
+                        }
                     }
+
+                    // If we somehow got more players than reported online, this heuristic failed, but better than nothing
                 }
             }
 
-            // RCON fallback to list players and op status if we still don't have names
-            $rconPass = $envMap['RCON_PASSWORD'] ?? '';
-            if (empty($players) && $rconPass) {
-                $cmd = "docker exec " . escapeshellarg($id) . " rcon-cli --password " . escapeshellarg($rconPass) . " list 2>&1";
-                $out = [];
-                $exit = 0;
-                exec($cmd, $out, $exit);
-                if ($exit === 0 && !empty($out)) {
-                    $line = implode(' ', $out);
-                    if (preg_match('/There are (\d+) of a max of (\d+) players online: (.*)/i', $line, $m)) {
-                        $online = intval($m[1]);
-                        $max = intval($m[2]);
-                        $names = array_map('trim', explode(',', $m[3]));
-                        foreach ($names as $n) {
-                            $name = $sanitizeName($n);
-                            if ($name !== '') {
-                                $players[] = ['name' => $name];
+            // Fallback: If RCON failed to get names but we know people are online, try mc-monitor JSON
+            if (empty($players) && $online > 0) {
+                $internalPort = isset($envMap['SERVER_PORT']) ? intval($envMap['SERVER_PORT']) : 25565;
+                $cmd = "docker exec " . escapeshellarg($id) . " mc-monitor status --json 127.0.0.1:$internalPort 2>/dev/null";
+                $statusRes = shell_exec($cmd);
+                if ($statusRes) {
+                    $jd = json_decode($statusRes, true);
+                    if (!empty($jd['players']['sample'])) {
+                        foreach ($jd['players']['sample'] as $p) {
+                            if (!empty($p['name'])) {
+                                $players[] = ['name' => $p['name']];
                             }
                         }
-                    } elseif (preg_match('/There are (\d+) of a max of (\d+) players online/i', $line, $m)) {
-                        $online = intval($m[1]);
-                        $max = intval($m[2]);
                     }
                 }
             }
@@ -785,7 +783,7 @@ try {
             // RCON op list to flag operators
             $ops = [];
             if ($rconPass) {
-                $opCmd = "docker exec " . escapeshellarg($id) . " rcon-cli --password " . escapeshellarg($rconPass) . " \"op list\" 2>&1";
+                $opCmd = "docker exec " . escapeshellarg($id) . " rcon-cli --port $rconPort --password " . escapeshellarg($rconPass) . " \"op list\" 2>&1";
                 $opOut = [];
                 $opExit = 0;
                 exec($opCmd, $opOut, $opExit);
@@ -806,19 +804,15 @@ try {
             // Attach isOp flag to players
             if (!empty($ops) && !empty($players)) {
                 $opsLower = array_map('strtolower', $ops);
-                $players = array_map(function ($p) use ($opsLower) {
-                    $name = is_array($p) && isset($p['name']) ? $p['name'] : (is_string($p) ? $p : '');
-                    $isOp = in_array(strtolower($name), $opsLower);
-                    return ['name' => $name, 'isOp' => $isOp];
-                }, $players);
-            } elseif (!empty($players)) {
-                // Normalize shape
-                $players = array_map(function ($p) {
-                    if (is_array($p) && isset($p['name'])) {
-                        return $p;
+                foreach ($players as &$p) {
+                    $p['isOp'] = in_array(strtolower($p['name']), $opsLower);
+                }
+            } else {
+                foreach ($players as &$p) {
+                    if (!isset($p['isOp'])) {
+                        $p['isOp'] = false;
                     }
-                    return ['name' => is_string($p) ? $p : '', 'isOp' => false];
-                }, $players);
+                }
             }
 
             jsonResponse(['success' => true, 'data' => ['online' => $online, 'max' => $max, 'players' => $players]]);
@@ -1059,12 +1053,13 @@ try {
                 }
             }
 
+            // Sync internal port variable with public port
+            $currentEnv['SERVER_PORT'] = $newPort;
+            $currentEnv['QUERY_PORT'] = $newPort;
+
             // Ensure query envs exist
             if (!isset($currentEnv['ENABLE_QUERY'])) {
                 $currentEnv['ENABLE_QUERY'] = 'TRUE';
-            }
-            if (!isset($currentEnv['QUERY_PORT'])) {
-                $currentEnv['QUERY_PORT'] = $newPort;
             }
 
             // Recreate
@@ -1206,6 +1201,9 @@ DATA_FILE="/data/mcmm_metrics.json"
 INTERVAL=10
 CPU_PREV=""
 TOTAL_PREV=""
+CPU_USAGE_PREV=""
+SYSTEM_USAGE_PREV=""
+TIMESTAMP_PREV=""
 
 while true; do
   PID=$(pidof java | awk '{print $1}')
@@ -1230,34 +1228,59 @@ while true; do
     fi
 
     # 3. CPU Percent
-    CPU_LINE=$(head -n1 /proc/stat)
-    TOTAL=0
-    for v in $(echo "$CPU_LINE" | cut -d ' ' -f2-); do TOTAL=$((TOTAL + v)); done
+    # CPU % = (Delta Usage / Delta Time) * 100
+    # We calculate SYSTEM-WIDE percentage to match docker stats/Unraid.
+    # (usage_delta / elapsed_nanoseconds) * 100
+    # Multiply by 100000 for 3rd decimal precision
     
-    STAT=$(cat /proc/$PID/stat)
-    PROC_UTIME=$(echo "$STAT" | awk '{print $14}')
-    PROC_STIME=$(echo "$STAT" | awk '{print $15}')
-    PROC_TOTAL=$((PROC_UTIME + PROC_STIME))
-    
-    CPU_PCT=0
-    if [ -n "$CPU_PREV" ] && [ -n "$TOTAL_PREV" ]; then
-      DPROC=$((PROC_TOTAL - CPU_PREV))
-      DTOTAL=$((TOTAL - TOTAL_PREV))
-      if [ "$DTOTAL" -gt 0 ]; then
-        CPU_PCT=$((DPROC * 100 / DTOTAL))
+    # Get CPU usage from /proc/stat (system-wide) and /proc/$PID/stat (process-specific)
+    # CPU usage is in USER_HZ (typically 100) units.
+    # Total CPU time for the system
+    SYSTEM_CPU_LINE=$(head -n1 /proc/stat)
+    SYSTEM_TOTAL_USAGE=0
+    for v in $(echo "$SYSTEM_CPU_LINE" | cut -d ' ' -f2-); do SYSTEM_TOTAL_USAGE=$((SYSTEM_TOTAL_USAGE + v)); done
+
+    # Total CPU time for the process (utime + stime)
+    PROC_STAT=$(cat /proc/$PID/stat)
+    PROC_UTIME=$(echo "$PROC_STAT" | awk '{print $14}')
+    PROC_STIME=$(echo "$PROC_STAT" | awk '{print $15}')
+    PROC_CPU_USAGE=$((PROC_UTIME + PROC_STIME))
+
+    # Get current timestamp in nanoseconds (for more precise time delta)
+    TIMESTAMP_CURRENT=$(date +%s%N)
+
+    CPU_VAL=0
+    if [ -n "$CPU_USAGE_PREV" ] && [ -n "$SYSTEM_USAGE_PREV" ] && [ -n "$TIMESTAMP_PREV" ]; then
+      D_PROC_USAGE=$((PROC_CPU_USAGE - CPU_USAGE_PREV))
+      D_SYSTEM_USAGE=$((SYSTEM_TOTAL_USAGE - SYSTEM_USAGE_PREV))
+      D_TIMESTAMP=$((TIMESTAMP_CURRENT - TIMESTAMP_PREV)) # in nanoseconds
+
+      if [ "$D_SYSTEM_USAGE" -gt 0 ] && [ "$D_TIMESTAMP" -gt 0 ]; then
+        # Convert D_PROC_USAGE from USER_HZ to nanoseconds (assuming USER_HZ=100, so 1 tick = 10,000,000 ns)
+        # This is a simplification, but aims to align with docker stats' system-wide percentage.
+        # Docker stats uses (cpu_delta / system_cpu_delta) * num_cpus * 100
+        # For simplicity and to match Unraid's display, we'll use (process_cpu_delta / system_cpu_delta) * 100
+        # The values from /proc/stat are already cumulative ticks.
+        
+        # CPU % = (process_cpu_ticks_delta / system_cpu_ticks_delta) * 100
+        # To get a value that can be divided by 1000 to get percentage with 3 decimal places:
+        # (D_PROC_USAGE * 100000) / D_SYSTEM_USAGE
+        CPU_VAL=$(( (D_PROC_USAGE * 100000) / D_SYSTEM_USAGE ))
       fi
     fi
-    CPU_PREV=$PROC_TOTAL
-    TOTAL_PREV=$TOTAL
+    CPU_USAGE_PREV=$PROC_CPU_USAGE
+    SYSTEM_USAGE_PREV=$SYSTEM_TOTAL_USAGE
+    TIMESTAMP_PREV=$TIMESTAMP_CURRENT
     
     TS=$(date +%s)
-    echo "{\"ts\":$TS,\"pid\":\"$PID\",\"heap_used_mb\":$((HEAP_USED_KB / 1024)),\"rss_mb\":$((RSS_KB / 1024)),\"cpu_percent\":$CPU_PCT}" > "$DATA_FILE"
+    # Output integer representing 1000x the percentage (e.g. 8500 = 8.5%, 5 = 0.005%)
+    echo "{\"ts\":$TS,\"pid\":\"$PID\",\"heap_used_mb\":$((HEAP_USED_KB / 1024)),\"rss_mb\":$((RSS_KB / 1024)),\"cpu_milli\":$CPU_VAL}" > "$DATA_FILE"
     # Debug log inside container
-    echo "$(date) Metrics updated: Heap=$((HEAP_USED_KB / 1024))MB, RSS=$((RSS_KB / 1024))MB, CPU=$CPU_PCT%" >> "/data/mcmm_agent.log"
+    echo "$(date) Metrics updated: Heap=$((HEAP_USED_KB / 1024))MB, RSS=$((RSS_KB / 1024))MB, CPU=$((CPU_VAL / 1000))%" >> "/data/mcmm_agent.log"
   else
     echo "$(date) Error: No Java PID found" >> "/data/mcmm_agent.log"
   fi
-  sleep $INTERVAL
+  sleep 5
 done
 BASH;
                         $logFile = rtrim($dataDir, '/') . '/mcmm_agent.log';
@@ -1865,4 +1888,85 @@ BASH;
 } catch (Throwable $e) {
     dbg("Fatal Error: " . $e->getMessage());
     jsonResponse(['success' => false, 'error' => 'Server Error: ' . $e->getMessage()], 500);
+}
+
+// getMinecraftStatus moved to lib.php
+
+/**
+ * Get internal players and max players using multiple check methods
+ */
+function getMinecraftLiveStats($containerId, $hostPort, $env)
+{
+    $online = 0;
+    $max = isset($env['MAX_PLAYERS']) ? intval($env['MAX_PLAYERS']) : 20;
+    $log = "--- Player Ping Diagnostics for $containerId (" . date('H:i:s') . ") ---\n";
+
+    // 1. Try Internal mc-monitor (TCP) - Fastest and very reliable
+    $internalPort = isset($env['SERVER_PORT']) ? intval($env['SERVER_PORT']) : 25565;
+    $cmd = "docker exec " . escapeshellarg($containerId) . " mc-monitor status --json 127.0.0.1:$internalPort 2>/dev/null";
+    $statusRes = shell_exec($cmd);
+    $log .= "Method 1 (mc-monitor): " . ($statusRes ? "SUCCESS" : "FAILED") . "\n";
+    if ($statusRes) {
+        $jd = json_decode($statusRes, true);
+        if (isset($jd['players'])) {
+            @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $jd['players']['online'] . "/" . $jd['players']['max'] . "\n\n", FILE_APPEND);
+            return ['online' => intval($jd['players']['online']), 'max' => intval($jd['players']['max'])];
+        }
+    }
+
+    // 2. Try RCON (Authoritative)
+    $rconPass = $env['RCON_PASSWORD'] ?? '';
+    if ($rconPass) {
+        $rconPort = isset($env['RCON_PORT']) ? intval($env['RCON_PORT']) : 25575;
+        $rconCmd = "docker exec " . escapeshellarg($containerId) . " rcon-cli --port $rconPort --password " . escapeshellarg($rconPass) . " list 2>/dev/null";
+        $rconOut = shell_exec($rconCmd);
+        $log .= "Method 2 (RCON): " . ($rconOut ? "SUCCESS" : "FAILED") . "\n";
+        // Flexible regex for both Vanilla and Modded "list" outputs
+        if ($rconOut && preg_match('/(?:There are|online:?) (\d+) (?:of|out of|\/) a max of (\d+)/i', $rconOut, $m)) {
+            @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $m[1] . "/" . $m[2] . "\n\n", FILE_APPEND);
+            return ['online' => intval($m[1]), 'max' => intval($m[2])];
+        }
+        // Fallback for just the number if regex above is too strict
+        if ($rconOut && preg_match('/There are (\d+) /i', $rconOut, $m)) {
+            @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $m[1] . "/20 (partial match)\n\n", FILE_APPEND);
+            return ['online' => intval($m[1]), 'max' => $max];
+        }
+    }
+
+    // 3. Try Host-Level Ping (Native PHP) - Fallback for networking issues
+    $log .= "Method 3 (Host Ping): Pinging 127.0.0.1:$hostPort\n";
+    $hostPing = getMinecraftStatus('127.0.0.1', intval($hostPort));
+    if ($hostPing) {
+        $log .= "Result: SUCCESS (Host Loopback)\n";
+        @file_put_contents('/tmp/mcmm_ping.log', $log . "\n", FILE_APPEND);
+        return $hostPing;
+    }
+
+    // 4. Try Container IP Ping (Native PHP) - Bypass bridge mapping issues
+    $inspectJson = shell_exec("docker inspect " . escapeshellarg($containerId) . " 2>/dev/null");
+    $inspect = json_decode((string)$inspectJson, true);
+    if ($inspect && isset($inspect[0]['NetworkSettings'])) {
+        $cIp = $inspect[0]['NetworkSettings']['IPAddress'] ?? '';
+        if (!$cIp) {
+            foreach ($inspect[0]['NetworkSettings']['Networks'] ?? [] as $nw) {
+                if (!empty($nw['IPAddress'])) {
+                    $cIp = $nw['IPAddress'];
+                    break;
+                }
+            }
+        }
+        if ($cIp) {
+            $log .= "Method 4 (Bridge IP): Pinging $cIp:$internalPort\n";
+            $bridgePing = getMinecraftStatus($cIp, $internalPort);
+            if ($bridgePing) {
+                $log .= "Result: SUCCESS (Bridge IP)\n";
+                @file_put_contents('/tmp/mcmm_ping.log', $log . "\n", FILE_APPEND);
+                return $bridgePing;
+            }
+        }
+    }
+
+    $log .= "Result: FINAL FAIL (Returning 0/$max)\n";
+    @file_put_contents('/tmp/mcmm_ping.log', $log . "\n", FILE_APPEND);
+    return ['online' => 0, 'max' => $max];
 }

@@ -61,8 +61,18 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => banner.remove(), 1200);
     }
 
-    // Initial load
-    console.log("%c MCMM %c Initializing dashboard...", "background:#7c3aed;color:#fff;font-weight:700;padding:2px 6px;border-radius:4px;", "");
+    // Initial load - try to hydrate from cache for instant feel
+    const cached = localStorage.getItem('mcmm_servers_cache');
+    if (cached) {
+        try {
+            const data = JSON.parse(cached);
+            if (data && data.length > 0) {
+                console.log("%c MCMM %c Hydrating from cache...", "background:#7c3aed;color:#fff;font-weight:700;padding:2px 6px;border-radius:4px;", "");
+                renderServers(data);
+            }
+        } catch (e) { }
+    }
+
     if (document.getElementById('tab-servers')?.classList.contains('active')) {
         loadServers();
     }
@@ -101,6 +111,7 @@ let modState = {
     serverInfo: null
 };
 let modSearchTimer;
+let serverRefreshInterval = null;
 
 // Deploy progress state
 let deployLogInterval = null;
@@ -121,6 +132,14 @@ function switchTab(tabId, element) {
 
     if (tabId === 'servers') {
         loadServers();
+        if (!serverRefreshInterval) {
+            serverRefreshInterval = setInterval(loadServers, 10000);
+        }
+    } else {
+        if (serverRefreshInterval) {
+            clearInterval(serverRefreshInterval);
+            serverRefreshInterval = null;
+        }
     }
 
     if (tabId === 'backups') {
@@ -1425,7 +1444,9 @@ async function loadServers() {
         console.groupEnd();
 
         if (data.success) {
+            localStorage.setItem('mcmm_servers_cache', JSON.stringify(data.data));
             renderServers(data.data);
+            initServerPlayerCounts();
         }
     } catch (e) {
         console.error('Failed to load servers:', e);
@@ -1464,11 +1485,20 @@ function renderServers(servers) {
         <div class="mcmm-server-list" id="serverListContainer">
     `;
 
-    servers.forEach(server => {
+    const sortedServers = [...servers].sort((a, b) => {
+        if (a.isRunning !== b.isRunning) {
+            return a.isRunning ? -1 : 1;
+        }
+        return a.name.localeCompare(b.name);
+    });
+
+    sortedServers.forEach(server => {
         const icon = server.icon || "https://media.forgecdn.net/avatars/855/527/638260492657788102.png";
         const statusClass = server.isRunning ? 'running' : 'stopped';
         const playersOnline = server.players?.online || 0;
         const playersMax = server.players?.max || 0;
+        const mcVersion = server.mcVersion || 'Unknown';
+        const loader = server.loader || 'Vanilla';
 
         const ramPercent = Math.min(Math.max(server.ram || 0, 0), 100);
         const ramUsedLabel = (server.ramUsedMb || 0) > 0 ? (server.ramUsedMb / 1024).toFixed(1) + ' GB' : '0 GB';
@@ -1482,11 +1512,16 @@ function renderServers(servers) {
                 <div class="mcmm-server-icon" style="background-image: url('${icon}');"></div>
                 
                 <div class="mcmm-server-info">
-                    <div class="mcmm-server-title">${server.name}</div>
+                    <div class="mcmm-server-title">
+                        ${server.name}
+                        <span class="mcmm-badge">${mcVersion}</span>
+                        <span class="mcmm-badge secondary">${loader}</span>
+                    </div>
                     <div class="mcmm-server-subtitle">
-                        <span>Port: ${server.ports}</span>
-                        <span style="opacity:0.5;">|</span>
+                        <span class="mcmm-status-dot"></span>
                         <span>${server.isRunning ? 'Online' : 'Offline'}</span>
+                        <span style="opacity:0.5;">|</span>
+                        <span>Port: ${server.ports}</span>
                         ${server.isRunning ? `
                             <span style="opacity:0.5;">|</span>
                             <span id="players-${server.id}" data-server-id="${server.id}" data-port="${server.ports}" data-running="1">
@@ -1509,10 +1544,10 @@ function renderServers(servers) {
                     <div class="mcmm-metric">
                         <div class="mcmm-metric-label">
                             <span>CPU</span>
-                            <span>${cpuUsage}%</span>
+                            <span>${Number(cpuUsage).toFixed(2)}%</span>
                         </div>
                         <div class="mcmm-metric-bar">
-                            <div class="mcmm-metric-fill" style="width: ${cpuUsage}%; background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
+                            <div class="mcmm-metric-fill" style="width: ${Math.min(Math.max(cpuUsage, 0), 100)}%; background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
                         </div>
                     </div>
                 </div>
@@ -2425,10 +2460,13 @@ async function submitServerSettings() {
     statusEl.className = 'mcmm-status';
     statusEl.textContent = 'Updating server...';
 
+    const portVal = parseInt(document.getElementById('edit_port').value);
     const payload = {
         id: id,
-        port: parseInt(document.getElementById('edit_port').value),
+        port: portVal,
         env: {
+            SERVER_PORT: portVal,
+            QUERY_PORT: portVal,
             MEMORY: document.getElementById('edit_memory').value,
             MAX_PLAYERS: parseInt(document.getElementById('edit_max_players').value),
             SERVER_IP: document.getElementById('edit_ip').value || '0.0.0.0',
