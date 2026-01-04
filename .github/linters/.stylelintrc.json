@@ -1,3 +1,16 @@
 {
-  "extends": "stylelint-config-standard"
+  "extends": [
+    "stylelint-config-standard"
+  ],
+  "ignoreFiles": [
+    "**/*.min.css",
+    "dist/**"
+  ],
+  "rules": {
+    "color-named": "never",
+    "selector-max-id": 0,
+    "max-nesting-depth": 3,
+    "declaration-no-important": true,
+    "no-descending-specificity": null
+  }
 }
