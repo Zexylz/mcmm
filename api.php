@@ -314,6 +314,11 @@ try {
                 jsonResponse(['success' => true, 'updates' => []]);
             }
 
+            $installed = json_decode(file_get_contents($metaFile), true) ?: [];
+            if (empty($installed)) {
+                jsonResponse(['success' => true, 'updates' => []]);
+            }
+
             // Fetch server config and env
             $cfgFile = "/boot/config/plugins/mcmm/servers/$id/config.json";
             $srvCfg = file_exists($cfgFile) ? json_decode(file_get_contents($cfgFile), true) : [];
