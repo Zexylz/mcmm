@@ -1,8 +1,11 @@
 {
   "tag-pair": true,
   "attr-lowercase": true,
-  "tag-self-close": true,
   "id-unique": true,
   "src-not-empty": true,
-  "title-require": true
+  "title-require": true,
+  "alt-require": true,
+  "attr-no-duplication": true,
+  "attr-value-double-quotes": true,
+  "tag-self-close": false
 }
