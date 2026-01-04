@@ -37,7 +37,7 @@ jobs:
         if: github.ref_type != 'tag'
         run: echo "DATE=$(date -u +%Y%m%d)" >> $GITHUB_ENV
 
-      # Nightly changelog generieren (schön & technisch, optimiert für Squash & merge)
+      # Nightly changelog generieren (schön & technisch, robust gegen EOF-Probleme)
       - name: Generate Nightly Changelog (pretty, squash-friendly)
         if: github.ref_type != 'tag'
         shell: bash
@@ -46,151 +46,92 @@ jobs:
 
           LAST_TAG="$(git tag --list "nightly-*" --sort=-creatordate | head -n 1 || true)"
           REPO="${GITHUB_REPOSITORY}"
+          OUT="changelog.md"
 
-          # Helper: convert "(#123)" to " [#123](.../pull/123)"
           pr_linkify () {
-            local subject="$1"
-            if [[ "$subject" =~ \(\#([0-9]+)\) ]]; then
+            local s="$1"
+            if [[ "$s" =~ \(\#([0-9]+)\) ]]; then
               local pr="${BASH_REMATCH[1]}"
-              # Replace first occurrence of "(#123)" with link
-              subject="${subject/(\#${pr})/ [#${pr}](https:\/\/github.com\/${REPO}\/pull\/${pr})}"
+              s="${s/(\#${pr})/ [#${pr}](https:\/\/github.com\/${REPO}\/pull\/${pr})}"
             fi
-            echo "$subject"
+            echo "$s"
           }
 
           {
-            echo "CHANGELOG<<'EOF'"
             echo "## Nightly Changelog"
             echo
             echo "- Commit: \`${GITHUB_SHA:0:7}\`"
             echo "- Run: #${GITHUB_RUN_NUMBER}"
             echo "- Trigger: ${GITHUB_EVENT_NAME}"
-          } >> "$GITHUB_ENV"
+            echo
+          } > "$OUT"
 
-          if [[ -z "${LAST_TAG}" ]]; then
+          if [[ -z "$LAST_TAG" ]]; then
             {
-              echo
               echo "No previous nightly tag found. This is the first nightly release."
               echo
               echo "### Changes"
+              git log -n 50 --no-merges --pretty=format:"- %s (\`%h\`, %an)"
+            } >> "$OUT"
+          else
+            {
+              echo "Previous nightly: \`${LAST_TAG}\`"
               echo
-              # First nightly: show last 50 commits
-              git log -n 50 --no-merges --pretty=format:"- %s (\`%h\`, %an)" | while IFS= read -r line; do
-                # Linkify PRs in the subject part only (best-effort)
-                # line format: "- SUBJECT (`hash`, author)"
-                subject="${line#- }"
-                subject="${subject% (\`*}"
-                rest="${line#- $subject}"
-                pretty_subject="$(pr_linkify "$subject")"
-                echo "- ${pretty_subject}${rest}"
-              done
+              echo "[Compare changes](https://github.com/${REPO}/compare/${LAST_TAG}...${GITHUB_SHA})"
               echo
-              echo "EOF"
-            } >> "$GITHUB_ENV"
-            exit 0
+            } >> "$OUT"
+
+            COMMITS="$(git log "${LAST_TAG}..HEAD" --no-merges --pretty=format:'%s|%h|%an')"
+
+            declare -A sections=(
+              [Features]=""
+              [Fixes]=""
+              [Performance]=""
+              [Refactor]=""
+              [Docs]=""
+              [Tests]=""
+              [Build]=""
+              [CI]=""
+              [Chore]=""
+              [Other]=""
+            )
+
+            while IFS= read -r row; do
+              [[ -z "$row" ]] && continue
+              subject="${row%%|*}"
+              rest="${row#*|}"
+              hash="${rest%%|*}"
+              author="${rest#*|}"
+
+              pretty="$(pr_linkify "$subject")"
+              line="- ${pretty} (\`${hash}\`, ${author})"
+
+              case "$subject" in
+                feat:*|feat\(*\):*)         sections[Features]+="$line"$'\n' ;;
+                fix:*|fix\(*\):*)           sections[Fixes]+="$line"$'\n' ;;
+                perf:*|perf\(*\):*)         sections[Performance]+="$line"$'\n' ;;
+                refactor:*|refactor\(*\):*) sections[Refactor]+="$line"$'\n' ;;
+                docs:*|docs\(*\):*)         sections[Docs]+="$line"$'\n' ;;
+                test:*|tests:*|test\(*\):*) sections[Tests]+="$line"$'\n' ;;
+                build:*|build\(*\):*)       sections[Build]+="$line"$'\n' ;;
+                ci:*|ci\(*\):*)             sections[CI]+="$line"$'\n' ;;
+                chore:*|chore\(*\):*)       sections[Chore]+="$line"$'\n' ;;
+                *)                          sections[Other]+="$line"$'\n' ;;
+              esac
+            done <<< "$COMMITS"
+
+            for key in Features Fixes Performance Refactor Docs Tests Build CI Chore Other; do
+              if [[ -n "${sections[$key]}" ]]; then
+                echo "### $key" >> "$OUT"
+                echo >> "$OUT"
+                echo "${sections[$key]}" >> "$OUT"
+              fi
+            done
           fi
 
-          COMPARE_URL="https://github.com/${REPO}/compare/${LAST_TAG}...${GITHUB_SHA}"
-
           {
-            echo
-            echo "- Previous nightly: \`${LAST_TAG}\`"
-            echo "- Compare: ${COMPARE_URL}"
-            echo
-          } >> "$GITHUB_ENV"
-
-          # Collect commits since last nightly (excluding merges)
-          COMMITS="$(git log "${LAST_TAG}..HEAD" --no-merges --pretty=format:'%s|%h|%an' || true)"
-
-          features=""
-          fixes=""
-          refactor=""
-          docs=""
-          chore=""
-          perf=""
-          tests=""
-          build=""
-          ci=""
-          other=""
-
-          append_line () {
-            local __var="$1"
-            local __line="$2"
-            eval "$__var=\"\${$__var}"$'\n'"$__line\""
-          }
-
-          while IFS= read -r row; do
-            [[ -z "$row" ]] && continue
-            subject="${row%%|*}"
-            rest="${row#*|}"
-            shorthash="${rest%%|*}"
-            author="${rest#*|}"
-
-            pretty_subject="$(pr_linkify "$subject")"
-            line="- ${pretty_subject} (\`${shorthash}\`, ${author})"
-
-            case "$subject" in
-              feat:*|feat$begin:math:text$\*$end:math:text$:*)
-                append_line features "$line"
-                ;;
-              fix:*|fix$begin:math:text$\*$end:math:text$:*)
-                append_line fixes "$line"
-                ;;
-              refactor:*|refactor$begin:math:text$\*$end:math:text$:*)
-                append_line refactor "$line"
-                ;;
-              perf:*|perf$begin:math:text$\*$end:math:text$:*)
-                append_line perf "$line"
-                ;;
-              docs:*|docs$begin:math:text$\*$end:math:text$:*)
-                append_line docs "$line"
-                ;;
-              test:*|test$begin:math:text$\*$end:math:text$:*|tests:*|tests$begin:math:text$\*$end:math:text$:*)
-                append_line tests "$line"
-                ;;
-              build:*|build$begin:math:text$\*$end:math:text$:*)
-                append_line build "$line"
-                ;;
-              ci:*|ci$begin:math:text$\*$end:math:text$:*)
-                append_line ci "$line"
-                ;;
-              chore:*|chore$begin:math:text$\*$end:math:text$:*)
-                append_line chore "$line"
-                ;;
-              *)
-                append_line other "$line"
-                ;;
-            esac
-          done <<< "$COMMITS"
-
-          {
-            section () {
-              local title="$1"
-              local content="$2"
-              if [[ -n "$content" ]]; then
-                echo "### ${title}"
-                echo
-                echo "${content#"$'\n'"}"
-                echo
-              fi
-            }
-
-            section "Features"     "$features"
-            section "Fixes"        "$fixes"
-            section "Performance"  "$perf"
-            section "Refactor"     "$refactor"
-            section "Docs"         "$docs"
-            section "Tests"        "$tests"
-            section "Build"        "$build"
-            section "CI"           "$ci"
-            section "Chore"        "$chore"
-            section "Other"        "$other"
-
-            if [[ -z "$features$fixes$perf$refactor$docs$tests$build$ci$chore$other" ]]; then
-              echo "No commit messages found (excluding merge commits) since \`${LAST_TAG}\`."
-              echo
-            fi
-
+            echo "CHANGELOG<<EOF"
+            cat "$OUT"
             echo "EOF"
           } >> "$GITHUB_ENV"
 
