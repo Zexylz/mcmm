@@ -5,16 +5,7 @@ on:
     branches:
       - main
     tags:
-      - 'v*'
-    paths:
-      - include/**
-      - javascript/**
-      - styles/**
-      - api.php
-      - default.cfg
-      - .htaccess
-      - mcmm.page
-      - mcmm.plg
+      - "v*"
   workflow_dispatch:
 
 jobs:
@@ -41,13 +32,35 @@ jobs:
           cd release
           zip -r ../mcmm-plugin.zip mcmm
 
-      - name: Create GitHub Release
+      # Nur für main-Pushes (kein Tag): Datum setzen
+      - name: Set date
+        if: github.ref_type != 'tag'
+        run: echo "DATE=$(date -u +%Y%m%d)" >> $GITHUB_ENV
+
+      # Nightly prerelease bei JEDEM Push auf main
+      - name: Create GitHub Release (nightly)
+        if: github.ref_type != 'tag'
         uses: softprops/action-gh-release@v2
         with:
           files: mcmm-plugin.zip
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
+          tag_name: nightly-${{ env.DATE }}-${{ github.run_number }}
+          name: Nightly ${{ env.DATE }} (#${{ github.run_number }})
+          prerelease: true
           draft: false
-          prerelease: ${{ github.ref_type != 'tag' }}
+          generate_release_notes: false
+          target_commitish: ${{ github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Normale Release bei v* Tag-Push
+      - name: Create GitHub Release (tag)
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: mcmm-plugin.zip
+          tag_name: ${{ github.ref_name }}
+          prerelease: false
+          draft: false
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
