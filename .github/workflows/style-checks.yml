@@ -7,7 +7,7 @@ on:
         description: "Select what to run"
         required: true
         default: "all"
-        type: choice
+        type: boolean
         options:
           - all
           - phpcs
