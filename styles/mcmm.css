@@ -446,15 +446,15 @@
 
 @keyframes mcmm-dot-pulse {
     0% {
-        box-shadow: 0 0 0 0 rgb(52 211 153 / 70%) !important;
+        box-shadow: 0 0 0 0 rgb(52 211 153 / 70%);
     }
 
     70% {
-        box-shadow: 0 0 0 6px rgb(52 211 153 / 0%) !important;
+        box-shadow: 0 0 0 6px rgb(52 211 153 / 0%);
     }
 
     100% {
-        box-shadow: 0 0 0 0 rgb(52 211 153 / 0%) !important;
+        box-shadow: 0 0 0 0 rgb(52 211 153 / 0%);
     }
 }
 
