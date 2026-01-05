@@ -70,19 +70,97 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npx eslint "**/*.js" --config .github/linters/eslint.config.mjs
 
-  stylelint:
-    name: Stylelint
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.stylelint }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - run: npm ci --no-audit --no-fund
-      - run: npx stylelint "**/*.css" --config .github/linters/.stylelintrc.json
+stylelint:
+  name: Stylelint
+  runs-on: ubuntu-latest
+  if: ${{ github.event_name != 'workflow_dispatch' || inputs.stylelint }}
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+        cache: npm
+        cache-dependency-path: package-lock.json
+    - run: npm ci --no-audit --no-fund
+
+    - name: Extract CSS from .page (<style> blocks + inline styles)
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p .tmp-stylelint
+        shopt -s globstar nullglob
+
+        for f in **/*.page; do
+          # 1) <style>...</style> extrahieren
+          out_style=".tmp-stylelint/${f%.page}.style.css"
+          mkdir -p "$(dirname "$out_style")"
+
+          awk '
+            BEGIN { in_style=0 }
+            {
+              line=$0
+              low=tolower($0)
+
+              if (!in_style && low ~ /<style([[:space:]][^>]*)?>/) {
+                in_style=1
+                sub(/.*<style([[:space:]][^>]*)?>/,"",line)
+                if (length(line) > 0) print line
+                next
+              }
+
+              if (in_style && low ~ /<\/style>/) {
+                sub(/<\/style>.*/,"",line)
+                if (length(line) > 0) print line
+                in_style=0
+                next
+              }
+
+              if (in_style) print $0
+            }
+          ' "$f" > "$out_style"
+
+          # 2) Inline styles style="..." extrahieren (double quotes)
+          out_inline=".tmp-stylelint/${f%.page}.inline.css"
+          mkdir -p "$(dirname "$out_inline")"
+
+          # Wir extrahieren alle style="..."; jede Fundstelle wird als eigener Block gelintet.
+          # Das ist ein "declaration list"-Kontext, den Stylelint grundsätzlich linten kann.
+          perl -0777 -ne '
+            my $t = $_;
+
+            # Entferne <script>...</script> und <style>...</style>, damit wir nicht versehentlich style="..." aus JS/CSS Strings ziehen.
+            $t =~ s{<script\b[^>]*>.*?</script>}{}gis;
+            $t =~ s{<style\b[^>]*>.*?</style>}{}gis;
+
+            while ($t =~ /style\s*=\s*"([^"]*)"/gis) {
+              my $s = $1;
+
+              # HTML Entities grob zurücksetzen, damit Stylelint nicht auf &quot; etc. trifft
+              $s =~ s/&quot;/"/g;
+              $s =~ s/&apos;/'\''/g;
+              $s =~ s/&lt;/</g;
+              $s =~ s/&gt;/>/g;
+              $s =~ s/&amp;/&/g;
+
+              # Falls jemand per \n in Attributen formatiert: normalisieren
+              $s =~ s/\r\n/\n/g;
+
+              # Leere / whitespace-only ignorieren
+              next if $s =~ /^\s*$/;
+
+              print "/* $ARGV inline style */\n";
+              print $s;
+              print "\n\n";
+            }
+          ' "$f" > "$out_inline"
+
+        done
+
+        # Leere extrahierte Dateien entfernen
+        find .tmp-stylelint -type f -size 0 -delete
+
+    - run: npx stylelint "**/*.css" ".tmp-stylelint/**/*.css" --config .github/linters/.stylelintrc.json
+
 
   htmlhint:
     name: HTMLHint
