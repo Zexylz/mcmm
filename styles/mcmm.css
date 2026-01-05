@@ -37,6 +37,8 @@
     margin: 0 !important;
     min-height: 100vh;
     padding: 0 !important;
+    transform: scale(1.2);
+    transform-origin: top;
 }
 
 .mcmm-app h1,
@@ -274,7 +276,7 @@
 }
 
 .mcmm-page-btn.active {
-    background: linear-gradient(135deg, #9d4edd, #7b2cbf);
+    background: linear-gradient(135deg, rgb(157 78 221 / 100%), rgb(123 44 191 / 100%));
     border-color: rgb(157 78 221 / 95%);
     box-shadow: 0 14px 30px rgb(157 78 221 / 45%);
     color: rgb(255 255 255 / 100%);
@@ -291,7 +293,7 @@
 }
 
 .mcmm-app .mcmm-btn-primary {
-    background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%) !important;
+    background: linear-gradient(135deg, rgb(123 44 191 / 100%) 0%, rgb(157 78 221 / 100%) 100%) !important;
     border: 1px solid transparent !important;
     box-shadow: 0 4px 15px rgb(123 44 191 / 40%) !important;
     color: rgb(255 255 255 / 100%) !important;
@@ -372,7 +374,7 @@
 }
 
 .mcmm-server-icon {
-    background-color: #333 !important;
+    background-color: rgb(51 51 51 / 100%) !important;
     background-position: center !important;
     background-repeat: no-repeat !important;
     background-size: cover !important;
@@ -801,7 +803,7 @@
 }
 
 .mcmm-version-thumb {
-    background-color: #1a1a1f;
+    background-color: rgb(26 26 31 / 100%);
     background-position: center;
     background-size: cover;
     border: 1px solid var(--border);
@@ -1580,6 +1582,7 @@
 [id="activeFilterContainer"]:active {
     transform: translateY(0);
 }
+
 
 /* ===== BACKUP CARD: INFO + OVERLAY (kept, but removed duplicate grid/card/thumb/info/name overrides) ===== */
 
