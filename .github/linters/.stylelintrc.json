@@ -10,7 +10,7 @@
     "color-named": "never",
     "selector-max-id": 0,
     "max-nesting-depth": 3,
-    "declaration-no-important": false,
+    "declaration-no-important": null,
     "no-descending-specificity": null
   }
 }
