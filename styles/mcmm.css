@@ -1567,22 +1567,19 @@
 
 /* ===== MISC: ACTIVE FILTER CONTAINER ===== */
 
-/* stylelint-disable selector-id-pattern */
-#activeFilterContainer {
+[id="activeFilterContainer"] {
     transition: all 0.2s ease;
 }
 
-#activeFilterContainer:hover {
+[id="activeFilterContainer"]:hover {
     background: rgb(157 78 221 / 20%) !important;
     border-color: var(--primary-hover) !important;
     transform: translateY(-1px);
 }
 
-#activeFilterContainer:active {
+[id="activeFilterContainer"]:active {
     transform: translateY(0);
 }
-
-/* stylelint-enable selector-id-pattern */
 
 /* ===== BACKUP CARD: INFO + OVERLAY (kept, but removed duplicate grid/card/thumb/info/name overrides) ===== */
 
