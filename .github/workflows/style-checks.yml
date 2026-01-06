@@ -68,7 +68,38 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci --no-audit --no-fund
-      - run: npx eslint "**/*.js" --config .github/linters/eslint.config.mjs
+
+      - name: Determine changed files (PR only)
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          git diff --name-only "origin/${{ github.base_ref }}"...HEAD > .tmp-changed.txt
+          echo "Changed files:"
+          sed 's/^/ - /' .tmp-changed.txt || true
+
+      - name: Run ESLint (changed files on PR; all on push)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            mapfile -t js_files < <(grep -E '\.js$' .tmp-changed.txt 2>/dev/null || true)
+            if [[ ${#js_files[@]} -eq 0 ]]; then
+              echo "ESLint: no changed .js files. Skipping."
+              exit 0
+            fi
+            npx eslint "${js_files[@]}" \
+              --config .github/linters/eslint.config.mjs \
+              --max-warnings 0 \
+              --format stylish
+          else
+            npx eslint "**/*.js" \
+              --config .github/linters/eslint.config.mjs \
+              --max-warnings 0 \
+              --format stylish
+          fi
 
   stylelint:
     name: Stylelint
@@ -82,7 +113,193 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci --no-audit --no-fund
-      - run: npx stylelint "**/*.css" --config .github/linters/.stylelintrc.json
+
+      - name: Determine changed files (PR only)
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          git diff --name-only "origin/${{ github.base_ref }}"...HEAD > .tmp-changed.txt
+          echo "Changed files:"
+          sed 's/^/ - /' .tmp-changed.txt || true
+
+      - name: Extract CSS from .page (line-preserving, PHP-safe, dummy selectors)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp-stylelint
+          shopt -s globstar nullglob
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            mapfile -t page_files < <(grep -E '\.page$' .tmp-changed.txt 2>/dev/null || true)
+          else
+            mapfile -t page_files < <(printf '%s\n' **/*.page)
+          fi
+
+          if [[ ${#page_files[@]} -eq 0 ]]; then
+            echo "No .page files to extract."
+            exit 0
+          fi
+
+          for f in "${page_files[@]}"; do
+            [[ -f "$f" ]] || continue
+
+            out_style=".tmp-stylelint/${f}.style.css"
+            out_inline=".tmp-stylelint/${f}.inline.css"
+            mkdir -p "$(dirname "$out_style")" "$(dirname "$out_inline")"
+
+            # 1) <style> ... </style> line-preserving
+            awk '
+              BEGIN { in_style=0 }
+              {
+                line=$0
+                low=tolower($0)
+
+                if (!in_style) {
+                  if (low ~ /<style([[:space:]][^>]*)?>/) {
+                    in_style=1
+                    sub(/.*<style([[:space:]][^>]*)?>/,"",line)
+                    if (length(line) > 0) print line; else print ""
+                    next
+                  }
+                  print ""
+                  next
+                } else {
+                  if (low ~ /<\/style>/) {
+                    sub(/<\/style>.*/,"",line)
+                    if (length(line) > 0) print line; else print ""
+                    in_style=0
+                    next
+                  }
+                  print $0
+                }
+              }
+            ' "$f" > "$out_style"
+
+            # 2) Inline styles line-preserving, PHP-safe, wrapped as dummy selectors
+            perl -ne '
+              BEGIN {
+                $ln = 0;
+                $idx = 0;
+                $in_script = 0;
+                $in_style  = 0;
+              }
+
+              sub decode_entities {
+                my ($s) = @_;
+                $s =~ s/&quot;/"/g;
+                $s =~ s/&apos;/'\''/g;
+                $s =~ s/&lt;/</g;
+                $s =~ s/&gt;/>/g;
+                $s =~ s/&amp;/&/g;
+                return $s;
+              }
+
+              sub normalize_decls {
+                my ($s) = @_;
+                $s =~ s/^\s+|\s+$//g;
+                $s =~ s/\s*;\s*$/;/;
+                $s .= ";" if $s !~ /;\s*$/;
+                return $s;
+              }
+
+              $ln++;
+              my $line = $_;
+              my $low  = lc($line);
+
+              # Skip inside <script>...</script>
+              if (!$in_script && $low =~ /<script\b/) { $in_script = 1; }
+              if ($in_script) {
+                print "\n";
+                if ($low =~ /<\/script>/) { $in_script = 0; }
+                next;
+              }
+
+              # Skip inside <style>...</style>
+              if (!$in_style && $low =~ /<style\b/) { $in_style = 1; }
+              if ($in_style) {
+                print "\n";
+                if ($low =~ /<\/style>/) { $in_style = 0; }
+                next;
+              }
+
+              # Remove PHP fragments on this line (PHP-safe)
+              $line =~ s/<\?(?:php|=)?.*?\?>//g;
+
+              my @rules = ();
+
+              while ($line =~ /style\s*=\s*"([^"]*)"/gi) {
+                my $s = decode_entities($1);
+                next if $s =~ /<\?/ || $s =~ /\?>/;
+                next if $s =~ /^\s*$/;
+                $s = normalize_decls($s);
+                $idx++;
+                push @rules, ".__inline_style_$idx__ { $s }";
+              }
+
+              while ($line =~ /style\s*=\s*'\''([^'\'']*)'\''/gi) {
+                my $s = decode_entities($1);
+                next if $s =~ /<\?/ || $s =~ /\?>/;
+                next if $s =~ /^\s*$/;
+                $s = normalize_decls($s);
+                $idx++;
+                push @rules, ".__inline_style_$idx__ { $s }";
+              }
+
+              if (@rules) {
+                print join(" ", @rules), "\n";
+              } else {
+                print "\n";
+              }
+            ' "$f" > "$out_inline"
+
+          done
+
+          # Remove fully empty extracted files
+          find .tmp-stylelint -type f -name "*.css" -exec sh -c 'grep -q "[^[:space:]]" "$1" || rm -f "$1"' _ {} \; || true
+
+      - name: Run Stylelint (changed CSS on PR; all on push)
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            mapfile -t css_files < <(grep -E '\.css$' .tmp-changed.txt 2>/dev/null || true)
+
+            filtered_css=()
+            for f in "${css_files[@]}"; do
+              [[ "$f" == dist/* ]] && continue
+              [[ "$f" == *.min.css ]] && continue
+              [[ -f "$f" ]] || continue
+              filtered_css+=("$f")
+            done
+
+            have_tmp=false
+            if compgen -G ".tmp-stylelint/**/*.css" > /dev/null; then
+              have_tmp=true
+            fi
+
+            if [[ ${#filtered_css[@]} -eq 0 ]] && [[ "$have_tmp" == "false" ]]; then
+              echo "Stylelint: no changed CSS and no extracted CSS. Skipping."
+              exit 0
+            fi
+
+            npx stylelint \
+              "${filtered_css[@]}" \
+              ".tmp-stylelint/**/*.css" \
+              --config .github/linters/.stylelintrc.json \
+              --formatter verbose \
+              --max-warnings 0
+          else
+            npx stylelint \
+              "**/*.css" \
+              ".tmp-stylelint/**/*.css" \
+              --config .github/linters/.stylelintrc.json \
+              --formatter verbose \
+              --max-warnings 0
+          fi
 
   htmlhint:
     name: HTMLHint
@@ -96,14 +313,27 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci --no-audit --no-fund
-      - name: Prepare HTML
+
+      - name: Determine changed files (PR only)
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          git diff --name-only "origin/${{ github.base_ref }}"...HEAD > .tmp-changed.txt
+          echo "Changed files:"
+          sed 's/^/ - /' .tmp-changed.txt || true
+
+      - name: Prepare HTML (changed .page on PR; all on push)
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p .tmp-htmlhint
           shopt -s globstar nullglob
-          for f in **/*.page; do
-            out=".tmp-htmlhint/${f%.page}.html"
+
+          prepare_html_from_page() {
+            local f="$1"
+            local out=".tmp-htmlhint/${f%.page}.html"
             mkdir -p "$(dirname "$out")"
             awk '
               BEGIN { in_front=1; in_html=0 }
@@ -119,5 +349,32 @@ jobs:
                 print
               }
             ' "$f" > "$out"
-          done
-      - run: npx htmlhint --config .github/linters/.htmlhintrc ".tmp-htmlhint/**/*.html"
+          }
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            mapfile -t page_files < <(grep -E '\.page$' .tmp-changed.txt 2>/dev/null || true)
+            if [[ ${#page_files[@]} -eq 0 ]]; then
+              echo "HTMLHint: no changed .page files. Skipping."
+              exit 0
+            fi
+            for f in "${page_files[@]}"; do
+              [[ -f "$f" ]] || continue
+              prepare_html_from_page "$f"
+            done
+          else
+            for f in **/*.page; do
+              [[ -f "$f" ]] || continue
+              prepare_html_from_page "$f"
+            done
+          fi
+
+      - name: Run HTMLHint
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+          if ! compgen -G ".tmp-htmlhint/**/*.html" > /dev/null; then
+            echo "HTMLHint: no generated HTML files. Skipping."
+            exit 0
+          fi
+          npx htmlhint --config .github/linters/.htmlhintrc ".tmp-htmlhint/**/*.html"
