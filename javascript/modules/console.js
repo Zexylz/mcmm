@@ -8,7 +8,7 @@ export function openConsole(serverId, serverName) {
     currentConsoleId = serverId;
 
     modal.classList.add('open');
-    output.innerHTML = '<div style="color: #666; padding: 1rem;">Loading logs...</div>';
+    output.innerHTML = '<div style="color: rgb(102 102 102 / 100%); padding: 1rem;">Loading logs...</div>';
 
     fetchLogs();
     consoleInterval = setInterval(fetchLogs, 2000);

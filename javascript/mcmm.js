@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const data = JSON.parse(cached);
             if (data && data.length > 0) {
-                console.log("%c MCMM %c Hydrating from cache...", "background:#7c3aed;color:#fff;font-weight:700;padding:2px 6px;border-radius:4px;", "");
+                console.log("%c MCMM %c Hydrating from cache...", "background:rgb(124 58 237 / 100%);color:rgb(255 255 255 / 100%);font-weight:700;padding:2px 6px;border-radius:4px;", "");
                 renderServers(data);
             }
         } catch (err) {
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Global error handler for debugging
 window.addEventListener('error', function (event) {
-    console.error("%c MCMM Runtime Error: ", "background:#ef4444;color:#fff;font-weight:700;padding:2px 6px;border-radius:4px;", event.message, "at", event.filename, ":", event.lineno);
+    console.error("%c MCMM Runtime Error: ", "background:rgb(239  68  68 / 100%);color:rgb(255 255 255 / 100%);font-weight:700;padding:2px 6px;border-radius:4px;", event.message, "at", event.filename, ":", event.lineno);
 });
 
 let modpackState = { items: [], loading: false, error: '' };
@@ -717,7 +717,7 @@ function renderMods() {
 
             return `
                 <div class="mcmm-modpack-card" style="display: flex; align-items: center; gap: 1.25rem; padding: 1.25rem; min-height: 90px;">
-                    <div style="width: 56px; height: 56px; background-image: url('${iconUrl}'); background-size: cover; background-position: center; background-color: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--text-secondary); flex-shrink: 0;">
+                    <div style="width: 56px; height: 56px; background-image: url('${iconUrl}'); background-size: cover; background-position: center; background-color: rgb(255 255 255 / 3%); border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--text-secondary); flex-shrink: 0;">
                         ${!iconUrl ? '☕' : ''}
                     </div>
                     
@@ -749,7 +749,7 @@ function renderMods() {
 
             return `
                 <div class="mcmm-modpack-card ${selectedClass}" style="display: flex; gap: 1.5rem; padding: 1.5rem; align-items: center; min-height: 110px; position: relative;" onclick="toggleModSelection('${mod.id}')">
-                    <div style="width: 80px; height: 80px; background-image: url('${mod.icon}'); background-size: cover; background-position: center; border-radius: 16px; flex-shrink: 0; background-color: #2a2a2a; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);"></div>
+                    <div style="width: 80px; height: 80px; background-image: url('${mod.icon}'); background-size: cover; background-position: center; border-radius: 16px; flex-shrink: 0; background-color: rgb(42 42 42 / 100%); border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10);"></div>
                     <div style="flex: 1; overflow: hidden; display: flex; flex-direction: column; height: 100%; justify-content: center;">
                         <div style="margin-bottom: 0.5rem; padding-right: 2rem;">
                             <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.1rem;">
@@ -1420,17 +1420,17 @@ async function loadServers() {
         const res = await fetch('/plugins/mcmm/api.php?action=servers');
         const data = await res.json();
 
-        console.group("%c MCMM %c Servers Dashboard Update", "background:#7c3aed;color:#fff;font-weight:700;padding:2px 6px;border-radius:4px;", "font-weight:700;");
+        console.group("%c MCMM %c Servers Dashboard Update", "background:rgb(124 58 237 / 100%);color:rgb(255 255 255 / 100%);font-weight:700;padding:2px 6px;border-radius:4px;", "font-weight:700;");
         console.log("Status:", data.success ? "✅ Success" : "❌ Failed");
 
         if (data.data) {
             data.data.forEach(s => {
-                const statusColor = s.isRunning ? "#10b981" : "#ef4444";
+                const statusColor = s.isRunning ? "rgb(16 185 129 / 100%)" : "rgb(239 6 68 / 100%)";
                 const ramSource = s.ramDetails?.source || 'unavailable';
                 console.groupCollapsed(`%c ${s.name} %c ${s.status} %c ${ramSource} `,
-                    "background:#1e293b;color:#38bdf8;font-weight:700;padding:2px 4px;border-radius:4px 0 0 4px;",
-                    `background:${statusColor};color:#fff;font-weight:700;padding:2px 4px;`,
-                    "background:#64748b;color:#fff;font-size:0.7rem;padding:2px 4px;border-radius:0 4px 4px 0;"
+                    "background:rgb(30 41 59 / 100%);color:rgb(56 189 248 / 100%);font-weight:700;padding:2px 4px;border-radius:4px 0 0 4px;",
+                    `background:${statusColor};color:rgb(255 255 255 / 100%);font-weight:700;padding:2px 4px;`,
+                    "background:rgb(100 116 139 / 100%);color:rgb(255 255 255 / 100%);font-size:0.7rem;padding:2px 4px;border-radius:0 4px 4px 0;"
                 );
                 console.log(`- Metrics: ${s.ramUsedMb}MB / ${s.ramLimitMb}MB (${s.ram}%) | CPU: ${s.cpu}%`);
                 if (s.ramDetails) {
@@ -1540,7 +1540,7 @@ function renderServers(servers) {
                             <span>${ramUsedLabel} / ${ramCapLabel} ${rssLabel}</span>
                         </div>
                         <div class="mcmm-metric-bar">
-                            <div class="mcmm-metric-fill" style="width: ${ramPercent}%; background: linear-gradient(90deg, #a855f7, #ec4899);"></div>
+                            <div class="mcmm-metric-fill" style="width: ${ramPercent}%; background: linear-gradient(90deg, rgb(168 85 247 / 100%), rgb(236 72 153 / 100%));"></div>
                         </div>
                     </div>
                     <div class="mcmm-metric">
@@ -1549,7 +1549,7 @@ function renderServers(servers) {
                             <span>${Number(cpuUsage).toFixed(2)}%</span>
                         </div>
                         <div class="mcmm-metric-bar">
-                            <div class="mcmm-metric-fill" style="width: ${Math.min(Math.max(cpuUsage, 0), 100)}%; background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
+                            <div class="mcmm-metric-fill" style="width: ${Math.min(Math.max(cpuUsage, 0), 100)}%; background: linear-gradient(90deg, rgb(59 130 246 / 100%), rgb(6 182 212 / 100%));"></div>
                         </div>
                     </div>
                 </div>
@@ -1841,7 +1841,7 @@ function openConsole(serverId, serverName) {
     currentConsoleId = serverId;
 
     modal.classList.add('open');
-    output.innerHTML = '<div style="color: #666; padding: 1rem;">Loading logs...</div>';
+    output.innerHTML = '<div style="color: rgb(102 102 102 / 100%); padding: 1rem;">Loading logs...</div>';
 
     fetchLogs();
     consoleInterval = setInterval(fetchLogs, 2000);
@@ -2419,7 +2419,7 @@ async function openServerSettings(id) {
             if (imgUrl) {
                 iconPrev.innerHTML = `<div style="width:48px; height:48px; border:1px solid var(--border); border-radius:10px; background-size:cover; background-position:center; background-image:url('${imgUrl}');"></div><div style="color: var(--text-secondary); font-size: 0.85rem; word-break: break-all;">${imgUrl}</div>`;
             } else {
-                iconPrev.innerHTML = `<div style="width:48px; height:48px; border:1px solid var(--border); border-radius:10px; background: rgba(255,255,255,0.04); display:flex; align-items:center; justify-content:center; color: var(--text-muted); font-size:0.8rem;">No Image</div><div style="color: var(--text-secondary); font-size: 0.85rem;">Preview</div>`;
+                iconPrev.innerHTML = `<div style="width:48px; height:48px; border:1px solid var(--border); border-radius:10px; background: rgb(255 255 255 / 4%); display:flex; align-items:center; justify-content:center; color: var(--text-muted); font-size:0.8rem;">No Image</div><div style="color: var(--text-secondary); font-size: 0.85rem;">Preview</div>`;
             }
         }
 
@@ -2641,7 +2641,7 @@ function renderBackups(backups) {
             <div class="mcmm-modpack-card" style="position: relative; height: 100%;">
                 <div class="mcmm-backup-info-trigger" title="Technical Details">
                     <div class="mcmm-backup-info-panel">
-                        <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.4; margin-bottom: 0.75rem; font-weight: 800; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">System Manifest</div>
+                        <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.4; margin-bottom: 0.75rem; font-weight: 800; border-bottom: 1px solid rgb(255 255 255 / 10%); padding-bottom: 0.5rem;">System Manifest</div>
                         
                         <div class="mcmm-backup-panel-item">
                             <span class="material-symbols-outlined">dns</span>
@@ -2704,7 +2704,7 @@ function renderBackups(backups) {
                 <div class="mcmm-backup-overlay">
                     <div class="mcmm-backup-actions">
                         <button class="mcmm-btn mcmm-btn-primary" style="flex: 1;" onclick="reinstallFromBackup('${b.name}')">Restore</button>
-                        <button class="mcmm-btn" style="background: rgba(248, 113, 113, 0.1); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.2); padding: 0.6rem;" onclick="deleteBackup('${b.name}')">
+                        <button class="mcmm-btn" style="background: rgb(248 113 113 / 10%); color: var(--danger); border: 1px solid rgb(248 113 113 / 20%); padding: 0.6rem;" onclick="deleteBackup('${b.name}')">
                             <span class="material-symbols-outlined" style="font-size: 1.1rem;">delete</span>
                         </button>
                     </div>
