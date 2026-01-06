@@ -65,16 +65,8 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
     <link rel="stylesheet" href="/plugins/mcmm/styles/mcmm.css?v=<?php echo time(); ?>" />
     <style>
-        div.title {
-            display: none !important;
-        }
-        
-        #displaybox,
-        #displaybox .content {
-            margin: 0;
-            padding: 0;
-            max-width: 100% !important;
-        }
+        div.title { display: none !important;}
+        #displaybox { margin: 0; padding: 0; max-width: 100% !important;}
     </style>
 </head>
 <body>
@@ -475,7 +467,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
 
                 <div class="mcmm-form-group">
                     <label class="mcmm-label">Deploy Console</label>
-                    <div id="deployConsole" style="display:none; background:rgb(15 16 20 / 100%);border:1px solid var(--border); border-radius:10px; padding:0.75rem; max-height:200px; overflow-y:auto; font-family:'Fira Code', monospace; font-size:0.85rem; color:rgb(192 202 245 / 100%); white-space:pre-wrap; word-break:break-word;">
+                    <div id="deployConsole" style="display:none; background:rgb(15 16 20 / 100%);border:1px solid var(--border); border-radius:10px; padding:0.75rem; max-height:200px; overflow-y:auto; font-family:'Fira Code', monospace; font-size:0.85rem; color:rgb(192 202 245 / 100%); white-space:pre-wrap; overflow-wrap:break-word; word-break:normal;">
                         <div id="deployConsoleText"></div>
                     </div>
                 </div>
@@ -659,7 +651,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
 
                 <div>
                     <div style="font-weight:700; margin-bottom:0.5rem;">Live Console</div>
-                    <div id="deployProgressConsole" style="background:#0f1014; border:1px solid var(--border); border-radius:10px; padding:0.75rem; height:60vh; max-height:60vh; overflow-y:auto; font-family:'Fira Code', monospace; font-size:0.9rem; color:rgb(192 202 245 / 100%); white-space:pre-wrap; word-break:break-word;">
+                    <div id="deployProgressConsole" style="background:#0f1014; border:1px solid var(--border); border-radius:10px; padding:0.75rem; height:60vh; max-height:60vh; overflow-y:auto; font-family:'Fira Code', monospace; font-size:0.9rem; color:rgb(192 202 245 / 100%); white-space:pre-wrap; overflow-wrap:break-word; word-break:normal;">
                         <div id="deployProgressConsoleText">Waiting for logs...</div>
                     </div>
                 </div>
