@@ -119,38 +119,52 @@ jobs:
               }
             ' "$f" > "$out_style"
 
-            # 2) Inline styles style="..." extrahieren (double quotes)
+            # 2) Inline styles style="..." / style='...' extrahieren (PHP-safe)
             out_inline=".tmp-stylelint/${f%.page}.inline.css"
             mkdir -p "$(dirname "$out_inline")"
 
-            # Wir extrahieren alle style="..."; jede Fundstelle wird als eigener Block gelintet.
-            # Das ist ein "declaration list"-Kontext, den Stylelint grundsätzlich linten kann.
             perl -0777 -ne '
               my $t = $_;
 
-              # Entferne <script>...</script> und <style>...</style>, damit wir nicht versehentlich style="..." aus JS/CSS Strings ziehen.
-              $t =~ s{<script\b[^>]*>.*?</script>}{}gis;
-              $t =~ s{<style\b[^>]*>.*?</style>}{}gis;
+              # PHP vollständig entfernen (<?php ... ?> und <?= ... ?>)
+              $t =~ s/<\?(?:php|=)?[\s\S]*?\?>//gis;
 
-              while ($t =~ /style\s*=\s*"([^"]*)"/gis) {
-                my $s = $1;
+              # <script> und <style> entfernen, um keine Strings zu matchen
+              $t =~ s{<script\b[^>]*>[\s\S]*?</script>}{}gis;
+              $t =~ s{<style\b[^>]*>[\s\S]*?</style>}{}gis;
 
-                # HTML Entities grob zurücksetzen, damit Stylelint nicht auf &quot; etc. trifft
+              sub decode_entities {
+                my ($s) = @_;
                 $s =~ s/&quot;/"/g;
                 $s =~ s/&apos;/'\''/g;
                 $s =~ s/&lt;/</g;
                 $s =~ s/&gt;/>/g;
                 $s =~ s/&amp;/&/g;
+                return $s;
+              }
 
-                # Falls jemand per \n in Attributen formatiert: normalisieren
+              sub emit_if_safe {
+                my ($s, $origin) = @_;
+                $s = decode_entities($s);
                 $s =~ s/\r\n/\n/g;
 
-                # Leere / whitespace-only ignorieren
-                next if $s =~ /^\s*$/;
+                # Failsafe: falls doch noch PHP-Reste drin sind -> ignorieren
+                return if $s =~ /<\?/;
+                return if $s =~ /\?>/;
 
-                print "/* $ARGV inline style */\n";
+                return if $s =~ /^\s*$/;
+
+                print "/* $ARGV inline style ($origin) */\n";
                 print $s;
                 print "\n\n";
+              }
+
+              while ($t =~ /style\s*=\s*"([^"]*)"/gis) {
+                emit_if_safe($1, "double quotes");
+              }
+
+              while ($t =~ /style\s*=\s*'\''([^'\'']*)'\''/gis) {
+                emit_if_safe($1, "single quotes");
               }
             ' "$f" > "$out_inline"
 
@@ -159,7 +173,8 @@ jobs:
           # Leere extrahierte Dateien entfernen
           find .tmp-stylelint -type f -size 0 -delete
 
-      - run: npx stylelint "**/*.css" ".tmp-stylelint/**/*.css" --config .github/linters/.stylelintrc.json
+      # Optional: CI hart machen (Warnings -> Fail)
+      - run: npx stylelint "**/*.css" ".tmp-stylelint/**/*.css" --config .github/linters/.stylelintrc.json --max-warnings 0
 
   htmlhint:
     name: HTMLHint
