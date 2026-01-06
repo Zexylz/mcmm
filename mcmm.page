@@ -68,6 +68,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
         div.title {
             display: none !important;
         }
+        
         #displaybox,
         #displaybox .content {
             margin: 0;

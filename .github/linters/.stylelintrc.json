@@ -1,11 +1,6 @@
 {
-  "extends": [
-    "stylelint-config-standard"
-  ],
-  "ignoreFiles": [
-    "**/*.min.css",
-    "dist/**"
-  ],
+  "extends": ["stylelint-config-standard"],
+  "ignoreFiles": ["**/*.min.css", "dist/**"],
   "rules": {
     "color-named": "never",
     "selector-max-id": 0,
@@ -15,9 +10,7 @@
   },
   "overrides": [
     {
-      "files": [
-        "**/*.inline.css"
-      ],
+      "files": ["**/*.inline.css"],
       "rules": {
         "rule-empty-line-before": null,
         "selector-type-no-unknown": null,
@@ -25,14 +18,18 @@
         "selector-id-pattern": null,
         "selector-pseudo-class-no-unknown": null,
         "selector-pseudo-element-no-unknown": null,
-        "at-rule-no-unknown": null
+        "at-rule-no-unknown": null,
+
+        "declaration-block-single-line-max-declarations": null,
+        "no-duplicate-selectors": null
       }
     },
     {
-      "files": [
-        "**/*.style.css"
-      ],
-      "rules": {}
+      "files": ["**/*.style.css"],
+      "rules": {
+        "selector-max-id": null,
+        "rule-empty-line-before": null
+      }
     }
   ]
 }
