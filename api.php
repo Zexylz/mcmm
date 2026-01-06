@@ -730,10 +730,19 @@ try {
             $stats = getMinecraftLiveStats($id, intval($port), $envMap);
             $online = $stats['online'];
             $max = $stats['max'];
-
-            // Add player listing if RCON available
             $players = [];
-            if ($rconPass && $online > 0) {
+
+            // Add player listing if sample available from stats (Modern Ping / mc-monitor)
+            if (!empty($stats['sample'])) {
+                foreach ($stats['sample'] as $p) {
+                    if (!empty($p['name'])) {
+                        $players[] = ['name' => $sanitizeName($p['name'])];
+                    }
+                }
+            }
+
+            // If still empty and RCON is available, try authoritative RCON list
+            if (empty($players) && $rconPass && $online > 0) {
                 $rconOut = shell_exec("docker exec " . escapeshellarg($id) . " rcon-cli --port $rconPort --password " . escapeshellarg($rconPass) . " list 2>/dev/null");
                 $rconOut = trim($rconOut);
 

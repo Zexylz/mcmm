@@ -1363,11 +1363,101 @@ function getMinecraftVersion(string $platform, string $id, string $versionId, st
     return null;
 }
 
+/**
+ * Retrieves Minecraft server status using the modern 1.7+ Handshake protocol
+ */
+function getMinecraftStatusModern(string $host, int $port, int $timeout = 2): ?array
+{
+    $socket = @fsockopen($host, $port, $errno, $errstr, $timeout);
+    if (!$socket) {
+        return null;
+    }
+
+    stream_set_timeout($socket, $timeout);
+
+    // 1. Handshake Packet (Protocol -1 (auto), Host, Port, NextState 1)
+    $hostLen = strlen($host);
+    $handshake = pack('C', 0x00); // Packet ID
+    $handshake .= "\x80\x05"; // VarInt: -1 (approx 763+)
+    $handshake .= pack('C', $hostLen) . $host;
+    $handshake .= pack('n', $port);
+    $handshake .= pack('C', 0x01); // Next state: Status
+
+    $packet = pack('C', strlen($handshake)) . $handshake;
+    fwrite($socket, $packet);
+
+    // 2. Status Request Packet
+    fwrite($socket, "\x01\x00");
+
+    // 3. Status Response
+    $sizeVarInt = 0;
+    $shift = 0;
+    while (true) {
+        $byte = ord(fread($socket, 1));
+        $sizeVarInt |= ($byte & 0x7F) << $shift;
+        if (($byte & 0x80) !== 0x80) {
+            break;
+        }
+        $shift += 7;
+    }
+
+    $data = '';
+    $remaining = $sizeVarInt;
+    while ($remaining > 0) {
+        $chunk = fread($socket, min($remaining, 8192));
+        if (!$chunk) {
+            break;
+        }
+        $data .= $chunk;
+        $remaining -= strlen($chunk);
+    }
+    @fclose($socket);
+
+    if (!$data || ord($data[0]) !== 0x00) {
+        return null;
+    }
+
+    // JSON starts after the ID VarInt
+    $jsonStr = substr($data, 1);
+    // There is another VarInt for string length
+    $shift = 0;
+    $jsonLen = 0;
+    $pos = 1;
+    while (true) {
+        $byte = ord($data[$pos++]);
+        $jsonLen |= ($byte & 0x7F) << $shift;
+        if (($byte & 0x80) !== 0x80) {
+            break;
+        }
+        $shift += 7;
+    }
+    $json = json_decode(substr($data, $pos), true);
+
+    if ($json && isset($json['players'])) {
+        return [
+            'online' => intval($json['players']['online']),
+            'max'    => intval($json['players']['max']),
+            'version' => $json['version']['name'] ?? '',
+            'sample' => $json['players']['sample'] ?? []
+        ];
+    }
+
+    return null;
+}
+
 function getMinecraftStatus(string $host, int $port, int $timeout = 1): ?array
 {
     if ($port <= 0) {
         return null;
     }
+
+    // Try Modern first (1.7+)
+    $res = getMinecraftStatusModern($host, $port, $timeout);
+    if ($res) {
+        return $res;
+    }
+
+    // Fallback to Legacy (1.6.1)
     $socket = @fsockopen($host, $port, $errno, $errstr, $timeout);
     if (!$socket) {
         return null;
@@ -1376,12 +1466,8 @@ function getMinecraftStatus(string $host, int $port, int $timeout = 1): ?array
     stream_set_timeout($socket, $timeout);
 
     // Minecraft 1.6.1+ Legacy Ping (UTF-16BE)
-    // See: https://wiki.vg/Server_List_Ping#1.6
     $channel = "MC|PingHost";
     $protocol = 74; // 1.7.2
-    $c_host = mb_convert_encoding($host, 'UTF-16BE');
-    $c_channel = mb_convert_encoding($channel, 'UTF-16BE');
-
     // Robust 1.6.1 compatible ping payload
     $payload = "\xFE\x01\xFA" .
                pack('n', 11) . mb_convert_encoding("MC|PingHost", "UTF-16BE") .
@@ -1398,11 +1484,9 @@ function getMinecraftStatus(string $host, int $port, int $timeout = 1): ?array
         return null;
     }
 
-    // Response starts with 0xFF, then length (short), then string (UTF-16BE)
     $response = substr($data, 3);
     $response = @mb_convert_encoding($response, 'UTF-8', 'UTF-16BE');
 
-    // Format: §1\0PROTOCOL\0VERSION\0MOTD\0ONLINE\0MAX
     if (strpos($response, "\x00") !== false) {
         $parts = explode("\x00", $response);
         if (count($parts) >= 6) {
@@ -1863,7 +1947,11 @@ function getMinecraftLiveStats($containerId, $hostPort, $env)
         $jd = json_decode($statusRes, true);
         if (isset($jd['players'])) {
             @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $jd['players']['online'] . "/" . $jd['players']['max'] . "\n\n", FILE_APPEND);
-            return ['online' => intval($jd['players']['online']), 'max' => intval($jd['players']['max'])];
+            return [
+                'online' => intval($jd['players']['online']),
+                'max'    => intval($jd['players']['max']),
+                'sample' => $jd['players']['sample'] ?? []
+            ];
         }
     }
 
@@ -1874,15 +1962,35 @@ function getMinecraftLiveStats($containerId, $hostPort, $env)
         $rconCmd = "docker exec " . escapeshellarg($containerId) . " rcon-cli --port $rconPort --password " . escapeshellarg($rconPass) . " list 2>/dev/null";
         $rconOut = shell_exec($rconCmd);
         $log .= "Method 2 (RCON): " . ($rconOut ? "SUCCESS" : "FAILED") . "\n";
+
+        $players = [];
+        if ($rconOut && preg_match('/(?:online|players): (.*)$/i', trim($rconOut), $pm)) {
+            $names = explode(', ', $pm[1]);
+            foreach ($names as $name) {
+                $clean = trim(preg_replace('/\e\[[\d;]*[A-Za-z]/', '', $name));
+                if ($clean !== '') {
+                    $players[] = ['name' => $clean];
+                }
+            }
+        }
+
         // Flexible regex for both Vanilla and Modded "list" outputs
         if ($rconOut && preg_match('/(?:There are|online:?) (\d+) (?:of|out of|\/) a max of (\d+)/i', $rconOut, $m)) {
             @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $m[1] . "/" . $m[2] . "\n\n", FILE_APPEND);
-            return ['online' => intval($m[1]), 'max' => intval($m[2])];
+            return [
+                'online' => intval($m[1]),
+                'max' => intval($m[2]),
+                'sample' => $players
+            ];
         }
         // Fallback for just the number if regex above is too strict
         if ($rconOut && preg_match('/There are (\d+) /i', $rconOut, $m)) {
             @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $m[1] . "/20 (partial match)\n\n", FILE_APPEND);
-            return ['online' => intval($m[1]), 'max' => $max];
+            return [
+                'online' => intval($m[1]),
+                'max' => $max,
+                'sample' => $players
+            ];
         }
     }
 

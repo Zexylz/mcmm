@@ -89,6 +89,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
     </div>
     <div class="mcmm-bg"></div>
 
+    <div class="mcmm-scale-wrapper">
     <!-- Header -->
     <header class="mcmm-header">
         <div class="mcmm-brand">
@@ -447,6 +448,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
             </div>
         </div>
     </main>
+    </div>
 
     <!-- Deploy Modal -->
     <div class="mcmm-modal-overlay" id="deployModal">
@@ -624,7 +626,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
 
     <!-- Deploy Progress Modal -->
     <div class="mcmm-modal-overlay" id="deployProgressModal">
-        <div class="mcmm-modal" style="max-width: 1100px; width: 96%; height: 90vh;">
+        <div class="mcmm-modal" style="max-width: 900px; width: 92%; height: 80vh;">
             <div class="mcmm-modal-header">
                 <div>
                     <div class="mcmm-modal-title">Deployment Progress</div>
@@ -918,7 +920,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
 
     <!-- Console Modal -->
     <div class="mcmm-modal-overlay" id="consoleModal">
-        <div class="mcmm-modal" style="height: 80vh;">
+        <div class="mcmm-modal" style="height: 65vh; max-width: 900px; width: 90%;">
             <div class="mcmm-modal-header">
                 <div class="mcmm-modal-title" id="consoleTitle">Server Console</div>
                 <button class="mcmm-modal-close" onclick="closeConsole()">×</button>
