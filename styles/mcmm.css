@@ -37,14 +37,13 @@
     margin: 0 !important;
     min-height: 100vh;
     padding: 0 !important;
-    overflow-x: hidden;
 }
 
 .mcmm-scale-wrapper {
-    transform: scale(1.2);
+    transform: scale(1.15);
     transform-origin: top center;
-    width: 83.333% !important;
-    margin: 0 auto !important;
+    width: 100%;
+    margin-bottom: 50px;
 }
 
 .mcmm-app h1,
@@ -1313,7 +1312,7 @@
     color: rgb(192 202 245 / 100%) !important;
     flex: 1 !important;
     font-family: "Fira Code", monospace !important;
-    font-size: 0.85rem !important;
+    font-size: 1.1rem !important;
     line-height: 1.4 !important;
     overflow-y: auto !important;
     padding: 1rem !important;
@@ -1343,7 +1342,7 @@
     color: rgb(255 255 255 / 100%);
     flex: 1 !important;
     font-family: "Fira Code", monospace !important;
-    font-size: 0.95rem !important;
+    font-size: 1.1rem !important;
     outline: none !important;
 }
 
