@@ -63,10 +63,11 @@
 
 /* ===== BACKGROUND ===== */
 .mcmm-bg {
-    background:
+    /* background:
         radial-gradient(circle at 15% 50%, rgb(76 29 149 / 15%) 0%, transparent 50%),
         radial-gradient(circle at 85% 30%, rgb(124 58 237 / 10%) 0%, transparent 50%),
-        linear-gradient(to bottom, rgb(11 12 22 / 100%) 0%, rgb(17 18 31 / 100%) 100%) !important;
+        linear-gradient(to bottom, rgb(11 12 22 / 100%) 0%, rgb(17 18 31 / 100%) 100%) !important; */
+    background: var(--bg-body) !important;
     height: 100% !important;
     left: 0 !important;
     pointer-events: none !important;
@@ -127,11 +128,9 @@
     content: "";
     height: 1px;
     left: 2rem;
-
     /* matches horizontal padding */
     position: absolute;
     right: 2rem;
-
     /* matches horizontal padding */
 }
 
@@ -682,8 +681,6 @@
     overflow: hidden !important;
 }
 
-
-
 .mcmm-modpack-thumb::after {
     background: linear-gradient(to top, rgb(11 12 22 / 90%) 0%, transparent 100%);
     bottom: -1px;
@@ -817,17 +814,6 @@
     transform: translateY(-2px) scale(1.005);
 }
 
-.mcmm-version-card.selected {
-    background: linear-gradient(135deg, rgb(157 78 221 / 12%), rgb(26 26 31 / 95%)) !important;
-    border: 2px solid var(--primary) !important;
-    box-shadow: 0 0 40px rgb(157 78 221 / 25%), inset 0 0 20px rgb(157 78 221 / 10%) !important;
-    transform: scale(1.02) !important;
-}
-
-.mcmm-version-card.selected::before {
-    opacity: 0.05;
-}
-
 /* Pulse animation for selected card */
 @keyframes neon-pulse {
     0% {
@@ -843,8 +829,17 @@
     }
 }
 
+/* FIX: merged duplicate .mcmm-version-card.selected */
 .mcmm-version-card.selected {
+    background: linear-gradient(135deg, rgb(157 78 221 / 12%), rgb(26 26 31 / 95%)) !important;
+    border: 2px solid var(--primary) !important;
+    box-shadow: 0 0 40px rgb(157 78 221 / 25%), inset 0 0 20px rgb(157 78 221 / 10%) !important;
+    transform: scale(1.02) !important;
     animation: neon-pulse 2s infinite ease-in-out;
+}
+
+.mcmm-version-card.selected::before {
+    opacity: 0.05;
 }
 
 .mcmm-version-thumb {
@@ -878,6 +873,7 @@
     z-index: 1;
 }
 
+/* FIX: merged duplicate .mcmm-version-name */
 .mcmm-version-name {
     color: var(--text-main);
     font-family: inherit;
@@ -885,12 +881,18 @@
     font-weight: 800;
     letter-spacing: -0.3px;
     margin-bottom: 0.2rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
+/* FIX: merged duplicate .mcmm-version-meta */
 .mcmm-version-meta {
     align-items: center;
     display: flex;
+    flex-wrap: wrap;
     gap: 0.6rem;
+    margin-top: 0.45rem;
 }
 
 .mcmm-version-select {
@@ -963,22 +965,6 @@
     display: flex;
     gap: 0.6rem;
     justify-content: space-between;
-}
-
-.mcmm-version-name {
-    color: var(--text-main);
-    font-size: 1rem;
-    font-weight: 700;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.mcmm-version-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-    margin-top: 0.45rem;
 }
 
 .mcmm-version-radio {
@@ -1251,11 +1237,11 @@
     width: 18px !important;
 }
 
-.mcmm-switch input:checked+.mcmm-slider {
+.mcmm-switch input:checked + .mcmm-slider {
     background: linear-gradient(135deg, rgb(123 44 191 / 100%) 0%, rgb(157 78 221 / 100%) 100%) !important;
 }
 
-.mcmm-switch input:checked+.mcmm-slider::before {
+.mcmm-switch input:checked + .mcmm-slider::before {
     transform: translateX(20px) !important;
 }
 
@@ -1506,13 +1492,7 @@
 }
 
 /* Player list (modal) */
-.mcmm-player-list {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0.5rem !important;
-    padding: 0.5rem !important;
-}
-
+/* FIX: removed duplicate selector by keeping a single canonical .mcmm-player-list below */
 .mcmm-player-row {
     align-items: center !important;
     background: rgb(255 255 255 / 3%) !important;
@@ -1527,6 +1507,14 @@
     padding: 0.6rem 0.75rem !important;
 }
 
+/* FIX: merged duplicate .mcmm-player-list */
+.mcmm-player-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    padding: 0.5rem !important;
+}
+
 .mcmm-player-head {
     background-position: center !important;
     background-size: cover !important;
@@ -1535,13 +1523,6 @@
     flex-shrink: 0 !important;
     height: 40px !important;
     width: 40px !important;
-}
-
-.mcmm-player-list {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 2px !important;
-    padding: 0.5rem !important;
 }
 
 .mcmm-player-item {
@@ -1939,7 +1920,6 @@
 }
 
 /* ===== MISC: ACTIVE FILTER CONTAINER ===== */
-
 [id="activeFilterContainer"] {
     transition: all 0.2s ease;
 }
@@ -1953,7 +1933,6 @@
 [id="activeFilterContainer"]:active {
     transform: translateY(0);
 }
-
 
 /* ===== BACKUP CARD: INFO + OVERLAY (kept, but removed duplicate grid/card/thumb/info/name overrides) ===== */
 
@@ -1983,7 +1962,7 @@
 }
 
 .mcmm-backup-info-trigger::before {
-    content: 'i';
+    content: "i";
     margin-right: 1px;
 }
 
@@ -2167,33 +2146,33 @@
 
 /* ===== COLORED LOGS ===== */
 .log-error {
-    color: #f55 !important;
+    color: rgb(255 85 85 / 100%) !important;
     font-weight: bold;
 }
 
 .log-warn {
-    color: #ffb86c !important;
+    color: rgb(255 184 108 / 100%) !important;
     font-weight: bold;
 }
 
 .log-system {
-    color: #8be9fd !important;
+    color: rgb(139 233 253 / 100%) !important;
 }
 
 .log-array {
-    color: #50fa7b !important;
+    color: rgb(80 250 123 / 100%) !important;
 }
 
 .log-login {
-    color: #bd93f9 !important;
+    color: rgb(189 147 249 / 100%) !important;
 }
 
 .log-text {
-    color: #f8f8f2 !important;
+    color: rgb(248 248 242 / 100%) !important;
 }
 
 .log-info {
-    color: #8be9fd !important;
+    color: rgb(139 233 253 / 100%) !important;
 }
 
 .log-group {
@@ -2212,16 +2191,16 @@
 
 .log-group.log-group-error:hover {
     background: rgb(255 85 85 / 5%) !important;
-    border-left: 3px solid #f55 !important;
+    border-left: 3px solid rgb(255 85 85 / 100%) !important;
     text-decoration: underline !important;
-    text-decoration-color: #f55 !important;
+    text-decoration-color: rgb(255 85 85 / 100%) !important;
 }
 
 .log-group.log-group-warn:hover {
     background: rgb(255 184 108 / 5%) !important;
-    border-left: 3px solid #ffb86c !important;
+    border-left: 3px solid rgb(255 184 108 / 100%) !important;
     text-decoration: underline !important;
-    text-decoration-color: #ffb86c !important;
+    text-decoration-color: rgb(255 184 108 / 100%) !important;
 }
 
 .mcmm-toast {
@@ -2231,7 +2210,7 @@
     border-radius: 12px;
     bottom: 30px;
     box-shadow: 0 8px 32px rgb(0 0 0 / 50%);
-    color: #fff;
+    color: rgb(255 255 255 / 100%);
     font-weight: 600;
     left: 50%;
     opacity: 0;
