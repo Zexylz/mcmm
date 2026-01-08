@@ -861,7 +861,7 @@ function renderModsPagination() {
     bar.innerHTML = buttons.join('');
 }
 
-function changeModsPage(page) { // eslint-disable-line no-unused-vars
+function changeModsPage(page) {
     if (modState.loading) return;
     const target = parseInt(page, 10);
     if (!Number.isFinite(target) || target < 1) return;
@@ -2109,7 +2109,7 @@ function closePlayersModal() {
     if (badge) badge.style.opacity = '0';
 }
 
-async function playerAction(serverId, playerName, action) { // eslint-disable-line no-unused-vars
+async function playerAction(serverId, playerName, action) {
     try {
         const res = await fetch(`/plugins/mcmm/api.php?action=server_player_action&id=${encodeURIComponent(serverId)}&player=${encodeURIComponent(playerName)}&action=${encodeURIComponent(action)}`);
         const data = await res.json();
@@ -2124,7 +2124,7 @@ async function playerAction(serverId, playerName, action) { // eslint-disable-li
     }
 }
 
-async function whisperPlayer(serverId, playerName) { // eslint-disable-line no-unused-vars
+async function whisperPlayer(serverId, playerName) {
     const msg = prompt(`Message to ${playerName}:`);
     if (msg) {
         try {
