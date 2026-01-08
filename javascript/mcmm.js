@@ -42,6 +42,8 @@ window.openVersionSelect = openVersionSelect;
 window.closeVersionSelect = closeVersionSelect;
 window.confirmVersionInstall = confirmVersionInstall;
 window.selectVersionFile = selectVersionFile;
+window.playerAction = playerAction;
+window.changeModsPage = changeModsPage;
 window.startAgents = startAgents;
 window.checkForUpdates = checkForUpdates;
 
