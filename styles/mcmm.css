@@ -1429,17 +1429,17 @@
 @keyframes pulse-green {
     0% {
         transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(80, 250, 123, 0.7);
+        box-shadow: 0 0 0 0 rgb(80 250 123 / 70%);
     }
 
     70% {
         transform: scale(1);
-        box-shadow: 0 0 0 6px rgba(80, 250, 123, 0);
+        box-shadow: 0 0 0 6px rgb(80 250 123 / 0%);
     }
 
     100% {
         transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(80, 250, 123, 0);
+        box-shadow: 0 0 0 0 rgb(80 250 123 / 0%);
     }
 }
 
@@ -1472,13 +1472,13 @@
 .mcmm-btn-pill.warning:hover {
     background: var(--warning) !important;
     border-color: var(--warning) !important;
-    color: black !important;
+    color: #000 !important;
 }
 
 .mcmm-player-badge.neon {
-    background: linear-gradient(135deg, #ff00ff 0%, #7b2cbf 100%) !important;
+    background: linear-gradient(135deg, #f0f 0%, #7b2cbf 100%) !important;
     box-shadow: 0 0 10px rgb(255 0 255 / 40%) !important;
-    color: white !important;
+    color: #fff !important;
     font-size: 0.6rem !important;
     font-weight: 900 !important;
     padding: 2px 6px !important;
@@ -1512,24 +1512,24 @@
 .mcmm-btn-pill-icon:hover {
     background: var(--warning) !important;
     border-color: var(--warning) !important;
-    color: black !important;
+    color: #000 !important;
     transform: scale(1.1) rotate(5deg) !important;
 }
 
 .mcmm-btn-pill.danger:hover {
     background: var(--danger) !important;
     border-color: var(--danger) !important;
-    color: white !important;
+    color: #fff !important;
 }
 
 .mcmm-btn-pill.success:hover {
     background: var(--success) !important;
     border-color: var(--success) !important;
-    color: white !important;
+    color: #fff !important;
 }
 
 .mcmm-player-name {
-    color: white !important;
+    color: #fff !important;
     font-size: 1rem !important;
     font-weight: 700 !important;
     letter-spacing: -0.2px !important;
@@ -1950,7 +1950,7 @@
 
 /* ===== COLORED LOGS ===== */
 .log-error {
-    color: #ff5555 !important;
+    color: #f55 !important;
     font-weight: bold;
 }
 
@@ -1995,9 +1995,9 @@
 
 .log-group.log-group-error:hover {
     background: rgb(255 85 85 / 5%) !important;
-    border-left: 3px solid #ff5555 !important;
+    border-left: 3px solid #f55 !important;
     text-decoration: underline !important;
-    text-decoration-color: #ff5555 !important;
+    text-decoration-color: #f55 !important;
 }
 
 .log-group.log-group-warn:hover {
@@ -2014,7 +2014,7 @@
     border-radius: 12px;
     bottom: 30px;
     box-shadow: 0 8px 32px rgb(0 0 0 / 50%);
-    color: white;
+    color: #fff;
     font-weight: 600;
     left: 50%;
     opacity: 0;

@@ -928,7 +928,7 @@ W
                 <div style="display: flex; flex-direction: column;">
                     <div class="mcmm-modal-title" style="letter-spacing: -0.5px; display: flex; align-items: center; gap: 0.75rem;">
                         Live Players
-                        <span id="playerTotalBadge" style="background: var(--accent-primary); color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; font-weight: 800; opacity: 0;">0/0</span>
+                        <span id="playerTotalBadge" style="background: var(--accent-primary); color: #fff; font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; font-weight: 800; opacity: 0;">0/0</span>
                     </div>
                 </div>
                 <div style="display: flex; gap: 0.6rem; align-items: center;">
@@ -940,7 +940,7 @@ W
             </div>
             <div style="padding: 1rem 1.5rem 0.5rem; background: rgb(255 255 255 / 1%);">
                 <div class="mcmm-search-container" style="position: relative;">
-                    <input type="text" id="playerSearch" placeholder="Filter players..." onkeyup="filterPlayers()" style="width: 100%; background: rgb(0 0 0 / 20%); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.75rem 0.6rem 2.5rem; color: white; font-size: 0.85rem; outline: none; transition: border-color 0.2s;">
+                    <input type="text" id="playerSearch" placeholder="Filter players..." onkeyup="filterPlayers()" style="width: 100%; background: rgb(0 0 0 / 20%); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.75rem 0.6rem 2.5rem; color: #fff; font-size: 0.85rem; outline: none; transition: border-color 0.2s;">
                     <svg style="position: absolute; left: 0.9rem; top: 50%; translate: 0 -50%; color: var(--text-muted); opacity: 0.6;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 </div>
             </div>

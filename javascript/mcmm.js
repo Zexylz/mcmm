@@ -1,6 +1,6 @@
 // MCMM Plugin Logic
 /* global csrfToken, $, mcmmConfig */
-/* exported switchTab, filterModpacks, openModManager, closeModManager, switchModTab, switchSource, clearModFilters, setModSort, filterMods, checkForUpdates, toggleModSelection, removeModFromQueue, clearQueue, installSelectedMods, setRam, toggleSelect, selectOption, controlServer, deleteServer, saveSettings, openServerSettings, closeServerSettings, submitServerSettings, closeDeployProgress, finishDeployAndView, openPlayersModal, closePlayersModal, playerAction, openConsole, closeConsole, changeModsPage */
+/* exported switchTab, filterModpacks, openModManager, closeModManager, switchModTab, switchSource, clearModFilters, setModSort, filterMods, checkForUpdates, toggleModSelection, removeModFromQueue, clearQueue, installSelectedMods, setRam, toggleSelect, selectOption, controlServer, deleteServer, saveSettings, openServerSettings, closeServerSettings, submitServerSettings, closeDeployProgress, finishDeployAndView, openPlayersModal, closePlayersModal, playerAction, openConsole, closeConsole, changeModsPage, handleLogContextMenu, filterPlayers, copyToClipboard, refreshPlayers, whisperPlayer */
 console.log('MCMM Script Loaded');
 
 // Expose functions globally for inline HTML onclick handlers
@@ -28,6 +28,11 @@ window.switchModTab = switchModTab;
 window.switchSource = switchSource;
 window.filterMods = filterMods;
 window.installMod = installMod;
+window.handleLogContextMenu = handleLogContextMenu;
+window.filterPlayers = filterPlayers;
+window.copyToClipboard = copyToClipboard;
+window.refreshPlayers = refreshPlayers;
+window.whisperPlayer = whisperPlayer;
 window.deleteMod = deleteMod;
 window.toggleModSelection = toggleModSelection;
 window.installSelectedMods = installSelectedMods;
@@ -2000,6 +2005,8 @@ function closeConsole() {
 }
 
 // --- Players Modal ---
+let localCurrentPlayers = [];
+let localCurrentServerId = null;
 async function openPlayersModal(serverId, serverName, port) {
     const modal = document.getElementById('playersModal');
     const body = document.getElementById('playersBody');
