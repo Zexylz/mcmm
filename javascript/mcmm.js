@@ -1,6 +1,6 @@
 // MCMM Plugin Logic
 /* global csrfToken, $, mcmmConfig */
-/* exported switchTab, filterModpacks, openModManager, closeModManager, switchModTab, switchSource, clearModFilters, setModSort, filterMods, checkForUpdates, toggleModSelection, removeModFromQueue, clearQueue, installSelectedMods, setRam, toggleSelect, selectOption, controlServer, deleteServer, saveSettings, openServerSettings, closeServerSettings, submitServerSettings, closeDeployProgress, finishDeployAndView, openPlayersModal, closePlayersModal, playerAction, openConsole, closeConsole, changeModsPage, handleLogContextMenu, filterPlayers, copyToClipboard, refreshPlayers, whisperPlayer */
+/* exported switchTab, filterModpacks, openModManager, closeModManager, switchModTab, switchSource, clearModFilters, setModSort, filterMods, checkForUpdates, toggleModSelection, removeModFromQueue, clearQueue, installSelectedMods, setRam, toggleSelect, selectOption, controlServer, deleteServer, saveSettings, openServerSettings, closeServerSettings, submitServerSettings, closeDeployProgress, finishDeployAndView, openPlayersModal, closePlayersModal, playerAction, openConsole, closeConsole, changeModsPage, handleLogContextMenu, filterPlayers, copyToClipboard, refreshPlayers, whisperPlayer, switchPlayerTab */
 console.log('MCMM Script Loaded');
 
 // Expose functions globally for inline HTML onclick handlers
@@ -46,6 +46,7 @@ window.playerAction = playerAction;
 window.changeModsPage = changeModsPage;
 window.startAgents = startAgents;
 window.checkForUpdates = checkForUpdates;
+window.switchPlayerTab = switchPlayerTab;
 
 window.clearModFilters = clearModFilters;
 window.setModSort = setModSort;
@@ -1745,17 +1746,18 @@ function renderDeployVersions(files) {
             <button class="mcmm-version-card ${typeClass} ${isSelected ? 'selected' : ''}" data-file-id="${file.id}" onclick="setDeployVersion('${file.id}', this)">
                 <div class="mcmm-version-thumb" style="background-image: url('${safePackImg}');"></div>
                 <div class="mcmm-version-main">
-                    <div class="mcmm-version-top">
-                        <div class="mcmm-version-name">${file.displayName}</div>
-                    </div>
-                    <div classmcmm-version-meta">
+                    <div class="mcmm-version-name">${file.displayName}</div>
+                    <div class="mcmm-version-meta">
                         <span class="mcmm-chip subtle">MC ${mcVersions}</span>
                         <span class="mcmm-chip subtle" style="color: var(--primary-hover); border-color: var(--primary-dim);">Java ${javaVer}</span>
+                        <span class="mcmm-chip ${typeClass}">${type}</span>
                     </div>
                 </div>
                 <div class="mcmm-version-select">
-                    <span class="mcmm-chip ${typeClass}">${type}</span>
-                    <span>${isSelected ? 'Selected' : 'Choose'}</span>
+                    <div class="mcmm-version-action-text">
+                        <div class="action-title">${isSelected ? 'Active' : 'Pick'}</div>
+                    </div>
+                    <div class="mcmm-version-status-indicator"></div>
                 </div>
             </button>
         `;
@@ -2009,33 +2011,78 @@ function closeConsole() {
 // --- Players Modal ---
 let localCurrentPlayers = [];
 let localCurrentServerId = null;
+let currentPlayersTab = 'active';
+
 async function openPlayersModal(serverId, serverName, port) {
     const modal = document.getElementById('playersModal');
-    const body = document.getElementById('playersBody');
     const searchInput = document.getElementById('playerSearch');
 
-    if (!modal || !body) return;
-
+    if (!modal) return;
     modal.classList.add('open');
     if (searchInput) searchInput.value = '';
 
     localCurrentServerId = serverId;
+    currentPlayersTab = 'active';
+    updatePlayerTabIndicator();
+    fetchTabPlayers();
+}
+
+function updatePlayerTabIndicator() {
+    const activeTab = document.getElementById('tab-active');
+    const bannedTab = document.getElementById('tab-banned');
+    if (!activeTab || !bannedTab) return;
+
+    if (currentPlayersTab === 'active') {
+        activeTab.classList.add('active');
+        activeTab.style.borderBottomColor = 'var(--accent-primary)';
+        activeTab.style.color = 'var(--text-main)';
+        bannedTab.classList.remove('active');
+        bannedTab.style.borderBottomColor = 'transparent';
+        bannedTab.style.color = 'var(--text-muted)';
+    } else {
+        bannedTab.classList.add('active');
+        bannedTab.style.borderBottomColor = 'var(--accent-primary)';
+        bannedTab.style.color = 'var(--text-main)';
+        activeTab.classList.remove('active');
+        activeTab.style.borderBottomColor = 'transparent';
+        activeTab.style.color = 'var(--text-muted)';
+    }
+}
+
+async function switchPlayerTab(tab) {
+    if (currentPlayersTab === tab) return;
+    currentPlayersTab = tab;
+    updatePlayerTabIndicator();
+    fetchTabPlayers();
+}
+
+async function fetchTabPlayers() {
+    const body = document.getElementById('playersBody');
+    const serverId = localCurrentServerId;
+    if (!body || !serverId) return;
+
     body.innerHTML = `
         <div style="text-align:center; padding: 4rem 2rem; color: var(--text-secondary);">
-            <div class="mcmm-spinner"></div>
-            <div style="margin-top: 1rem; font-weight: 500; font-size: 0.9rem; letter-spacing: 0.5px;">ESTABLISHING RCON LINK...</div>
+            <div class="mcmm-spinner" style="width: 24px; height: 24px;"></div>
+            <div style="margin-top: 1rem; font-weight: 500; font-size: 0.85rem; opacity: 0.8;">FETCHING DATA...</div>
         </div>
     `;
 
     try {
-        const res = await fetch(`/plugins/mcmm/api.php?action=server_players&id=${encodeURIComponent(serverId)}&port=${encodeURIComponent(port || '25565')}`);
+        const action = currentPlayersTab === 'active' ? 'server_players' : 'server_banned_players';
+        const res = await fetch(`/plugins/mcmm/api.php?action=${action}&id=${encodeURIComponent(serverId)}`);
         const data = await res.json();
 
         if (data.success) {
-            localCurrentPlayers = data.data.players || [];
-            renderPlayers(localCurrentPlayers, data.data.online, data.data.max);
+            if (currentPlayersTab === 'active') {
+                localCurrentPlayers = data.data.players || [];
+                renderPlayers(localCurrentPlayers, data.data.online, data.data.max);
+            } else {
+                localCurrentPlayers = data.data || [];
+                renderPlayers(localCurrentPlayers);
+            }
         } else {
-            body.innerHTML = `<div style="padding: 3rem; text-align:center; color: var(--danger); font-weight:600;">CONNECTION FAILED: ${data.error || 'Check RCON settings'}</div>`;
+            body.innerHTML = `<div style="padding: 3rem; text-align:center; color: var(--danger); font-weight:600;">ERROR: ${data.error}</div>`;
         }
     } catch (e) {
         body.innerHTML = `<div style="padding: 3rem; text-align:center; color: var(--danger);">ERROR: ${e.message}</div>`;
@@ -2062,44 +2109,58 @@ function renderPlayers(players, onlineCount = null, maxCount = null) {
     const badge = document.getElementById('playerTotalBadge');
     const serverId = localCurrentServerId;
 
-    if (onlineCount !== null && badge) {
+    if (currentPlayersTab === 'active' && onlineCount !== null && badge) {
         badge.textContent = `${onlineCount} / ${maxCount || '?'}`;
         badge.style.opacity = '1';
+    } else if (badge) {
+        badge.style.opacity = '0';
     }
 
     if (!players || players.length === 0) {
-        const msg = localCurrentPlayers.length === 0 ? 'SERVER IS EMPTY' : 'NO MATCHES FOUND';
-        body.innerHTML = `<div style="padding: 4rem 2rem; text-align:center; color: var(--text-muted); font-weight: 700; font-size: 0.8rem; letter-spacing: 1px; opacity: 0.5;">${msg}</div>`;
+        const msg = currentPlayersTab === 'active' ? 'SERVER IS EMPTY' : 'NO BANNED PLAYERS';
+        body.innerHTML = `<div style="padding: 4rem 2rem; text-align:center; color: var(--text-muted); font-weight: 500; font-size: 0.85rem; opacity: 0.5;">${msg}</div>`;
         return;
     }
 
-    const rows = players.map(p => {
+    const items = players.map(p => {
         const name = p.name || p;
-        const headUrl = `https://cravatar.eu/helmavatar/${encodeURIComponent(name)}/64.png`;
+        const headUrl = `https://cravatar.eu/helmavatar/${encodeURIComponent(name)}/96.png`;
         const isOp = !!p.isOp;
         const opAction = isOp ? 'deop' : 'op';
         const opLabel = isOp ? 'Deop' : 'Op';
 
+        let buttons = '';
+        if (currentPlayersTab === 'active') {
+            buttons = `
+                <button class="mcmm-btn-minimal" onclick="whisperPlayer('${serverId}', '${name}')">Chat</button>
+                <button class="mcmm-btn-minimal" onclick="playerAction('${serverId}', '${name}', '${opAction}')">${opLabel}</button>
+                <button class="mcmm-btn-minimal danger" onclick="playerAction('${serverId}', '${name}', 'kick')">Kick</button>
+                <button class="mcmm-btn-minimal danger" onclick="playerAction('${serverId}', '${name}', 'ban')">Ban</button>
+            `;
+        } else {
+            buttons = `
+                <button class="mcmm-btn-minimal" onclick="playerAction('${serverId}', '${name}', 'unban')">Unban</button>
+            `;
+        }
+
         return `
-            <div class="mcmm-player-row enhanced">
-                <div class="mcmm-player-main">
-                    <div class="mcmm-player-head large" style="background-image: url('${headUrl}');" onclick="copyToClipboard('${name}', 'Copied ${name}')"></div>
-                    <div class="mcmm-player-info">
-                        <div class="mcmm-player-name">${name}</div>
-                        ${isOp ? '<div class="mcmm-player-badge neon">OPERATOR</div>' : '<div class="mcmm-player-role">MEMBER</div>'}
+            <div class="mcmm-player-item">
+                <img src="${headUrl}" class="mcmm-player-avatar" alt="">
+                <div class="mcmm-player-details">
+                    <div class="mcmm-player-name-text" onclick="copyToClipboard('${name}', 'Name copied')" style="cursor: pointer;" title="Click to copy">${name}</div>
+                    <div class="mcmm-player-status-row">
+                        <div class="mcmm-dot-static" style="background: ${currentPlayersTab === 'active' ? '#50fa7b' : '#ff5555'}"></div>
+                        <div class="mcmm-player-role-label ${isOp ? 'is-op' : ''}">${currentPlayersTab === 'active' ? (isOp ? 'Operator' : 'Member') : 'Banned'}</div>
                     </div>
                 </div>
-                <div class="mcmm-player-actions compact">
-                    <button class="mcmm-btn-pill warning" onclick="playerAction('${serverId}', '${name}', 'kick')">Kick</button>
-                    <button class="mcmm-btn-pill danger" onclick="playerAction('${serverId}', '${name}', 'ban')">Ban</button>
-                    <button class="mcmm-btn-pill ${isOp ? 'danger' : 'success'}" onclick="playerAction('${serverId}', '${name}', '${opAction}')">${opLabel}</button>
-                    <button class="mcmm-btn-pill-icon" onclick="whisperPlayer('${serverId}', '${name}')" title="Message">💬</button>
+                <div class="mcmm-player-actions-minimal">
+                    ${buttons}
                 </div>
             </div>
         `;
     }).join('');
 
-    body.innerHTML = `<div class="mcmm-player-list-grid" style="display: flex; flex-direction: column; gap: 0.6rem; padding: 0.5rem;">${rows}</div>`;
+    body.innerHTML = `<div class="mcmm-player-list">${items}</div>`;
 }
 
 function closePlayersModal() {
@@ -2113,7 +2174,7 @@ function closePlayersModal() {
 
 async function playerAction(serverId, playerName, action) {
     try {
-        const res = await fetch(`/plugins/mcmm/api.php?action=server_player_action&id=${encodeURIComponent(serverId)}&player=${encodeURIComponent(playerName)}&action=${encodeURIComponent(action)}`);
+        const res = await fetch(`/plugins/mcmm/api.php?action=server_player_action&id=${encodeURIComponent(serverId)}&player=${encodeURIComponent(playerName)}&player_action=${encodeURIComponent(action)}`);
         const data = await res.json();
         if (!data.success) {
             alert('Error: ' + (data.error || 'command failed'));
@@ -2130,7 +2191,7 @@ async function whisperPlayer(serverId, playerName) {
     const msg = prompt(`Message to ${playerName}:`);
     if (msg) {
         try {
-            const res = await fetch(`/plugins/mcmm/api.php?action=server_player_action&id=${encodeURIComponent(serverId)}&player=${encodeURIComponent(playerName)}&action=whisper&message=${encodeURIComponent(msg)}`);
+            const res = await fetch(`/plugins/mcmm/api.php?action=server_player_action&id=${encodeURIComponent(serverId)}&player=${encodeURIComponent(playerName)}&player_action=whisper&message=${encodeURIComponent(msg)}`);
             const data = await res.json();
             if (data.success) showToast(`Message sent`);
             else alert('Error: ' + data.error);
@@ -2837,7 +2898,7 @@ function renderBackups(backups) {
             <div class="mcmm-modpack-card" style="position: relative; height: 100%;">
                 <div class="mcmm-backup-info-trigger" title="Technical Details">
                     <div class="mcmm-backup-info-panel">
-                        <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.4; margin-bottom: 0.75rem; font-weight: 800; border-bottom: 1px solid rgb(255 255 255 / 10%); padding-bottom: 0.5rem;">System Manifest</div>
+                        <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.4; margin-bottom: 0.75rem; font-weight: 800; border-bottom: 1px solid rgb(255 255 255 / 10%); padding-bottom: 0.5rem;">Modpack Manifest</div>
                         
                         <div class="mcmm-backup-panel-item">
                             <span class="material-symbols-outlined">dns</span>

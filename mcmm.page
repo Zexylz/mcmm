@@ -440,18 +440,19 @@ W
 
     <!-- Deploy Modal -->
     <div class="mcmm-modal-overlay" id="deployModal">
-        <div class="mcmm-modal" style="max-width: 300px; width: 50%;">
-            <div class="mcmm-modal-header">
+        <div class="mcmm-modal" style="max-width: 680px !important; width: 95% !important;">
+            <div class="mcmm-modal-header" style="padding: 0.85rem 1.1rem !important;">
                 <div>
-                    <div class="mcmm-modal-title" id="deployTitle">Deploy Server</div>
-                    <div style="color: var(--text-secondary); margin-top: 0.25rem;" id="deploySubtitle"></div>
+                    <div class="mcmm-modal-title" id="deployTitle" style="font-size: 1.05rem !important;">Deploy Server</div>
+                    <div style="color: var(--text-secondary); margin-top: 0.1rem; font-size: 0.75rem;" id="deploySubtitle"></div>
                 </div>
                 <button class="mcmm-modal-close" onclick="closeDeploy()">×</button>
             </div>
 
-            <div class="mcmm-modal-body" style="display: grid; gap: 1rem; padding: 1.25rem;">
+            <div class="mcmm-modal-body" style="display: grid; gap: 0.65rem !important; padding: 1.1rem !important;">
+                <div class="mcmm-section-divider">Instance Details</div>
                 <div>
-                    <label class="mcmm-label">Server Name</label>
+                    <label class="mcmm-label" style="font-size: 0.75rem;">Server Name</label>
                     <input type="text" id="deploy_name" class="mcmm-input" value="<?php echo htmlspecialchars($config['default_server_name']); ?>" />
                 </div>
 
@@ -467,9 +468,10 @@ W
                     <input type="hidden" id="deploy_loader" value="" />
                 </div>
 
+                <div class="mcmm-section-divider">Network & Priority</div>
                 <div class="mcmm-form-group">
                     <label class="mcmm-label">Deploy Console</label>
-                    <div id="deployConsole" style="display:none; background:#0f1014; border:1px solid var(--border); border-radius:10px; padding:0.75rem; max-height:200px; overflow-y:auto; font-family:'Fira Code', monospace; font-size:0.85rem; color:#c0caf5; white-space:pre-wrap; overflow-wrap:anywhere;">
+                    <div id="deployConsole" style="display:none; background:#0f1014; border:1px solid var(--border); border-radius:10px; padding:0.75rem; max-height:160px; overflow-y:auto; font-family:'Fira Code', monospace; font-size:0.8rem; color:#c0caf5; white-space:pre-wrap; overflow-wrap:anywhere;">
                         <div id="deployConsoleText"></div>
                     </div>
                 </div>
@@ -504,6 +506,7 @@ W
                     </div>
                 </div>
 
+                <div class="mcmm-section-divider">Environment & Rules</div>
                 <div class="mcmm-toggle-grid">
                     <div class="mcmm-toggle-item">
                         <div class="mcmm-toggle-label">
@@ -597,6 +600,7 @@ W
                     </div>
                 </div>
 
+                <div class="mcmm-section-divider">Technical Configuration</div>
                 <div class="mcmm-form-group">
                     <label class="mcmm-label">JVM Flags</label>
                     <textarea id="deploy_jvm_flags" class="mcmm-input" style="height: 70px; resize: vertical; font-family: 'Fira Code', monospace; font-size: 0.85rem;"><?php echo htmlspecialchars($config['jvm_flags']); ?></textarea>
@@ -614,7 +618,7 @@ W
 
     <!-- Deploy Progress Modal -->
     <div class="mcmm-modal-overlay" id="deployProgressModal">
-        <div class="mcmm-modal" style="max-width: 900px; width: 92%; height: 80vh;">
+        <div class="mcmm-modal" style="max-width: 800px !important; width: 95% !important; height: 75vh !important;">
             <div class="mcmm-modal-header">
                 <div>
                     <div class="mcmm-modal-title">Deployment Progress</div>
@@ -757,18 +761,19 @@ W
 
     <!-- Server Settings Modal -->
     <div class="mcmm-modal-overlay" id="serverSettingsModal">
-        <div class="mcmm-modal" style="max-width: 720px;">
-            <div class="mcmm-modal-header">
+        <div class="mcmm-modal" style="max-width: 680px !important; width: 95% !important;">
+            <div class="mcmm-modal-header" style="padding: 0.85rem 1.1rem !important;">
                 <div>
-                    <div class="mcmm-modal-title" id="serverSettingsTitle">Server Settings</div>
-                    <div style="color: var(--text-secondary); margin-top: 0.25rem;">Edit configuration</div>
+                    <div class="mcmm-modal-title" id="serverSettingsTitle" style="font-size: 1.05rem !important;">Server Settings</div>
+                    <div style="color: var(--text-secondary); margin-top: 0.1rem; font-size: 0.75rem;">Edit configuration</div>
                 </div>
                 <button class="mcmm-modal-close" onclick="closeServerSettings()">×</button>
             </div>
 
-            <div class="mcmm-modal-body" style="display: grid; gap: 1rem; padding: 1.25rem;">
+            <div class="mcmm-modal-body" style="display: grid; gap: 0.65rem !important; padding: 1.1rem !important;">
                 <input type="hidden" id="edit_server_id" />
 
+                <div class="mcmm-section-divider">Network Configuration</div>
                 <div class="mcmm-form-grid">
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Server IP</label>
@@ -803,6 +808,7 @@ W
                     </div>
                 </div>
 
+                <div class="mcmm-section-divider">Server Parameters</div>
                 <div class="mcmm-toggle-grid">
                     <div class="mcmm-toggle-item">
                         <div class="mcmm-toggle-label">
@@ -908,7 +914,7 @@ W
 
     <!-- Console Modal -->
     <div class="mcmm-modal-overlay" id="consoleModal">
-        <div class="mcmm-modal" style="height: 65vh; max-width: 900px; width: 90%;">
+        <div class="mcmm-modal" style="height: 60vh !important; max-width: 750px !important; width: 95% !important;">
             <div class="mcmm-modal-header">
                 <div class="mcmm-modal-title" id="consoleTitle">Server Console</div>
                 <button class="mcmm-modal-close" onclick="closeConsole()">×</button>
@@ -923,31 +929,31 @@ W
 
     <!-- Players Modal -->
     <div class="mcmm-modal-overlay" id="playersModal">
-        <div class="mcmm-modal" style="max-width: 480px !important; width: 95% !important; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgb(123 44 191 / 40%) !important; box-shadow: 0 20px 50px rgb(0 0 0 / 60%) !important;">
-            <div class="mcmm-modal-header" style="border-bottom: 1px solid var(--border); padding: 1.25rem 1.5rem; background: rgb(255 255 255 / 2%);">
-                <div style="display: flex; flex-direction: column;">
-                    <div class="mcmm-modal-title" style="letter-spacing: -0.5px; display: flex; align-items: center; gap: 0.75rem;">
-                        Live Players
-                        <span id="playerTotalBadge" style="background: var(--accent-primary); color: #fff; font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; font-weight: 800; opacity: 0;">0/0</span>
-                    </div>
+        <div class="mcmm-modal" style="max-width: 480px !important; width: 95% !important; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border) !important; box-shadow: 0 15px 40px rgb(0 0 0 / 40%) !important; background: var(--bg-surface) !important;">
+            <div class="mcmm-modal-header" style="border-bottom: 1px solid var(--border); padding: 1rem 1.25rem; background: var(--bg-surface) !important;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div class="mcmm-modal-title" style="font-size: 1.1rem; font-weight: 700; color: var(--text-main) !important;">Player Manager</div>
+                    <span id="playerTotalBadge" style="background: var(--bg-surface-hover); border: 1px solid var(--border); color: var(--text-muted); font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; font-weight: 600; opacity: 0; transition: opacity 0.3s;">0/0</span>
                 </div>
-                <div style="display: flex; gap: 0.6rem; align-items: center;">
-                    <button class="mcmm-btn-refresh-mini" onclick="refreshPlayers()" title="Refresh" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; transition: color 0.2s;">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path></svg>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button class="mcmm-btn-refresh-mini" onclick="refreshPlayers()" title="Refresh" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; transition: color 0.15s; padding: 4px;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path></svg>
                     </button>
-                    <button class="mcmm-modal-close" onclick="closePlayersModal()" style="font-size: 1.5rem; opacity: 0.5;">×</button>
+                    <button class="mcmm-modal-close" onclick="closePlayersModal()" style="font-size: 1.5rem; opacity: 0.5; color: var(--text-main) !important; background: transparent; border: none; cursor: pointer; padding: 4px;">×</button>
                 </div>
             </div>
-            <div style="padding: 1rem 1.5rem 0.5rem; background: rgb(255 255 255 / 1%);">
-                <div class="mcmm-search-container" style="position: relative;">
-                    <input type="text" id="playerSearch" placeholder="Filter players..." onkeyup="filterPlayers()" style="width: 100%; background: rgb(0 0 0 / 20%); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.75rem 0.6rem 2.5rem; color: #fff; font-size: 0.85rem; outline: none; transition: border-color 0.2s;">
-                    <svg style="position: absolute; left: 0.9rem; top: 50%; translate: 0 -50%; color: var(--text-muted); opacity: 0.6;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                </div>
+
+            <div style="display: flex; background: var(--bg-surface); border-bottom: 1px solid var(--border);">
+                <button id="tab-active" class="mcmm-modal-tab active" onclick="switchPlayerTab('active')" style="flex: 1; padding: 0.75rem; background: transparent; border: none; border-bottom: 2px solid var(--accent-primary); color: var(--text-main); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">Active</button>
+                <button id="tab-banned" class="mcmm-modal-tab" onclick="switchPlayerTab('banned')" style="flex: 1; padding: 0.75rem; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">Banned</button>
             </div>
-            <div id="playersBody" class="mcmm-modal-body" style="padding: 0.5rem 0.75rem; max-height: 55vh; overflow-y: auto;">
+            
+            <input type="text" id="playerSearch" class="mcmm-player-search-box" placeholder="Search players..." onkeyup="filterPlayers()">
+            
+            <div id="playersBody" class="mcmm-modal-body" style="padding: 0; max-height: 60vh; overflow-y: auto;">
                 <div style="text-align:center; padding: 4rem 2rem; color: var(--text-secondary);">
-                    <div class="mcmm-spinner"></div>
-                    <div style="margin-top: 1rem; font-weight: 500; font-size: 0.9rem; letter-spacing: 0.5px;">ESTABLISHING RCON LINK...</div>
+                    <div class="mcmm-spinner" style="width: 24px; height: 24px; border-width: 3px;"></div>
+                    <div style="margin-top: 1rem; font-weight: 500; font-size: 0.85rem; letter-spacing: 0.5px; opacity: 0.8;">SCANNING PLAYERS...</div>
                 </div>
             </div>
         </div>

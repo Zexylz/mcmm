@@ -832,11 +832,72 @@ try {
             jsonResponse(['success' => true, 'data' => ['online' => $online, 'max' => $max, 'players' => $players]]);
             break;
 
+        case 'server_banned_players':
+            $id = $_GET['id'] ?? '';
+            if (!$id) {
+                jsonResponse(['success' => false, 'error' => 'Missing ID'], 400);
+            }
+            $inspectJson = shell_exec("docker inspect " . escapeshellarg($id));
+            $inspectData = json_decode($inspectJson, true);
+            $envMap = [];
+            if ($inspectData && isset($inspectData[0]['Config']['Env'])) {
+                foreach ($inspectData[0]['Config']['Env'] as $e) {
+                    $ev = explode('=', $e, 2);
+                    if (count($ev) === 2) {
+                        $envMap[$ev[0]] = $ev[1];
+                    }
+                }
+            }
+            $rconPass = $envMap['RCON_PASSWORD'] ?? '';
+            $rconPort = isset($envMap['RCON_PORT']) ? intval($envMap['RCON_PORT']) : 25575;
+            $banned = [];
+
+            if ($rconPass) {
+                // Method 1: RCON Parsing (More compatible with external RCON providers)
+                $out = shell_exec("docker exec " . escapeshellarg($id) . " rcon-cli --port $rconPort --password " . escapeshellarg($rconPass) . " \"banlist players\" 2>&1");
+                $out = trim($out);
+
+                if ($out && stripos($out, 'no banned players') === false) {
+                    // Minecraft list commands typically end with ": name1, name2, ..."
+                    if (preg_match('/:\s*(.*)$/i', $out, $m)) {
+                        $names = explode(', ', $m[1]);
+                        foreach ($names as $n) {
+                            $name = trim(preg_replace('/\e\[[\d;]*[A-Za-z]/', '', $n));
+                            // Ignore reasons if present (e.g. "Name (Reason)")
+                            $name = trim(explode(' ', $name)[0]);
+                            if ($name && !in_array(strtolower($name), ['no', 'banned'])) {
+                                $banned[] = ['name' => $name];
+                            }
+                        }
+                    }
+                }
+
+                // Method 2: Authoritative JSON Fallback (Reads file directly from container)
+                if (empty($banned)) {
+                    $jsonContent = shell_exec("docker exec " . escapeshellarg($id) . " cat banned-players.json 2>/dev/null");
+                    if (!$jsonContent) {
+                        $jsonContent = shell_exec("docker exec " . escapeshellarg($id) . " cat /data/banned-players.json 2>/dev/null");
+                    }
+                    if ($jsonContent) {
+                        $jd = json_decode($jsonContent, true);
+                        if (is_array($jd)) {
+                            foreach ($jd as $entry) {
+                                if (!empty($entry['name'])) {
+                                    $banned[] = ['name' => $entry['name']];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            jsonResponse(['success' => true, 'data' => array_values(array_unique($banned, SORT_REGULAR))]);
+            break;
+
         case 'server_player_action':
             $id = $_GET['id'] ?? '';
             $player = $_GET['player'] ?? '';
-            $action = $_GET['action'] ?? '';
-            if (!$id || !$player || !$action) {
+            $player_action = $_GET['player_action'] ?? '';
+            if (!$id || !$player || !$player_action) {
                 jsonResponse(['success' => false, 'error' => 'Missing parameters'], 400);
             }
 
@@ -867,15 +928,17 @@ try {
             $cmdMap = [
                 'kick' => "kick " . escapeshellarg($player),
                 'ban' => "ban " . escapeshellarg($player),
+                'unban' => "pardon " . escapeshellarg($player),
                 'op' => "op " . escapeshellarg($player),
                 'deop' => "deop " . escapeshellarg($player),
+                'whisper' => "tell " . escapeshellarg($player) . " " . ($_GET['message'] ?? ''),
             ];
-            if (!isset($cmdMap[$action])) {
-                jsonResponse(['success' => false, 'error' => 'Unsupported action'], 400);
+            if (!isset($cmdMap[$player_action])) {
+                jsonResponse(['success' => false, 'error' => 'Unsupported action: ' . $player_action], 400);
             }
 
             $rconPort = isset($envMap['RCON_PORT']) ? intval($envMap['RCON_PORT']) : 25575;
-            $execCmd = "docker exec " . escapeshellarg($id) . " rcon-cli --port $rconPort --password " . escapeshellarg($rconPass) . " " . $cmdMap[$action] . " 2>&1";
+            $execCmd = "docker exec " . escapeshellarg($id) . " rcon-cli --port $rconPort --password " . escapeshellarg($rconPass) . " " . $cmdMap[$player_action] . " 2>&1";
             $out = [];
             $exit = 0;
             exec($execCmd, $out, $exit);

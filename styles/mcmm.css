@@ -657,12 +657,14 @@
     border: 1px solid var(--border) !important;
     border-radius: var(--radius-md) !important;
     cursor: pointer !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     position: relative !important;
     transition: all 0.3s !important;
+    z-index: 1;
 }
 
 .mcmm-modpack-card:hover {
+    z-index: 100 !important;
     border-color: rgb(157 78 221 / 60%) !important;
     box-shadow: 0 20px 40px rgb(0 0 0 / 40%), 0 0 25px rgb(157 78 221 / 20%) !important;
     transform: translateY(-8px) scale(1.02) !important;
@@ -676,6 +678,8 @@
     height: 180px !important;
     position: relative !important;
     transition: all 0.3s ease !important;
+    border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
+    overflow: hidden !important;
 }
 
 
@@ -729,9 +733,9 @@
 
 /* Selected Card State */
 .mcmm-modpack-card.selected {
-    background: rgb(157 78 221 / 10%) !important;
-    border-color: var(--primary);
-    box-shadow: inset 0 0 0 1px var(--primary);
+    background: rgb(157 78 221 / 5%) !important;
+    border: 2px solid var(--primary) !important;
+    box-shadow: 0 10px 30px rgb(157 78 221 / 15%) !important;
 }
 
 /* Checkbox (top-right) */
@@ -774,56 +778,188 @@
     display: block;
 }
 
-/* ===== VERSION SELECTION (DEDUPED SET) ===== */
-.mcmm-version-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
+/* ===== PREMIUM VERSION SELECTION (DAZZLE) ===== */
 .mcmm-version-card {
     align-items: center;
-    background: linear-gradient(135deg, rgb(255 255 255 / 2%), rgb(255 255 255 / 6%));
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: 0 8px 22px rgb(0 0 0 / 18%);
+    backdrop-filter: blur(10px);
+    background: linear-gradient(145deg, rgb(255 255 255 / 1%), rgb(255 255 255 / 4%));
+    border: 1px solid rgb(255 255 255 / 5%);
+    border-radius: 14px;
     cursor: pointer;
     display: flex;
-    gap: 0.9rem;
+    gap: 1.1rem;
+    min-height: 80px;
+    overflow: hidden;
     padding: 0.85rem 1rem;
-    transition: all 0.2s ease;
+    position: relative;
+    text-decoration: none;
+    transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
     width: 100%;
 }
 
+.mcmm-version-card::before {
+    background: radial-gradient(circle at center, var(--primary), transparent 70%);
+    content: "";
+    height: 100%;
+    left: 0;
+    opacity: 0;
+    position: absolute;
+    top: 0;
+    transition: opacity 0.3s ease;
+    width: 100%;
+    z-index: 0;
+}
+
 .mcmm-version-card:hover {
-    border-color: rgb(157 78 221 / 55%);
-    box-shadow: 0 12px 28px rgb(157 78 221 / 20%);
-    transform: translateY(-1px);
+    background: rgb(255 255 255 / 6%);
+    border-color: rgb(157 78 221 / 40%);
+    box-shadow: 0 10px 30px rgb(0 0 0 / 30%);
+    transform: translateY(-2px) scale(1.005);
 }
 
 .mcmm-version-card.selected {
-    border-color: var(--primary);
-    box-shadow: 0 14px 34px rgb(157 78 221 / 35%);
+    background: linear-gradient(135deg, rgb(157 78 221 / 12%), rgb(26 26 31 / 95%)) !important;
+    border: 2px solid var(--primary) !important;
+    box-shadow: 0 0 40px rgb(157 78 221 / 25%), inset 0 0 20px rgb(157 78 221 / 10%) !important;
+    transform: scale(1.02) !important;
+}
+
+.mcmm-version-card.selected::before {
+    opacity: 0.05;
+}
+
+/* Pulse animation for selected card */
+@keyframes neon-pulse {
+    0% {
+        box-shadow: 0 0 20px rgb(157 78 221 / 20%);
+    }
+
+    50% {
+        box-shadow: 0 0 45px rgb(157 78 221 / 45%);
+    }
+
+    100% {
+        box-shadow: 0 0 20px rgb(157 78 221 / 20%);
+    }
+}
+
+.mcmm-version-card.selected {
+    animation: neon-pulse 2s infinite ease-in-out;
 }
 
 .mcmm-version-thumb {
-    background-color: rgb(26 26 31 / 100%);
     background-position: center;
     background-size: cover;
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    border: 2px solid rgb(255 255 255 / 10%);
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgb(0 0 0 / 30%);
     flex-shrink: 0;
-    height: 54px;
-    width: 54px;
+    height: 52px;
+    overflow: hidden;
+    position: relative;
+    width: 52px;
+    z-index: 1;
 }
 
-.mcmm-version-body {
+.mcmm-version-thumb::after {
+    background: linear-gradient(to top, rgb(0 0 0 / 40%), transparent);
+    content: "";
+    inset: 0;
+    position: absolute;
+}
+
+.mcmm-version-main {
+    display: flex;
     flex: 1;
+    flex-direction: column;
     min-width: 0;
+    position: relative;
+    text-align: left;
+    z-index: 1;
+}
+
+.mcmm-version-name {
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    margin-bottom: 0.2rem;
+}
+
+.mcmm-version-meta {
+    align-items: center;
+    display: flex;
+    gap: 0.6rem;
+}
+
+.mcmm-version-select {
+    align-items: center;
+    display: flex;
+    gap: 1rem;
+    margin-left: auto;
+    position: relative;
+    z-index: 1;
+}
+
+.mcmm-version-status-indicator {
+    align-items: center;
+    background: rgb(255 255 255 / 3%);
+    border: 2px solid rgb(255 255 255 / 8%);
+    border-radius: 50%;
+    display: flex;
+    height: 24px;
+    justify-content: center;
+    position: relative;
+    transition: all 0.3s ease;
+    width: 24px;
+}
+
+.mcmm-version-card.selected .mcmm-version-status-indicator {
+    background: var(--primary);
+    border-color: var(--primary);
+    box-shadow: 0 0 15px var(--primary-dim);
+}
+
+.mcmm-version-status-indicator::after {
+    background: rgb(255 255 255 / 100%);
+    border-radius: 50%;
+    content: "";
+    height: 8px;
+    opacity: 0.2;
+    transition: all 0.3s ease;
+    width: 8px;
+}
+
+.mcmm-version-card.selected .mcmm-version-status-indicator::after {
+    background: #fff;
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+.mcmm-version-action-text {
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+}
+
+.mcmm-version-action-text .action-title {
+    color: var(--text-main);
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    opacity: 0.5;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+}
+
+.mcmm-version-card.selected .mcmm-version-action-text .action-title {
+    color: var(--primary-hover);
+    opacity: 1;
+    text-shadow: 0 0 10px rgb(157 78 221 / 60%);
 }
 
 .mcmm-version-top {
-    align-items: center;
     display: flex;
     gap: 0.6rem;
     justify-content: space-between;
@@ -978,7 +1114,7 @@
 
 .mcmm-form-grid {
     display: grid !important;
-    gap: 2rem !important;
+    gap: 0.75rem !important;
     grid-template-columns: 1fr 1fr !important;
 }
 
@@ -990,8 +1126,11 @@
 
 .mcmm-label {
     color: var(--text-secondary) !important;
-    font-size: 0.9rem !important;
-    font-weight: 600 !important;
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.1rem !important;
+    opacity: 0.7 !important;
+    text-transform: uppercase !important;
 }
 
 .mcmm-input {
@@ -1000,8 +1139,8 @@
     border-radius: 8px !important;
     color: var(--text-main) !important;
     font-family: inherit !important;
-    font-size: 0.95rem !important;
-    padding: 0.9rem 1rem !important;
+    font-size: 0.9rem !important;
+    padding: 0.6rem 0.8rem !important;
     transition: all 0.2s !important;
     width: 100% !important;
 }
@@ -1020,8 +1159,8 @@
 /* Toggle Grid */
 .mcmm-toggle-grid {
     display: grid !important;
-    gap: 0.75rem !important;
-    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem !important;
+    grid-template-columns: repeat(3, 1fr) !important;
 }
 
 .mcmm-toggle-item {
@@ -1031,7 +1170,7 @@
     border-radius: 8px !important;
     display: flex !important;
     justify-content: space-between !important;
-    padding: 0.9rem 1rem !important;
+    padding: 0.5rem 0.75rem !important;
     transition: all 0.2s !important;
 }
 
@@ -1043,6 +1182,27 @@
 .mcmm-toggle-label {
     display: flex !important;
     flex-direction: column !important;
+}
+
+/* Section Dividers */
+.mcmm-section-divider {
+    align-items: center !important;
+    color: var(--primary-hover) !important;
+    display: flex !important;
+    font-size: 0.7rem !important;
+    font-weight: 800 !important;
+    gap: 1rem !important;
+    letter-spacing: 1.5px !important;
+    margin: 0.75rem 0 0.25rem !important;
+    opacity: 0.8 !important;
+    text-transform: uppercase !important;
+}
+
+.mcmm-section-divider::after {
+    background: linear-gradient(to right, rgb(157 78 221 / 20%), transparent) !important;
+    content: "" !important;
+    flex: 1 !important;
+    height: 1px !important;
 }
 
 .mcmm-toggle-name {
@@ -1266,9 +1426,9 @@
     display: flex !important;
     flex-direction: column !important;
     max-height: 90vh !important;
-    max-width: 95vw !important;
+    max-width: 95vw;
     overflow: hidden !important;
-    width: 95% !important;
+    width: 95%;
 }
 
 .mcmm-modal-header {
@@ -1301,7 +1461,7 @@
 .mcmm-modal-body {
     flex: 1 !important;
     overflow-y: auto !important;
-    padding: 1.5rem !important;
+    padding: 1.25rem !important;
 }
 
 /* Console Modal Specific */
@@ -1377,79 +1537,135 @@
     width: 40px !important;
 }
 
-.mcmm-player-row.enhanced {
+.mcmm-player-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    padding: 0.5rem !important;
+}
+
+.mcmm-player-item {
+    align-items: center !important;
+    background: transparent !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    padding: 0.6rem 0.75rem !important;
+    transition: background 0.15s ease !important;
+}
+
+.mcmm-player-item:hover {
     background: var(--bg-surface-hover) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 12px !important;
+}
+
+.mcmm-player-avatar {
+    border-radius: 6px !important;
+    height: 36px !important;
+    margin-right: 0.75rem !important;
+    width: 36px !important;
+}
+
+.mcmm-player-details {
     display: flex !important;
-    padding: 0.75rem 1rem !important;
-    transition: all 0.2s ease !important;
+    flex: 1 !important;
+    flex-direction: column !important;
+}
+
+.mcmm-player-name-text {
+    color: var(--text-main) !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+}
+
+.mcmm-player-status-row {
     align-items: center !important;
-}
-
-.mcmm-player-row.enhanced:hover {
-    border-color: var(--accent-primary) !important;
-    transform: translateX(4px) !important;
-}
-
-.mcmm-player-main {
     display: flex !important;
-    align-items: center !important;
-    gap: 1rem !important;
+    gap: 0.5rem !important;
+    margin-top: 1px !important;
 }
 
-.mcmm-player-head.large {
-    width: 44px !important;
-    height: 44px !important;
-    border-radius: 10px !important;
-    background-size: cover !important;
-    border: 2px solid var(--border) !important;
-}
-
-.mcmm-player-meta {
-    display: flex !important;
-    gap: 0.4rem !important;
-    align-items: center !important;
-    margin-top: 2px !important;
-}
-
-.mcmm-badge-outline {
-    border: 1px solid var(--border) !important;
+.mcmm-player-role-label {
     color: var(--text-muted) !important;
-    padding: 1px 6px !important;
-    border-radius: 4px !important;
-    font-size: 0.65rem !important;
-    font-weight: 600 !important;
+    font-size: 0.7rem !important;
+    font-weight: 500 !important;
+    text-transform: uppercase;
 }
 
-.pulse {
-    animation: pulse-green 2s infinite;
+.mcmm-player-role-label.is-op {
+    color: var(--accent-primary) !important;
+    font-weight: 700 !important;
 }
 
-@keyframes pulse-green {
-    0% {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgb(80 250 123 / 70%);
-    }
-
-    70% {
-        transform: scale(1);
-        box-shadow: 0 0 0 6px rgb(80 250 123 / 0%);
-    }
-
-    100% {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgb(80 250 123 / 0%);
-    }
+.mcmm-player-actions-minimal {
+    display: flex !important;
+    gap: 0.5rem !important;
+    opacity: 0.4;
+    transition: opacity 0.2s !important;
 }
 
-.mcmm-player-stats-bar {
-    background: rgb(255 255 255 / 3%) !important;
+.mcmm-player-item:hover .mcmm-player-actions-minimal {
+    opacity: 1;
+}
+
+.mcmm-btn-minimal {
+    align-items: center !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: 6px !important;
+    color: var(--text-muted) !important;
+    cursor: pointer !important;
+    display: flex !important;
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    justify-content: center !important;
+    padding: 0.35rem 0.6rem !important;
+    transition: all 0.15s !important;
+}
+
+.mcmm-btn-minimal:hover {
+    background: var(--bg-surface-hover) !important;
+    border-color: var(--border) !important;
+    color: var(--text-main) !important;
+}
+
+.mcmm-btn-minimal.danger:hover {
+    background: rgb(255 85 85 / 10%) !important;
+    border-color: rgb(255 85 85 / 20%) !important;
+    color: #f55 !important;
+}
+
+.mcmm-player-stats-minimal {
+    align-items: center !important;
+    background: rgb(255 255 255 / 2%) !important;
     border-bottom: 1px solid var(--border) !important;
-    padding: 0.75rem 1.25rem !important;
+    color: var(--text-muted) !important;
+    display: flex !important;
+    font-size: 0.75rem !important;
     font-weight: 600 !important;
-    font-size: 0.85rem !important;
-    color: var(--text-secondary) !important;
+    gap: 0.5rem !important;
+    padding: 0.6rem 1.25rem !important;
+}
+
+.mcmm-dot-static {
+    background: #50fa7b !important;
+    border-radius: 50% !important;
+    height: 6px !important;
+    width: 6px !important;
+}
+
+.mcmm-player-search-box {
+    background: var(--bg-surface) !important;
+    border: none !important;
+    border-bottom: 1px solid var(--border) !important;
+    color: var(--text-main) !important;
+    font-size: 0.9rem !important;
+    outline: none !important;
+    padding: 0.9rem 1.25rem !important;
+    width: 100% !important;
+}
+
+.mcmm-player-search-box::placeholder {
+    color: var(--text-muted) !important;
+    opacity: 0.5 !important;
 }
 
 .mcmm-btn-pill {
@@ -1799,7 +2015,7 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     visibility: hidden !important;
     width: 260px !important;
-    z-index: 30 !important;
+    z-index: 200 !important;
 }
 
 .mcmm-backup-info-trigger:hover .mcmm-backup-info-panel {
@@ -1907,6 +2123,7 @@
     position: absolute !important;
     transition: all 0.3s ease !important;
     z-index: 10 !important;
+    border-radius: var(--radius-md) !important;
 }
 
 .mcmm-modpack-card:hover .mcmm-backup-overlay {
