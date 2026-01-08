@@ -128,10 +128,8 @@
     content: "";
     height: 1px;
     left: 2rem;
-    /* matches horizontal padding */
     position: absolute;
     right: 2rem;
-    /* matches horizontal padding */
 }
 
 .mcmm-tab {
@@ -1491,8 +1489,7 @@
     outline: none !important;
 }
 
-/* Player list (modal) */
-/* FIX: removed duplicate selector by keeping a single canonical .mcmm-player-list below */
+/* Player list (modal) FIX: removed duplicate selector by keeping a single canonical .mcmm-player-list below */
 .mcmm-player-row {
     align-items: center !important;
     background: rgb(255 255 255 / 3%) !important;
