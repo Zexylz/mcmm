@@ -669,17 +669,16 @@
 }
 
 .mcmm-modpack-thumb {
+    background-color: rgb(0 0 0 / 20%) !important;
     background-position: center !important;
+    background-repeat: no-repeat !important;
     background-size: cover !important;
-    height: 140px !important;
+    height: 180px !important;
     position: relative !important;
-    transition: background-size 0.3s !important;
+    transition: all 0.3s ease !important;
 }
 
-.mcmm-modpack-grid.fit-images .mcmm-modpack-thumb {
-    background-repeat: no-repeat !important;
-    background-size: contain !important;
-}
+
 
 .mcmm-modpack-thumb::after {
     background: linear-gradient(to top, rgb(11 12 22 / 90%) 0%, transparent 100%);
@@ -1364,6 +1363,10 @@
     padding: 0.75rem !important;
 }
 
+.mcmm-player-row.compact {
+    padding: 0.6rem 0.75rem !important;
+}
+
 .mcmm-player-head {
     background-position: center !important;
     background-size: cover !important;
@@ -1374,15 +1377,162 @@
     width: 40px !important;
 }
 
-.mcmm-player-name {
-    color: var(--text-main) !important;
-    font-weight: 700 !important;
+.mcmm-player-row.enhanced {
+    background: var(--bg-surface-hover) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    padding: 0.75rem 1rem !important;
+    transition: all 0.2s ease !important;
+    align-items: center !important;
 }
 
-.mcmm-player-actions {
+.mcmm-player-row.enhanced:hover {
+    border-color: var(--accent-primary) !important;
+    transform: translateX(4px) !important;
+}
+
+.mcmm-player-main {
+    display: flex !important;
+    align-items: center !important;
+    gap: 1rem !important;
+}
+
+.mcmm-player-head.large {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 10px !important;
+    background-size: cover !important;
+    border: 2px solid var(--border) !important;
+}
+
+.mcmm-player-meta {
     display: flex !important;
     gap: 0.4rem !important;
-    margin-left: auto !important;
+    align-items: center !important;
+    margin-top: 2px !important;
+}
+
+.mcmm-badge-outline {
+    border: 1px solid var(--border) !important;
+    color: var(--text-muted) !important;
+    padding: 1px 6px !important;
+    border-radius: 4px !important;
+    font-size: 0.65rem !important;
+    font-weight: 600 !important;
+}
+
+.pulse {
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(80, 250, 123, 0.7);
+    }
+
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 6px rgba(80, 250, 123, 0);
+    }
+
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(80, 250, 123, 0);
+    }
+}
+
+.mcmm-player-stats-bar {
+    background: rgb(255 255 255 / 3%) !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding: 0.75rem 1.25rem !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    color: var(--text-secondary) !important;
+}
+
+.mcmm-btn-pill {
+    background: var(--bg-surface-hover) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 20px !important;
+    color: var(--text-main) !important;
+    cursor: pointer !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    padding: 0.35rem 0.8rem !important;
+    transition: all 0.2s !important;
+}
+
+.mcmm-btn-pill:hover {
+    filter: brightness(1.2) !important;
+    transform: translateY(-1px) !important;
+}
+
+.mcmm-btn-pill.warning:hover {
+    background: var(--warning) !important;
+    border-color: var(--warning) !important;
+    color: black !important;
+}
+
+.mcmm-player-badge.neon {
+    background: linear-gradient(135deg, #ff00ff 0%, #7b2cbf 100%) !important;
+    box-shadow: 0 0 10px rgb(255 0 255 / 40%) !important;
+    color: white !important;
+    font-size: 0.6rem !important;
+    font-weight: 900 !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    letter-spacing: 0.5px !important;
+}
+
+.mcmm-player-role {
+    color: var(--text-muted) !important;
+    font-size: 0.65rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+}
+
+.mcmm-btn-pill-icon {
+    background: rgb(255 255 255 / 5%) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 50% !important;
+    color: var(--text-main) !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 32px !important;
+    width: 32px !important;
+    padding: 0 !important;
+    transition: all 0.2s !important;
+    font-size: 0.9rem !important;
+}
+
+.mcmm-btn-pill-icon:hover {
+    background: var(--warning) !important;
+    border-color: var(--warning) !important;
+    color: black !important;
+    transform: scale(1.1) rotate(5deg) !important;
+}
+
+.mcmm-btn-pill.danger:hover {
+    background: var(--danger) !important;
+    border-color: var(--danger) !important;
+    color: white !important;
+}
+
+.mcmm-btn-pill.success:hover {
+    background: var(--success) !important;
+    border-color: var(--success) !important;
+    color: white !important;
+}
+
+.mcmm-player-name {
+    color: white !important;
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.2px !important;
 }
 
 /* ===== LOADING / SPINNERS ===== */
@@ -1767,4 +1917,116 @@
     display: flex !important;
     gap: 0.75rem !important;
     width: 100% !important;
+}
+
+/* ===== MOD MANAGER ICONS ===== */
+.mcmm-mod-icon {
+    align-items: center;
+    background-color: var(--bg-surface-hover);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-shrink: 0;
+    height: 56px;
+    justify-content: center;
+    width: 56px;
+}
+
+.mcmm-mod-icon.large {
+    background-color: var(--bg-surface-hover);
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 20%);
+    height: 80px;
+    width: 80px;
+}
+
+.mcmm-mod-icon span {
+    color: var(--text-muted);
+    font-size: 1.5rem;
+}
+
+/* ===== COLORED LOGS ===== */
+.log-error {
+    color: #ff5555 !important;
+    font-weight: bold;
+}
+
+.log-warn {
+    color: #ffb86c !important;
+    font-weight: bold;
+}
+
+.log-system {
+    color: #8be9fd !important;
+}
+
+.log-array {
+    color: #50fa7b !important;
+}
+
+.log-login {
+    color: #bd93f9 !important;
+}
+
+.log-text {
+    color: #f8f8f2 !important;
+}
+
+.log-info {
+    color: #8be9fd !important;
+}
+
+.log-group {
+    border-radius: 4px;
+    padding: 2px 0;
+    transition: background 0.2s ease, border-left 0.2s ease;
+}
+
+.log-group.log-group-error {
+    border-left: 3px solid transparent;
+}
+
+.log-group.log-group-warn {
+    border-left: 3px solid transparent;
+}
+
+.log-group.log-group-error:hover {
+    background: rgb(255 85 85 / 5%) !important;
+    border-left: 3px solid #ff5555 !important;
+    text-decoration: underline !important;
+    text-decoration-color: #ff5555 !important;
+}
+
+.log-group.log-group-warn:hover {
+    background: rgb(255 184 108 / 5%) !important;
+    border-left: 3px solid #ffb86c !important;
+    text-decoration: underline !important;
+    text-decoration-color: #ffb86c !important;
+}
+
+.mcmm-toast {
+    backdrop-filter: blur(12px);
+    background: rgb(0 0 0 / 80%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    bottom: 30px;
+    box-shadow: 0 8px 32px rgb(0 0 0 / 50%);
+    color: white;
+    font-weight: 600;
+    left: 50%;
+    opacity: 0;
+    padding: 12px 24px;
+    pointer-events: none;
+    position: fixed;
+    transform: translateX(-50%) translateY(20px);
+    transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    z-index: 10000;
+}
+
+.mcmm-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }

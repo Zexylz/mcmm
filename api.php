@@ -874,7 +874,8 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Unsupported action'], 400);
             }
 
-            $execCmd = "docker exec " . escapeshellarg($id) . " rcon-cli --password " . escapeshellarg($rconPass) . " " . $cmdMap[$action] . " 2>&1";
+            $rconPort = isset($envMap['RCON_PORT']) ? intval($envMap['RCON_PORT']) : 25575;
+            $execCmd = "docker exec " . escapeshellarg($id) . " rcon-cli --port $rconPort --password " . escapeshellarg($rconPass) . " " . $cmdMap[$action] . " 2>&1";
             $out = [];
             $exit = 0;
             exec($execCmd, $out, $exit);

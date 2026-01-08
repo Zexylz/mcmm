@@ -1,6 +1,6 @@
 // MCMM Plugin Logic
 /* global csrfToken, $, mcmmConfig */
-/* exported switchTab, filterModpacks, openModManager, closeModManager, switchModTab, switchSource, clearModFilters, setModSort, filterMods, checkForUpdates, toggleModSelection, removeModFromQueue, clearQueue, installSelectedMods, toggleImageFit, setRam, toggleSelect, selectOption, controlServer, deleteServer, saveSettings, openServerSettings, closeServerSettings, submitServerSettings, closeDeployProgress, finishDeployAndView, openPlayersModal, closePlayersModal, playerAction, openConsole, closeConsole, changeModsPage */
+/* exported switchTab, filterModpacks, openModManager, closeModManager, switchModTab, switchSource, clearModFilters, setModSort, filterMods, checkForUpdates, toggleModSelection, removeModFromQueue, clearQueue, installSelectedMods, setRam, toggleSelect, selectOption, controlServer, deleteServer, saveSettings, openServerSettings, closeServerSettings, submitServerSettings, closeDeployProgress, finishDeployAndView, openPlayersModal, closePlayersModal, playerAction, openConsole, closeConsole, changeModsPage */
 console.log('MCMM Script Loaded');
 
 // Expose functions globally for inline HTML onclick handlers
@@ -121,11 +121,20 @@ let deployLogInterval = null;
 
 // Tab Switching
 function switchTab(tabId, element) {
-    document.querySelectorAll('.mcmm-tab').forEach(t => t.classList.remove('active'));
-    if (element) element.classList.add('active');
+    const tabElement = element || document.getElementById('tab-main-' + tabId);
+    if (tabElement) {
+        // Only clear active state for tabs in the same container
+        const container = tabElement.closest('.mcmm-tabs') || document.querySelector('.mcmm-tabs');
+        if (container) {
+            container.querySelectorAll('.mcmm-tab').forEach(t => t.classList.remove('active'));
+        }
+        tabElement.classList.add('active');
+    }
 
+    // Switch content
     document.querySelectorAll('.mcmm-tab-content').forEach(c => c.classList.remove('active'));
-    document.getElementById('tab-' + tabId).classList.add('active');
+    const content = document.getElementById('tab-' + tabId);
+    if (content) content.classList.add('active');
 
     if (tabId === 'catalog' && !modpackState.loading && !modpacksLoaded) {
         modpacksLoaded = true;
@@ -717,8 +726,8 @@ function renderMods() {
 
             return `
                 <div class="mcmm-modpack-card" style="display: flex; align-items: center; gap: 1.25rem; padding: 1.25rem; min-height: 90px;">
-                    <div style="width: 56px; height: 56px; background-image: url('${iconUrl}'); background-size: cover; background-position: center; background-color: rgb(255 255 255 / 3%); border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--text-secondary); flex-shrink: 0;">
-                        ${!iconUrl ? '☕' : ''}
+                    <div class="mcmm-mod-icon" style="background-image: url('${iconUrl}');">
+                        ${!iconUrl ? '<span>☕</span>' : ''}
                     </div>
                     
                     <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
@@ -749,7 +758,7 @@ function renderMods() {
 
             return `
                 <div class="mcmm-modpack-card ${selectedClass}" style="display: flex; gap: 1.5rem; padding: 1.5rem; align-items: center; min-height: 110px; position: relative;" onclick="toggleModSelection('${mod.id}')">
-                    <div style="width: 80px; height: 80px; background-image: url('${mod.icon}'); background-size: cover; background-position: center; border-radius: 16px; flex-shrink: 0; background-color: rgb(42 42 42 / 100%); border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10);"></div>
+                    <div class="mcmm-mod-icon large" style="background-image: url('${mod.icon}');"></div>
                     <div style="flex: 1; overflow: hidden; display: flex; flex-direction: column; height: 100%; justify-content: center;">
                         <div style="margin-bottom: 0.5rem; padding-right: 2rem;">
                             <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.1rem;">
@@ -1301,16 +1310,131 @@ function setDeployStatus(message, isError = false) {
     el.textContent = message;
 }
 
+function formatConsoleLog(text) {
+    if (!text) return '';
+    const lines = String(text).split('\n');
+    let output = '';
+    let currentGroupLines = [];
+    let currentType = null;
+
+    const flushGroup = () => {
+        if (currentGroupLines.length === 0) return;
+        const typeClass = currentType ? ` log-group-${currentType}` : '';
+        const content = currentGroupLines.join('\n');
+        output += `<div class="log-group${typeClass}" oncontextmenu="handleLogContextMenu(event, this)">${content}</div>`;
+        currentGroupLines = [];
+        currentType = null;
+    };
+
+    const formatLine = (l) => {
+        let escaped = String(l)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
+        return escaped
+            .replace(/\[(ERROR|FATAL|Exception)\]/gi, '[<span class="log-error">$1</span>]')
+            .replace(/\[(WARN|WARNING)\]/gi, '[<span class="log-warn">$1</span>]')
+            .replace(/\[(INFO|SYSTEM)\]/gi, '[<span class="log-system">$1</span>]')
+            .replace(/\[(SUCCESS|ARRAY)\]/gi, '[<span class="log-array">$1</span>]')
+            .replace(/\[(LOGIN|LOGGED)\]/gi, '[<span class="log-login">$1</span>]')
+            .replace(/\b(ERROR|FATAL|Exception|error)\b/g, '<span class="log-error">$1</span>')
+            .replace(/\b(WARN|WARNING|warn)\b/g, '<span class="log-warn">$1</span>')
+            .replace(/\b(INFO|system)\b/g, '<span class="log-system">$1</span>')
+            .replace(/\b(SUCCESS|success|array)\b/g, '<span class="log-array">$1</span>')
+            .replace(/\b(LOGIN|login|logged)\b/g, '<span class="log-login">$1</span>');
+    };
+
+    for (let line of lines) {
+        if (line.trim() === '') {
+            if (currentGroupLines.length > 0) currentGroupLines.push('');
+            continue;
+        }
+
+        // New entry if starts with timestamp [HH:MM:SS]
+        const isNewEntry = /^\[\d{2}:\d{2}:\d{2}\]/.test(line);
+        const hasError = /\[(ERROR|FATAL|Exception)\]|\b(ERROR|FATAL|Exception)\b/i.test(line);
+        const hasWarn = /\[(WARN|WARNING)\]|\b(WARN|WARNING)\b/i.test(line);
+
+        if (isNewEntry) {
+            flushGroup();
+            if (hasError) currentType = 'error';
+            else if (hasWarn) currentType = 'warn';
+        } else if (!currentType && (hasError || hasWarn)) {
+            // Case where the first line doesn't have a timestamp but is an error
+            flushGroup();
+            currentType = hasError ? 'error' : 'warn';
+        }
+
+        currentGroupLines.push(formatLine(line));
+    }
+    flushGroup();
+    return output;
+}
+
+function handleLogContextMenu(e, el) {
+    e.preventDefault();
+    const text = el.innerText;
+
+    const doCopy = (str) => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(str);
+        } else {
+            const textArea = document.createElement("textarea");
+            textArea.value = str;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            textArea.style.top = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                return Promise.resolve();
+            } catch (err) {
+                document.body.removeChild(textArea);
+                return Promise.reject(err);
+            }
+        }
+    };
+
+    doCopy(text).then(() => {
+        showToast('Error copied to clipboard');
+        el.style.background = 'rgb(255 255 255 / 15%)';
+        setTimeout(() => el.style.background = '', 200);
+    }).catch(() => {
+        showToast('Failed to copy');
+    });
+}
+
+function showToast(message) {
+    let toast = document.getElementById('mcmm-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'mcmm-toast';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.className = 'mcmm-toast show';
+    setTimeout(() => {
+        toast.className = 'mcmm-toast';
+    }, 3000);
+}
+
 function setDeployConsole(lines) {
     const wrapper = document.getElementById('deployConsole');
     const textEl = document.getElementById('deployConsoleText');
     if (!wrapper || !textEl) return;
     if (lines && lines.length) {
         wrapper.style.display = 'block';
-        textEl.textContent = Array.isArray(lines) ? lines.join('\n') : String(lines);
+        const rawText = Array.isArray(lines) ? lines.join('\n') : String(lines);
+        textEl.innerHTML = formatConsoleLog(rawText);
     } else {
         wrapper.style.display = 'none';
-        textEl.textContent = '';
+        textEl.innerHTML = '';
     }
 }
 
@@ -1345,7 +1469,7 @@ function setDeployProgressConsole(text) {
     const el = document.getElementById('deployProgressConsoleText');
     const box = document.getElementById('deployProgressConsole');
     if (!el || !box) return;
-    el.textContent = text;
+    el.innerHTML = formatConsoleLog(text);
     box.scrollTop = box.scrollHeight;
 }
 
@@ -1404,12 +1528,8 @@ function finishDeployAndView() {
     stopDeployLogPolling();
     closeDeployProgress();
     // Switch to servers tab
-    const tabEl = document.querySelector('.mcmm-tab:nth-child(1)');
-    if (tabEl) tabEl.click();
-    else {
-        switchTab('servers');
-        loadServers();
-    }
+    switchTab('servers');
+    loadServers();
 }
 
 async function loadServers() {
@@ -1464,14 +1584,14 @@ function renderServers(servers) {
         container.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <h2 style="font-size: 1.25rem;">Servers Status</h2>
-                <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog', document.querySelector('.mcmm-tab:nth-child(2)'))">
+                <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog')">
                     Deploy New Server
                 </button>
             </div>
             <div class="mcmm-empty">
                 <h3>No servers found</h3>
                 <p>Get started by deploying your first modpack server.</p>
-                <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog', document.querySelector('.mcmm-tab:nth-child(2)'))">Browse Catalog</button>
+                <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog')">Browse Catalog</button>
             </div>
         `;
         return;
@@ -1480,7 +1600,7 @@ function renderServers(servers) {
     let html = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
             <h2 style="font-size: 1.25rem;">Servers Status</h2>
-            <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog', document.querySelector('.mcmm-tab:nth-child(2)'))">
+            <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog')">
                 Deploy New Server
             </button>
         </div>
@@ -1862,7 +1982,7 @@ async function fetchLogs() {
             // ANSI escape codes regex: /\x1B\[[0-9;]*[a-zA-Z]/g
             let cleanLogs = (data.logs || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, ''); // eslint-disable-line no-control-regex
 
-            output.textContent = cleanLogs;
+            output.innerHTML = formatConsoleLog(cleanLogs);
 
             if (wasAtBottom) {
                 output.scrollTop = output.scrollHeight;
@@ -1883,60 +2003,103 @@ function closeConsole() {
 async function openPlayersModal(serverId, serverName, port) {
     const modal = document.getElementById('playersModal');
     const body = document.getElementById('playersBody');
-    const subtitle = document.getElementById('playersModalSubtitle');
-    if (!modal || !body || !subtitle) return;
-    subtitle.textContent = serverName || '';
+    const searchInput = document.getElementById('playerSearch');
+
+    if (!modal || !body) return;
+
     modal.classList.add('open');
-    body.innerHTML = `<div style="text-align:center; padding: 2rem; color: var(--text-secondary);">
-        <div class="mcmm-spinner"></div>
-        <div style="margin-top:0.5rem;">Loading players...</div>
-    </div>`;
+    if (searchInput) searchInput.value = '';
+
+    localCurrentServerId = serverId;
+    body.innerHTML = `
+        <div style="text-align:center; padding: 4rem 2rem; color: var(--text-secondary);">
+            <div class="mcmm-spinner"></div>
+            <div style="margin-top: 1rem; font-weight: 500; font-size: 0.9rem; letter-spacing: 0.5px;">ESTABLISHING RCON LINK...</div>
+        </div>
+    `;
+
     try {
         const res = await fetch(`/plugins/mcmm/api.php?action=server_players&id=${encodeURIComponent(serverId)}&port=${encodeURIComponent(port || '25565')}`);
         const data = await res.json();
-        if (!data.success) throw new Error(data.error || 'Failed to load players');
-        const players = data.data.players || [];
-        const online = data.data.online ?? 0;
-        const max = data.data.max ?? 0;
-        if (!players.length) {
-            body.innerHTML = `<div style="text-align:center; padding: 1.5rem; color: var(--text-secondary);">
-                <div style="font-weight:700; margin-bottom:0.25rem;">${online} / ${max || '?'} online</div>
-                <div style="color: var(--text-muted);">No player list available.</div>
-            </div>`;
-            return;
+
+        if (data.success) {
+            localCurrentPlayers = data.data.players || [];
+            renderPlayers(localCurrentPlayers, data.data.online, data.data.max);
+        } else {
+            body.innerHTML = `<div style="padding: 3rem; text-align:center; color: var(--danger); font-weight:600;">CONNECTION FAILED: ${data.error || 'Check RCON settings'}</div>`;
         }
-        const rows = players.map(p => {
-            const name = p.name || p;
-            const headUrl = `https://cravatar.eu/helmavatar/${encodeURIComponent(name)}/64.png`;
-            const isOp = !!p.isOp;
-            const opAction = isOp ? 'deop' : 'op';
-            const opLabel = isOp ? 'Deop' : 'Op';
-            return `
-                <div class="mcmm-player-row">
-                    <div class="mcmm-player-head" style="background-image: url('${headUrl}');"></div>
-                    <div classmcmm-player-name">${name}</div>
-                    <div class="mcmm-player-actions">
-                        <button class="mcmm-btn warning" style="padding: 0.35rem 0.65rem;" onclick="playerAction('${serverId}', '${name}', 'kick')">Kick</button>
-                        <button class="mcmm-btn danger" style="padding: 0.35rem 0.65rem;" onclick="playerAction('${serverId}', '${name}', 'ban')">Ban</button>
-                        <button class="mcmm-btn ${isOp ? 'danger' : 'success'}" style="padding: 0.35rem 0.65rem;" onclick="playerAction('${serverId}', '${name}', '${opAction}')">${opLabel}</button>
+    } catch (e) {
+        body.innerHTML = `<div style="padding: 3rem; text-align:center; color: var(--danger);">ERROR: ${e.message}</div>`;
+    }
+}
+
+function refreshPlayers() {
+    if (localCurrentServerId) {
+        openPlayersModal(localCurrentServerId, null);
+    }
+}
+
+function filterPlayers() {
+    const q = document.getElementById('playerSearch').value.toLowerCase();
+    const filtered = localCurrentPlayers.filter(p => {
+        const name = (p.name || p).toLowerCase();
+        return name.includes(q);
+    });
+    renderPlayers(filtered);
+}
+
+function renderPlayers(players, onlineCount = null, maxCount = null) {
+    const body = document.getElementById('playersBody');
+    const badge = document.getElementById('playerTotalBadge');
+    const serverId = localCurrentServerId;
+
+    if (onlineCount !== null && badge) {
+        badge.textContent = `${onlineCount} / ${maxCount || '?'}`;
+        badge.style.opacity = '1';
+    }
+
+    if (!players || players.length === 0) {
+        const msg = localCurrentPlayers.length === 0 ? 'SERVER IS EMPTY' : 'NO MATCHES FOUND';
+        body.innerHTML = `<div style="padding: 4rem 2rem; text-align:center; color: var(--text-muted); font-weight: 700; font-size: 0.8rem; letter-spacing: 1px; opacity: 0.5;">${msg}</div>`;
+        return;
+    }
+
+    const rows = players.map(p => {
+        const name = p.name || p;
+        const headUrl = `https://cravatar.eu/helmavatar/${encodeURIComponent(name)}/64.png`;
+        const isOp = !!p.isOp;
+        const opAction = isOp ? 'deop' : 'op';
+        const opLabel = isOp ? 'Deop' : 'Op';
+
+        return `
+            <div class="mcmm-player-row enhanced">
+                <div class="mcmm-player-main">
+                    <div class="mcmm-player-head large" style="background-image: url('${headUrl}');" onclick="copyToClipboard('${name}', 'Copied ${name}')"></div>
+                    <div class="mcmm-player-info">
+                        <div class="mcmm-player-name">${name}</div>
+                        ${isOp ? '<div class="mcmm-player-badge neon">OPERATOR</div>' : '<div class="mcmm-player-role">MEMBER</div>'}
                     </div>
                 </div>
-            `;
-        }).join('');
-        body.innerHTML = `
-            <div style="padding: 0.5rem 0.75rem; color: var(--text-secondary); font-weight:700; margin-bottom: 0.25rem;">
-                ${online} / ${max || '?'} online
+                <div class="mcmm-player-actions compact">
+                    <button class="mcmm-btn-pill warning" onclick="playerAction('${serverId}', '${name}', 'kick')">Kick</button>
+                    <button class="mcmm-btn-pill danger" onclick="playerAction('${serverId}', '${name}', 'ban')">Ban</button>
+                    <button class="mcmm-btn-pill ${isOp ? 'danger' : 'success'}" onclick="playerAction('${serverId}', '${name}', '${opAction}')">${opLabel}</button>
+                    <button class="mcmm-btn-pill-icon" onclick="whisperPlayer('${serverId}', '${name}')" title="Message">💬</button>
+                </div>
             </div>
-            <div class="mcmm-player-list">${rows}</div>
         `;
-    } catch (e) {
-        body.innerHTML = `<div style="padding: 1.5rem; color: var(--danger); text-align:center;">Error: ${e.message}</div>`;
-    }
+    }).join('');
+
+    body.innerHTML = `<div class="mcmm-player-list-grid" style="display: flex; flex-direction: column; gap: 0.6rem; padding: 0.5rem;">${rows}</div>`;
 }
 
 function closePlayersModal() {
     const modal = document.getElementById('playersModal');
     if (modal) modal.classList.remove('open');
+    localCurrentPlayers = [];
+    localCurrentServerId = null;
+    const badge = document.getElementById('playerTotalBadge');
+    if (badge) badge.style.opacity = '0';
 }
 
 async function playerAction(serverId, playerName, action) { // eslint-disable-line no-unused-vars
@@ -1945,9 +2108,40 @@ async function playerAction(serverId, playerName, action) { // eslint-disable-li
         const data = await res.json();
         if (!data.success) {
             alert('Error: ' + (data.error || 'command failed'));
+        } else {
+            showToast(`${action.toUpperCase()} command executed`);
+            refreshPlayers();
         }
     } catch (e) {
         alert('Error: ' + e.message);
+    }
+}
+
+async function whisperPlayer(serverId, playerName) { // eslint-disable-line no-unused-vars
+    const msg = prompt(`Message to ${playerName}:`);
+    if (msg) {
+        try {
+            const res = await fetch(`/plugins/mcmm/api.php?action=server_player_action&id=${encodeURIComponent(serverId)}&player=${encodeURIComponent(playerName)}&action=whisper&message=${encodeURIComponent(msg)}`);
+            const data = await res.json();
+            if (data.success) showToast(`Message sent`);
+            else alert('Error: ' + data.error);
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    }
+}
+
+function copyToClipboard(text, successMsg) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => showToast(successMsg || 'Copied!'));
+    } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showToast(successMsg || 'Copied!');
     }
 }
 
@@ -2297,14 +2491,7 @@ async function installSelectedMods() {
         btn.style.background = ''; // Reset to default class style
     }, 2000);
 }
-function toggleImageFit(checkbox) { // eslint-disable-line no-unused-vars
-    const grid = document.getElementById('modpackGrid');
-    if (checkbox.checked) {
-        grid.classList.add('fit-images');
-    } else {
-        grid.classList.remove('fit-images');
-    }
-}
+
 
 function setRam(amount) {
     const defaultInput = document.getElementById('default_memory');
@@ -2767,7 +2954,7 @@ async function reinstallFromBackup(name) {
         const data = await res.json();
         if (data.success) {
             alert('Server reinstalled successfully!');
-            switchTab('servers', document.querySelector('.mcmm-tab:first-child'));
+            switchTab('servers');
         } else {
             alert('Error: ' + data.error);
             container.innerHTML = originalHtml;
