@@ -2011,8 +2011,6 @@ function closeConsole() {
 // --- Players Modal ---
 let localCurrentPlayers = [];
 let localCurrentServerId = null;
-let localCurrentServerName = '';
-let localCurrentServerPort = null;
 let currentPlayersTab = 'active';
 
 async function openPlayersModal(serverId, serverName, port) {
@@ -2025,12 +2023,10 @@ async function openPlayersModal(serverId, serverName, port) {
     if (searchInput) searchInput.value = '';
 
     localCurrentServerId = serverId;
-    localCurrentServerName = serverName;
-    localCurrentServerPort = port;
     currentPlayersTab = 'active';
 
     if (titleEl) {
-        titleEl.textContent = `Players: ${serverName}`;
+        titleEl.textContent = `Players: ${serverName} (${port})`;
     }
 
     updatePlayerTabIndicator();
