@@ -62,7 +62,7 @@
 }
 
 .material-symbols-outlined {
-    font-family: 'Material Symbols Outlined' !important;
+    font-family: 'Material Symbols Outlined', sans-serif !important;
     display: inline-flex !important;
     vertical-align: middle !important;
     font-size: 1.25em !important;
@@ -71,7 +71,7 @@
     font-style: normal !important;
     text-transform: none !important;
     letter-spacing: normal !important;
-    word-wrap: normal !important;
+    overflow-wrap: normal !important;
     white-space: nowrap !important;
     direction: ltr !important;
 }
@@ -1622,16 +1622,18 @@
 .log-system,
 .log-info {
     color: rgb(139 233 153 / 100%);
+
     /* Softer Green */
 }
 
 .log-error {
-    color: rgb(255 85 85 / 100%);
-    font-weight: 700;
+    color: rgb(255 85 85 / 100%) !important;
+    font-weight: 700 !important;
 }
 
 .log-warn {
-    color: rgb(255 184 108 / 100%);
+    color: rgb(255 184 108 / 100%) !important;
+    font-weight: 700 !important;
 }
 
 .log-success {
@@ -1656,22 +1658,14 @@
 }
 
 .log-array {
-    color: rgb(80 250 123 / 100%);
+    color: rgb(80 250 123 / 100%) !important;
 }
 
 .log-login {
-    color: rgb(189 147 249 / 100%);
+    color: rgb(189 147 249 / 100%) !important;
 }
 
-.mcmm-console-input {
-    background: transparent !important;
-    border: none !important;
-    color: rgb(248 248 242 / 100%) !important;
-    flex: 1 !important;
-    font-family: "Fira Code", monospace !important;
-    font-size: 1rem !important;
-    outline: none !important;
-}
+/* Consolidated duplicate console input selector */
 
 /* Player list (modal) FIX: removed duplicate selector by keeping a single canonical .mcmm-player-list below */
 .mcmm-player-row {
@@ -2326,33 +2320,16 @@
 }
 
 /* ===== COLORED LOGS ===== */
-.log-error {
-    color: rgb(255 85 85 / 100%) !important;
-    font-weight: bold;
-}
-
-.log-warn {
-    color: rgb(255 184 108 / 100%) !important;
-    font-weight: bold;
-}
-
+/* Consolidated log styles—duplicates removed */
 .log-system {
     color: rgb(139 233 253 / 100%) !important;
-}
-
-.log-array {
-    color: rgb(80 250 123 / 100%) !important;
-}
-
-.log-login {
-    color: rgb(189 147 249 / 100%) !important;
 }
 
 .log-text {
     color: rgb(248 248 242 / 100%) !important;
 }
 
-.log-info {
+.log-info-important {
     color: rgb(139 233 253 / 100%) !important;
 }
 
@@ -2445,14 +2422,14 @@
 
 .mcmm-settings-pane {
     display: none !important;
-    animation: mcmmFadeIn 0.3s ease-out;
+    animation: mcmm-fade-in 0.3s ease-out;
 }
 
 .mcmm-settings-pane.active {
     display: block !important;
 }
 
-@keyframes mcmmFadeIn {
+@keyframes mcmm-fade-in {
     from {
         opacity: 0;
         transform: translateY(10px);
