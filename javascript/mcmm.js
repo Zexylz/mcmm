@@ -2011,18 +2011,28 @@ function closeConsole() {
 // --- Players Modal ---
 let localCurrentPlayers = [];
 let localCurrentServerId = null;
+let localCurrentServerName = '';
+let localCurrentServerPort = null;
 let currentPlayersTab = 'active';
 
 async function openPlayersModal(serverId, serverName, port) {
     const modal = document.getElementById('playersModal');
     const searchInput = document.getElementById('playerSearch');
+    const titleEl = modal?.querySelector('.mcmm-modal-title');
 
     if (!modal) return;
     modal.classList.add('open');
     if (searchInput) searchInput.value = '';
 
     localCurrentServerId = serverId;
+    localCurrentServerName = serverName;
+    localCurrentServerPort = port;
     currentPlayersTab = 'active';
+
+    if (titleEl) {
+        titleEl.textContent = `Players: ${serverName}`;
+    }
+
     updatePlayerTabIndicator();
     fetchTabPlayers();
 }
