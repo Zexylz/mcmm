@@ -233,6 +233,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                     <input type="text" class="mcmm-search-input" placeholder="Search modpacks..." id="modpackSearch" onkeyup="filterModpacks()" />
                 </div>
             </div>
+W
             <div class="mcmm-modpack-grid" id="modpackGrid">
                 <!-- Loaded via JS -->
             </div>
