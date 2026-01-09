@@ -61,6 +61,21 @@
     text-decoration: none !important;
 }
 
+.material-symbols-outlined {
+    font-family: 'Material Symbols Outlined' !important;
+    display: inline-flex !important;
+    vertical-align: middle !important;
+    font-size: 1.25em !important;
+    line-height: 1 !important;
+    font-weight: normal !important;
+    font-style: normal !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    word-wrap: normal !important;
+    white-space: nowrap !important;
+    direction: ltr !important;
+}
+
 /* ===== BACKGROUND ===== */
 .mcmm-bg {
     /* background:
@@ -1074,26 +1089,53 @@
 }
 
 .mcmm-panel {
-    background: rgb(13 14 23 / 60%) !important;
-    backdrop-filter: blur(8px) !important;
-    border: 1px solid rgb(255 255 255 / 5%) !important;
-    border-radius: 12px !important;
-    margin-bottom: 2rem !important;
-    padding: 2rem !important;
+    background: linear-gradient(145deg, rgb(255 255 255 / 2%), rgb(255 255 255 / 5%)) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid rgb(255 255 255 / 8%) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 32px 0 rgb(0 0 0 / 37%) !important;
+    margin-bottom: 2.5rem !important;
+    padding: 2.5rem !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.mcmm-panel::after {
+    background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgb(157 78 221 / 10%), transparent 40%);
+    content: "";
+    height: 100%;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 1;
+    pointer-events: none;
 }
 
 .mcmm-panel-title {
     align-items: center !important;
-    border-bottom: 1px solid rgb(255 255 255 / 5%) !important;
-    color: var(--text-main) !important;
+    border-bottom: 2px solid rgb(157 78 221 / 20%) !important;
+    color: rgb(255 255 255 / 100%) !important;
     display: flex !important;
-    font-size: 1rem !important;
-    font-weight: 600 !important;
-    gap: 0.5rem !important;
-    letter-spacing: 0.5px !important;
-    margin-bottom: 1.5rem !important;
-    padding-bottom: 0.75rem !important;
-    text-transform: uppercase !important;
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    gap: 0.75rem !important;
+    letter-spacing: -0.5px !important;
+    margin-bottom: 2rem !important;
+    padding-bottom: 1rem !important;
+    position: relative;
+    z-index: 2;
+}
+
+.mcmm-panel-title::after {
+    background: var(--primary);
+    bottom: -2px;
+    box-shadow: 0 0 15px var(--primary);
+    content: "";
+    height: 2px;
+    left: 0;
+    position: absolute;
+    width: 60px;
 }
 
 .mcmm-form-grid {
@@ -1109,35 +1151,62 @@
 }
 
 .mcmm-label {
-    color: var(--text-secondary) !important;
-    font-size: 0.8rem !important;
-    font-weight: 700 !important;
-    margin-bottom: 0.1rem !important;
-    opacity: 0.7 !important;
+    color: rgb(255 255 255 / 50%) !important;
+    font-size: 0.7rem !important;
+    font-weight: 900 !important;
+    letter-spacing: 1.5px !important;
+    margin-bottom: 0.25rem !important;
     text-transform: uppercase !important;
 }
 
 .mcmm-input {
-    background: rgb(0 0 0 / 20%) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 8px !important;
-    color: var(--text-main) !important;
+    background: rgb(0 0 0 / 25%) !important;
+    border: 1px solid rgb(255 255 255 / 10%) !important;
+    border-radius: 10px !important;
+    color: rgb(255 255 255 / 100%) !important;
     font-family: inherit !important;
-    font-size: 0.9rem !important;
-    padding: 0.6rem 0.8rem !important;
-    transition: all 0.2s !important;
+    font-size: 0.95rem !important;
+    padding: 0.85rem 1rem !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     width: 100% !important;
 }
 
 .mcmm-input:focus {
     background: rgb(157 78 221 / 5%) !important;
     border-color: var(--primary) !important;
+    box-shadow: 0 0 15px rgb(157 78 221 / 15%) !important;
     outline: none !important;
 }
 
 .mcmm-input-hint {
     color: var(--text-muted) !important;
     font-size: 0.8rem !important;
+}
+
+.mcmm-password-toggle {
+    align-items: center !important;
+    background: none !important;
+    border: none !important;
+    color: rgb(255 255 255 / 30%) !important;
+    cursor: pointer !important;
+    display: flex !important;
+    font-size: 1.1rem !important;
+    height: 32px !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: absolute !important;
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    width: 32px !important;
+    z-index: 5 !important;
+}
+
+.mcmm-password-toggle:hover {
+    color: var(--primary) !important;
+    transform: translateY(-50%) scale(1.15) !important;
 }
 
 /* Toggle Grid */
@@ -1149,18 +1218,22 @@
 
 .mcmm-toggle-item {
     align-items: center !important;
-    background: rgb(255 255 255 / 2%) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 8px !important;
+    background: rgb(255 255 255 / 3%) !important;
+    border: 1px solid rgb(255 255 255 / 5%) !important;
+    border-radius: 12px !important;
     display: flex !important;
     justify-content: space-between !important;
-    padding: 0.5rem 0.75rem !important;
-    transition: all 0.2s !important;
+    padding: 0.85rem 1.15rem !important;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    z-index: 2;
 }
 
 .mcmm-toggle-item:hover {
-    background: rgb(255 255 255 / 5%) !important;
-    border-color: rgb(157 78 221 / 30%) !important;
+    background: rgb(255 255 255 / 6%) !important;
+    border-color: rgb(157 78 221 / 40%) !important;
+    box-shadow: 0 4px 20px rgb(0 0 0 / 20%) !important;
+    transform: translateY(-2px) !important;
 }
 
 .mcmm-toggle-label {
@@ -1171,19 +1244,21 @@
 /* Section Dividers */
 .mcmm-section-divider {
     align-items: center !important;
-    color: var(--primary-hover) !important;
+    color: var(--primary) !important;
     display: flex !important;
-    font-size: 0.7rem !important;
-    font-weight: 800 !important;
-    gap: 1rem !important;
-    letter-spacing: 1.5px !important;
-    margin: 0.75rem 0 0.25rem !important;
-    opacity: 0.8 !important;
+    font-size: 0.75rem !important;
+    font-weight: 900 !important;
+    gap: 1.25rem !important;
+    letter-spacing: 2px !important;
+    margin: 1.5rem 0 1rem !important;
+    opacity: 0.9 !important;
     text-transform: uppercase !important;
+    position: relative;
+    z-index: 2;
 }
 
 .mcmm-section-divider::after {
-    background: linear-gradient(to right, rgb(157 78 221 / 20%), transparent) !important;
+    background: linear-gradient(to right, rgb(157 78 221 / 40%), transparent) !important;
     content: "" !important;
     flex: 1 !important;
     height: 1px !important;
@@ -1191,13 +1266,16 @@
 
 .mcmm-toggle-name {
     color: rgb(255 255 255 / 100%) !important;
-    font-size: 0.9rem !important;
-    font-weight: 500 !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.2px !important;
 }
 
 .mcmm-toggle-desc {
-    color: var(--text-muted) !important;
+    color: rgb(255 255 255 / 45%) !important;
     font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    margin-top: 2px !important;
 }
 
 /* Switch */
@@ -1215,32 +1293,36 @@
 }
 
 .mcmm-slider {
-    background-color: rgb(45 45 48 / 100%) !important;
+    background-color: rgb(255 255 255 / 10%) !important;
+    border: 1px solid rgb(255 255 255 / 5%) !important;
     border-radius: 24px !important;
     cursor: pointer !important;
     inset: 0 !important;
     position: absolute !important;
-    transition: 0.4s !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .mcmm-slider::before {
     background-color: rgb(255 255 255 / 100%) !important;
     border-radius: 50% !important;
     bottom: 3px !important;
+    box-shadow: 0 2px 5px rgb(0 0 0 / 30%) !important;
     content: "" !important;
-    height: 18px !important;
-    left: 3px !important;
+    height: 16px !important;
+    left: 4px !important;
     position: absolute !important;
-    transition: 0.4s !important;
-    width: 18px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    width: 16px !important;
 }
 
-.mcmm-switch input:checked + .mcmm-slider {
-    background: linear-gradient(135deg, rgb(123 44 191 / 100%) 0%, rgb(157 78 221 / 100%) 100%) !important;
+.mcmm-switch input:checked+.mcmm-slider {
+    background: var(--primary) !important;
+    border-color: rgb(157 78 221 / 50%) !important;
+    box-shadow: 0 0 15px rgb(157 78 221 / 30%) !important;
 }
 
-.mcmm-switch input:checked + .mcmm-slider::before {
-    transform: translateX(20px) !important;
+.mcmm-switch input:checked+.mcmm-slider::before {
+    transform: translateX(18px) !important;
 }
 
 /* RAM Pills */
@@ -1252,24 +1334,27 @@
 }
 
 .mcmm-ram-pill {
-    background: rgb(255 255 255 / 5%) !important;
-    border: 1px solid rgb(255 255 255 / 10%) !important;
-    border-radius: 6px !important;
-    color: var(--text-secondary) !important;
+    background: rgb(255 255 255 / 3%) !important;
+    border: 1px solid rgb(255 255 255 / 8%) !important;
+    border-radius: 10px !important;
+    color: rgb(255 255 255 / 40%) !important;
     cursor: pointer !important;
     font-size: 0.85rem !important;
-    padding: 0.5rem 1rem !important;
-    transition: all 0.2s !important;
+    font-weight: 700 !important;
+    padding: 0.6rem 1.25rem !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .mcmm-ram-pill:hover {
-    background: rgb(255 255 255 / 10%) !important;
+    background: rgb(255 255 255 / 8%) !important;
+    border-color: rgb(157 78 221 / 20%) !important;
     color: rgb(255 255 255 / 100%) !important;
 }
 
 .mcmm-ram-pill.active {
-    background: var(--primary) !important;
+    background: rgb(157 78 221 / 20%) !important;
     border-color: var(--primary) !important;
+    box-shadow: 0 0 15px rgb(157 78 221 / 25%) !important;
     color: rgb(255 255 255 / 100%) !important;
 }
 
@@ -1281,20 +1366,22 @@
 
 .mcmm-select-trigger {
     align-items: center !important;
-    background: rgb(0 0 0 / 20%) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 8px !important;
-    color: var(--text-main) !important;
+    background: rgb(0 0 0 / 25%) !important;
+    border: 1px solid rgb(255 255 255 / 10%) !important;
+    border-radius: 10px !important;
+    color: rgb(255 255 255 / 100%) !important;
     cursor: pointer !important;
     display: flex !important;
     font-size: 0.95rem !important;
+    font-weight: 500 !important;
     justify-content: space-between !important;
-    padding: 0.9rem 1rem !important;
-    transition: all 0.2s !important;
+    padding: 0.85rem 1rem !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .mcmm-select-trigger:hover {
     border-color: rgb(157 78 221 / 40%) !important;
+    box-shadow: 0 0 15px rgb(157 78 221 / 10%) !important;
 }
 
 .mcmm-select-trigger::after {
@@ -1347,16 +1434,16 @@
 /* Section Title */
 .mcmm-section-title {
     align-items: center !important;
-    border-bottom: 1px solid rgb(255 255 255 / 5%) !important;
-    color: var(--text-secondary) !important;
+    color: rgb(255 255 255 / 60%) !important;
     display: flex !important;
-    font-size: 0.85rem !important;
-    font-weight: 600 !important;
-    gap: 0.5rem !important;
-    letter-spacing: 0.5px !important;
-    margin-bottom: 0.75rem !important;
+    font-size: 0.8rem !important;
+    font-weight: 900 !important;
+    gap: 0.75rem !important;
+    letter-spacing: 1.5px !important;
+    margin-bottom: 1.25rem !important;
     padding-bottom: 0.5rem !important;
     text-transform: uppercase !important;
+    border-bottom: 1px solid rgb(255 255 255 / 5%) !important;
 }
 
 /* Status Message */
@@ -1448,44 +1535,141 @@
     padding: 1.25rem !important;
 }
 
-/* Console Modal Specific */
-.mcmm-console-output {
-    background: rgb(15 16 20 / 100%) !important;
+/* ===== PREMIUM CONSOLE 2.0 ===== */
+.mcmm-console-window {
+    background: rgb(12 13 18 / 100%) !important;
+    border: 1px solid rgb(255 255 255 / 5%) !important;
     border-radius: 8px !important;
-    color: rgb(192 202 245 / 100%) !important;
+    display: flex !important;
     flex: 1 !important;
-    font-family: "Fira Code", monospace !important;
-    font-size: 1.1rem !important;
-    line-height: 1.4 !important;
-    overflow-y: auto !important;
-    padding: 1rem !important;
-    white-space: pre-wrap !important;
-    word-break: break-all !important;
+    flex-direction: column !important;
+    margin: 1.1rem !important;
+    overflow: hidden !important;
+    position: relative !important;
 }
 
-.mcmm-console-input-container {
-    align-items: center !important;
-    background: rgb(26 27 38 / 100%) !important;
-    border-top: 1px solid var(--border) !important;
+.mcmm-console-tab-bar {
+    background: rgb(26 28 36 / 100%) !important;
+    border-bottom: 2px solid rgb(12 13 18 / 100%) !important;
     display: flex !important;
-    flex-shrink: 0 !important;
-    gap: 0.5rem !important;
-    padding: 1rem !important;
+    gap: 2px !important;
+    padding: 0 10px !important;
+}
+
+.mcmm-console-output-container {
+    display: flex !important;
+    flex: 1 !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+}
+
+.mcmm-console-header-info {
+    color: rgb(139 233 253 / 100%) !important;
+    font-family: "Fira Code", monospace !important;
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.85rem !important;
+    text-shadow: 0 0 12px rgb(139 233 253 / 80%) !important;
+}
+
+.mcmm-console-output {
+    background: transparent !important;
+    color: rgb(248 248 242 / 100%) !important;
+    flex: 1 !important;
+    font-family: "Fira Code", monospace !important;
+    font-size: 0.95rem !important;
+    letter-spacing: 0.2px !important;
+    line-height: 1.7 !important;
+    overflow-y: auto !important;
+    padding-right: 0.5rem !important;
+    white-space: pre-wrap !important;
+}
+
+.mcmm-console-input-row {
+    align-items: center !important;
+    background: rgb(15 17 24 / 100%) !important;
+    border-top: 2px solid rgb(12 13 18 / 100%) !important;
+    display: flex !important;
+    padding: 0.85rem 1.25rem !important;
 }
 
 .mcmm-console-prompt {
-    color: var(--primary) !important;
+    color: rgb(80 250 123 / 100%) !important;
     font-family: "Fira Code", monospace !important;
-    font-weight: bold !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    margin-right: 0.85rem !important;
+    text-shadow: 0 0 5px rgb(80 250 123 / 30%) !important;
 }
 
 .mcmm-console-input {
     background: transparent !important;
     border: none !important;
-    color: rgb(255 255 255 / 100%);
+    color: rgb(248 248 242 / 100%) !important;
     flex: 1 !important;
     font-family: "Fira Code", monospace !important;
-    font-size: 1.1rem !important;
+    font-size: 0.9rem !important;
+    outline: none !important;
+}
+
+/* DRACULA LOG COLORS - Industrial Palette */
+.log-timestamp {
+    color: rgb(255 184 108 / 100%);
+    margin-right: 4px;
+}
+
+.log-system,
+.log-info {
+    color: rgb(139 233 153 / 100%);
+    /* Softer Green */
+}
+
+.log-error {
+    color: rgb(255 85 85 / 100%);
+    font-weight: 700;
+}
+
+.log-warn {
+    color: rgb(255 184 108 / 100%);
+}
+
+.log-success {
+    background: rgb(80 250 123 / 15%);
+    border-radius: 4px;
+    box-shadow: 0 0 15px rgb(80 250 123 / 25%);
+    color: rgb(80 250 123 / 100%);
+    display: inline-block;
+    font-weight: 700;
+    margin: 2px 0;
+    padding: 2px 8px;
+    text-shadow: 0 0 8px rgb(80 250 123 / 40%);
+}
+
+.log-chat,
+.log-advancement {
+    color: rgb(139 233 253 / 100%);
+}
+
+.log-join {
+    color: rgb(255 125 210 / 100%);
+}
+
+.log-array {
+    color: rgb(80 250 123 / 100%);
+}
+
+.log-login {
+    color: rgb(189 147 249 / 100%);
+}
+
+.mcmm-console-input {
+    background: transparent !important;
+    border: none !important;
+    color: rgb(248 248 242 / 100%) !important;
+    flex: 1 !important;
+    font-family: "Fira Code", monospace !important;
+    font-size: 1rem !important;
     outline: none !important;
 }
 
@@ -2222,4 +2406,60 @@
 .mcmm-toast.show {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+}
+
+/* Global Settings Modal Layout */
+.mcmm-settings-sidebar {
+    background: rgb(255 255 255 / 2%) !important;
+}
+
+.mcmm-side-link {
+    align-items: center !important;
+    border-radius: 10px !important;
+    color: var(--text-muted) !important;
+    cursor: pointer !important;
+    display: flex !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    gap: 0.85rem !important;
+    margin-bottom: 0.5rem !important;
+    padding: 0.85rem 1rem !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.mcmm-side-link:hover {
+    background: rgb(255 255 255 / 5%) !important;
+    color: var(--text-main) !important;
+}
+
+.mcmm-side-link.active {
+    background: linear-gradient(90deg, rgb(124 58 237 / 15%), transparent) !important;
+    border-left: 3px solid var(--primary) !important;
+    color: var(--primary) !important;
+    padding-left: calc(1rem - 3px) !important;
+}
+
+.mcmm-side-link .material-symbols-outlined {
+    font-size: 1.25rem !important;
+}
+
+.mcmm-settings-pane {
+    display: none !important;
+    animation: mcmmFadeIn 0.3s ease-out;
+}
+
+.mcmm-settings-pane.active {
+    display: block !important;
+}
+
+@keyframes mcmmFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

@@ -1,6 +1,6 @@
 // MCMM Plugin Logic
 /* global csrfToken, $, mcmmConfig */
-/* exported switchTab, filterModpacks, openModManager, closeModManager, switchModTab, switchSource, clearModFilters, setModSort, filterMods, checkForUpdates, toggleModSelection, removeModFromQueue, clearQueue, installSelectedMods, setRam, toggleSelect, selectOption, controlServer, deleteServer, saveSettings, openServerSettings, closeServerSettings, submitServerSettings, closeDeployProgress, finishDeployAndView, openPlayersModal, closePlayersModal, playerAction, openConsole, closeConsole, changeModsPage, handleLogContextMenu, filterPlayers, copyToClipboard, refreshPlayers, whisperPlayer, switchPlayerTab */
+/* exported switchTab, filterModpacks, openModManager, closeModManager, switchModTab, switchSource, clearModFilters, setModSort, filterMods, checkForUpdates, toggleModSelection, removeModFromQueue, clearQueue, installSelectedMods, setRam, toggleSelect, selectOption, controlServer, deleteServer, saveSettings, openServerSettings, closeServerSettings, submitServerSettings, closeDeployProgress, finishDeployAndView, openPlayersModal, closePlayersModal, playerAction, openConsole, closeConsole, changeModsPage, handleLogContextMenu, filterPlayers, copyToClipboard, refreshPlayers, whisperPlayer, switchPlayerTab, togglePasswordVisibility, openGlobalSettings, closeGlobalSettings, switchSettingsCategory */
 console.log('MCMM Script Loaded');
 
 // Expose functions globally for inline HTML onclick handlers
@@ -50,6 +50,7 @@ window.switchPlayerTab = switchPlayerTab;
 
 window.clearModFilters = clearModFilters;
 window.setModSort = setModSort;
+window.togglePasswordVisibility = togglePasswordVisibility;
 window.setDeployVersion = setDeployVersion;
 window.renderDeployVersions = renderDeployVersions;
 window.setDeployConsole = setDeployConsole;
@@ -60,6 +61,36 @@ window.loadBackups = loadBackups;
 window.createBackup = createBackup;
 window.reinstallFromBackup = reinstallFromBackup;
 window.deleteBackup = deleteBackup;
+window.openGlobalSettings = openGlobalSettings;
+window.closeGlobalSettings = closeGlobalSettings;
+window.switchSettingsCategory = switchSettingsCategory;
+
+function openGlobalSettings() {
+    console.log("MCMM: Opening Global Settings Modal...");
+    const modal = document.getElementById('globalSettingsModal');
+    if (!modal) {
+        console.error("MCMM ERR: Modal 'globalSettingsModal' not found in DOM!");
+        return;
+    }
+    modal.classList.add('open');
+    const firstTab = document.querySelector('.mcmm-settings-sidebar .mcmm-side-link');
+    if (firstTab) switchSettingsCategory('general', firstTab);
+}
+
+function closeGlobalSettings() {
+    const modal = document.getElementById('globalSettingsModal');
+    if (modal) modal.classList.remove('open');
+}
+
+function switchSettingsCategory(categoryId, btn) {
+    document.querySelectorAll('.mcmm-side-link').forEach(l => l.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.mcmm-settings-pane').forEach(p => p.classList.remove('active'));
+    const pane = document.getElementById('settings-' + categoryId);
+    if (pane) pane.classList.add('active');
+    const container = document.getElementById('settingsCategoryContainer');
+    if (container) container.scrollTop = 0;
+}
 
 // Hide debug banner
 document.addEventListener('DOMContentLoaded', () => {
@@ -86,6 +117,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('tab-servers')?.classList.contains('active')) {
         loadServers();
     }
+
+    // --- Interactive Hover Effects ---
+    document.addEventListener('mousemove', e => {
+        const panels = document.querySelectorAll('.mcmm-panel, .mcmm-version-card');
+        for (const panel of panels) {
+            const rect = panel.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            panel.style.setProperty('--mouse-x', `${x}px`);
+            panel.style.setProperty('--mouse-y', `${y}px`);
+        }
+    });
 });
 
 // Global error handler for debugging
@@ -781,13 +824,13 @@ function renderMods() {
                                 <span>${mod.downloads}</span>
                             </div>
                             ${needsUpdate
-                    ? `<button class="mcmm-btn mcmm-btn-primary" style="padding: 0.5rem 1.25rem; font-size: 0.9rem; font-weight: 600;" onclick="event.stopPropagation(); installMod('${mod.id}', '${safeModName}', this)">Update</button>`
+                    ? `<button class="mcmm-btn mcmm-btn-primary" style="padding: 0.5rem 1.25rem; font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;" onclick="event.stopPropagation(); installMod('${mod.id}', '${safeModName}', this)"><span class="material-symbols-outlined" style="font-size: 1.1rem;">update</span> Update</button>`
                     : (isInstalled
                         ? `<div style="display: flex; align-items: center; gap: 0.4rem; color: var(--success); font-weight: 700;">
                              <span class="material-symbols-outlined" style="font-size: 1.2rem;">check_circle</span>
                              <span>Installed</span>
                            </div>`
-                        : `<button class="mcmm-btn mcmm-btn-primary" style="padding: 0.5rem 1.25rem; font-size: 0.9rem; font-weight: 600;" onclick="event.stopPropagation(); installMod('${mod.id}', '${safeModName}', this)">Install</button>`
+                        : `<button class="mcmm-btn mcmm-btn-primary" style="padding: 0.5rem 1.25rem; font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;" onclick="event.stopPropagation(); installMod('${mod.id}', '${safeModName}', this)"><span class="material-symbols-outlined" style="font-size: 1.1rem;">download</span> Install</button>`
                     )
                 }
                         </div>
@@ -1335,29 +1378,63 @@ function formatConsoleLog(text) {
     };
 
     const formatLine = (l) => {
-        let escaped = String(l)
+        let text = String(l);
+        let timestamp = '';
+
+        // Extract timestamp: [12:34:56]
+        const tsMatch = text.match(/^\[(\d{2}:\d{2}:\d{2})\]\s*/);
+        if (tsMatch) {
+            timestamp = `[<span class="log-timestamp">${tsMatch[1]}</span>] `;
+            text = text.slice(tsMatch[0].length);
+        }
+
+        let escaped = text
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
 
-        return escaped
-            .replace(/\[(ERROR|FATAL|Exception)\]/gi, '[<span class="log-error">$1</span>]')
-            .replace(/\[(WARN|WARNING)\]/gi, '[<span class="log-warn">$1</span>]')
-            .replace(/\[(INFO|SYSTEM)\]/gi, '[<span class="log-system">$1</span>]')
-            .replace(/\[(SUCCESS|ARRAY)\]/gi, '[<span class="log-array">$1</span>]')
-            .replace(/\[(LOGIN|LOGGED)\]/gi, '[<span class="log-login">$1</span>]')
-            .replace(/\b(ERROR|FATAL|Exception|error)\b/g, '<span class="log-error">$1</span>')
-            .replace(/\b(WARN|WARNING|warn)\b/g, '<span class="log-warn">$1</span>')
-            .replace(/\b(INFO|system)\b/g, '<span class="log-system">$1</span>')
-            .replace(/\b(SUCCESS|success|array)\b/g, '<span class="log-array">$1</span>')
-            .replace(/\b(LOGIN|login|logged)\b/g, '<span class="log-login">$1</span>');
+        // Full line highlighting for specific categories
+        if (/\[(JOIN|LEFT|LOGIN|LOGGED)\]/i.test(escaped)) {
+            return timestamp + `<span class="log-join">${escaped}</span>`;
+        }
+        if (/\[(CHAT|MESSAGE|MSG|ADVANCEMENT)\]/i.test(escaped)) {
+            return timestamp + `<span class="log-chat">${escaped}</span>`;
+        }
+        if (/\[(SUCCESS)\]/i.test(escaped)) {
+            return timestamp + `<span class="log-success">${escaped}</span>`;
+        }
+        if (/\[(ERROR|FATAL|Exception)\]/i.test(escaped)) {
+            return timestamp + `<span class="log-error">${escaped}</span>`;
+        }
+        if (/\[(WARN|WARNING)\]/i.test(escaped)) {
+            return timestamp + `<span class="log-warn">${escaped}</span>`;
+        }
+
+        // Tag-based full line highlighting for Info
+        if (/\[(INFO|SYSTEM)\]/i.test(escaped)) {
+            return timestamp + `<span class="log-info">${escaped}</span>`;
+        }
+
+        // Final keyword-only highlighting for other lines
+        escaped = escaped.replace(/\b(ERROR|FATAL|Exception|failed)\b/gi, '<span class="log-error">$1</span>');
+        escaped = escaped.replace(/\b(WARN|WARNING)\b/gi, '<span class="log-warn">$1</span>');
+        escaped = escaped.replace(/\b(SUCCESS|done|started)\b/gi, '<span class="log-success">$1</span>');
+
+        return timestamp + escaped;
     };
 
     for (let line of lines) {
         if (line.trim() === '') {
             if (currentGroupLines.length > 0) currentGroupLines.push('');
+            continue;
+        }
+
+        // Special Header Support: [ Server Console ]
+        if (line.includes('[ Server Console ]')) {
+            flushGroup();
+            output += `<div class="mcmm-console-header-info">${line}</div>`;
             continue;
         }
 
@@ -1684,18 +1761,18 @@ function renderServers(servers) {
                 
                 <div class="mcmm-server-actions">
                     ${server.isRunning ? `
-                        <button class="mcmm-btn-icon danger" title="Stop Server" onclick="controlServer('${server.id}', 'stop')">⏹</button>
-                        <button class="mcmm-btn-icon" title="Console" onclick="openConsole('${server.id}', '${server.name}')">_></button>
-                        <button class="mcmm-btn-icon" title="Players" onclick="openPlayersModal('${server.id}', '${server.name}', '${server.ports}')">👥</button>
+                        <button class="mcmm-btn-icon danger" title="Stop Server" onclick="controlServer('${server.id}', 'stop')"><span class="material-symbols-outlined">stop</span></button>
+                        <button class="mcmm-btn-icon" title="Console" onclick="openConsole('${server.id}', '${server.name}')"><span class="material-symbols-outlined">terminal</span></button>
+                        <button class="mcmm-btn-icon" title="Players" onclick="openPlayersModal('${server.id}', '${server.name}', '${server.ports}')"><span class="material-symbols-outlined">groups</span></button>
                     ` : `
-                        <button class="mcmm-btn-icon success" title="Start Server" onclick="controlServer('${server.id}', 'start')">▶</button>
-                        <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Console Offline">_></button>
-                        <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Players Offline">👥</button>
+                        <button class="mcmm-btn-icon success" title="Start Server" onclick="controlServer('${server.id}', 'start')"><span class="material-symbols-outlined">play_arrow</span></button>
+                        <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Console Offline"><span class="material-symbols-outlined">terminal</span></button>
+                        <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Players Offline"><span class="material-symbols-outlined">groups</span></button>
                     `}
-                    <button class="mcmm-btn-icon" title="Mods" onclick="openModManager('${server.id}', '${server.name}')">🧩</button>
-                    <button class="mcmm-btn-icon" title="Backup" onclick="createBackup('${server.id}')">☁️</button>
-                    <button class="mcmm-btn-icon" title="Settings" onclick="openServerSettings('${server.id}')">⚙️</button>
-                    <button class="mcmm-btn-icon danger" title="Delete Server" onclick="deleteServer('${server.id}')">🗑️</button>
+                    <button class="mcmm-btn-icon" title="Mods" onclick="openModManager('${server.id}', '${server.name}')"><span class="material-symbols-outlined">extension</span></button>
+                    <button class="mcmm-btn-icon" title="Backup" onclick="createBackup('${server.id}')"><span class="material-symbols-outlined">cloud_upload</span></button>
+                    <button class="mcmm-btn-icon" title="Settings" onclick="openServerSettings('${server.id}')"><span class="material-symbols-outlined">settings</span></button>
+                    <button class="mcmm-btn-icon danger" title="Delete Server" onclick="deleteServer('${server.id}')"><span class="material-symbols-outlined">delete</span></button>
                 </div>
             </div>
         `;
@@ -1704,7 +1781,9 @@ function renderServers(servers) {
     html += `
         </div>
         <div style="margin-top: 1rem;">
-            <button class="mcmm-btn mcmm-btn-primary" onclick="startAgents()">Restart Metrics Agents</button>
+            <button class="mcmm-btn mcmm-btn-primary" style="display: flex; align-items: center; gap: 0.6rem;" onclick="startAgents()">
+                <span class="material-symbols-outlined">refresh</span> Restart Metrics Agents
+            </button>
         </div>
     `;
 
@@ -1962,12 +2041,15 @@ async function submitDeploy() {
 // --- Console ---
 let consoleInterval;
 let currentConsoleId = null;
+let currentConsoleName = null;
 
 function openConsole(serverId, serverName) {
     const modal = document.getElementById('consoleModal');
     const output = document.getElementById('consoleOutput');
+
     document.getElementById('consoleTitle').textContent = serverName + ' - Console';
     currentConsoleId = serverId;
+    currentConsoleName = serverName;
 
     modal.classList.add('open');
     output.innerHTML = '<div style="color: rgb(102 102 102 / 100%); padding: 1rem;">Loading logs...</div>';
@@ -1988,10 +2070,11 @@ async function fetchLogs() {
             const wasAtBottom = output.scrollTop + output.clientHeight >= output.scrollHeight - 50;
 
             // Clean up logs: Strip ANSI color codes
-            // ANSI escape codes regex: /\x1B\[[0-9;]*[a-zA-Z]/g
             let cleanLogs = (data.logs || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, ''); // eslint-disable-line no-control-regex
 
-            output.innerHTML = formatConsoleLog(cleanLogs);
+            // Prepend Server Header
+            const headerLine = `[ Server Console ] - ${currentConsoleName || 'Minecraft Server'}\n`;
+            output.innerHTML = formatConsoleLog(headerLine + cleanLogs);
 
             if (wasAtBottom) {
                 output.scrollTop = output.scrollHeight;
@@ -2253,6 +2336,7 @@ function deleteServer(id) {
 }
 
 // --- Settings ---
+
 function saveSettings(e) {
     e.preventDefault();
 
@@ -2331,6 +2415,19 @@ function saveSettings(e) {
     }
 }
 
+function togglePasswordVisibility(id, btn) {
+    const input = document.getElementById(id);
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerHTML = '<span class="material-symbols-outlined">visibility_off</span>';
+        btn.title = 'Hide Key';
+    } else {
+        input.type = 'password';
+        btn.innerHTML = '<span class="material-symbols-outlined">visibility</span>';
+        btn.title = 'Show Key';
+    }
+}
+
 function handleSaveSuccess(result, statusEl) {
     if (typeof result === 'string') {
         console.error("API returned string instead of JSON:", result.substring(0, 200));
@@ -2342,7 +2439,10 @@ function handleSaveSuccess(result, statusEl) {
     if (result && result.success) {
         statusEl.className = 'mcmm-status success';
         statusEl.textContent = 'Settings saved successfully!';
-        setTimeout(() => statusEl.style.display = 'none', 5000);
+        setTimeout(() => {
+            statusEl.style.display = 'none';
+            closeGlobalSettings();
+        }, 1500);
     } else {
         statusEl.className = 'mcmm-status error';
         const errorMsg = (result && result.error) ? result.error : 'Unknown error (success=false)';
