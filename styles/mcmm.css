@@ -447,13 +447,8 @@ html, body {
     left: 0 !important;
     top: 0 !important;
     bottom: 0 !important;
-
-    /* Fade bis zur Icon-Kante */
     width: 14px !important; /* ≈ Icon + Abstand, ggf. feinjustieren */
-
-    /* gleiche Rundung wie Card, aber nur links */
     border-radius: var(--radius-md) 0 0 var(--radius-md) !important;
-
     pointer-events: none !important;
     z-index: 1 !important;
 }
@@ -573,10 +568,7 @@ html, body {
     display: flex !important;
     flex: 1 1 auto !important;
     gap: 1.4rem !important;
-
-    /* less aggressive than 0 2rem; keeps spacing consistent */
-    padding: 0 0.5rem !important;
-
+    padding: 0 0.5rem !important; /* less aggressive than 0 2rem; keeps spacing consistent */
     min-width: 280px !important;
 }
 
@@ -690,7 +682,7 @@ html, body {
 }
 
 /* Responsive: stack metrics and keep actions usable */
-@media (max-width: 1200px) {
+@media (max-width <= 1200px) {
     .mcmm-server-row {
         flex-wrap: wrap !important;
         row-gap: 1rem !important;
@@ -713,7 +705,7 @@ html, body {
     }
 }
 
-@media (max-width: 900px) {
+@media (max-width <= 900px) {
     .mcmm-server-metrics {
         flex-direction: column !important;
         gap: 0.9rem !important;
@@ -768,6 +760,7 @@ html, body {
 .mcmm-modal .mcmm-search {
     max-width: none !important;
 }
+
 .mcmm-app .mcmm-input,
 .mcmm-app .mcmm-search-input {
     background: rgb(0 0 0 / 40%);
