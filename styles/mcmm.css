@@ -1,8 +1,8 @@
-/* ===== CSS RESET FOR UNRAID ===== */
+ /* ===== CSS RESET FOR UNRAID ===== */
 .mcmm-app,
 .mcmm-app * {
     all: revert;
-    box-sizing: border-box !important;
+    box-sizing: border-box;
 }
 
 /* ===== THEME VARIABLES ===== */
@@ -25,40 +25,79 @@
     --radius-md: 16px;
     --blur-strength: 16px;
     --content-max-width: 1400px;
+    --gutter: clamp(16px, 2vw, 32px); /* responsiver Seitenabstand: min 16px, ideal 2vw, max 32px */
 }
 
-/* ===== BASE STYLES ===== */
+/* =========================================================
+   DEBUG: element label overlay
+   =========================================================
+
+.mcmm-app * { outline: 1px solid rgba(255,0,0,0.15); } */
+
+/* ===== BASE STYLES =====
+   Re-apply inheritance baseline after revert */
 .mcmm-app {
-    background: var(--bg-body) !important;
-    color: var(--text-main) !important;
-    font-family: Outfit, Inter, -apple-system, BlinkMacSystemFont, sans-serif !important;
-    font-size: 16px !important;
-    line-height: 1.6 !important;
-    margin: 0 !important;
+    box-sizing: border-box;
+    color: var(--text-main);
+    font-family: Outfit, Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0;
     min-height: 100vh;
-    padding: 0 !important;
+    padding: 0;
+
+    overflow-x: clip;
+}
+
+@supports not (overflow-x: clip) {
+    .mcmm-app { overflow-x: hidden; }
+}
+
+.mcmm-app .mcmm-header {
+    padding-top: 2rem !important;
+    padding-bottom: 0 !important;
+}
+
+.mcmm-app .mcmm-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    padding-top: 1rem;
+    position: relative;
+}
+
+.mcmm-app .mcmm-main {
+    padding-top: 0 !important;
+    padding-bottom: 4rem !important;
 }
 
 .mcmm-scale-wrapper {
-    transform: scale(1.15);
     transform-origin: top center;
     width: 100%;
     margin-bottom: 50px;
+
+    /* Desktop */
+    transform: scale(1.15);
 }
 
-.mcmm-app h1,
-.mcmm-app h2,
-.mcmm-app h3,
-.mcmm-app h4,
-.mcmm-app p {
-    font-family: inherit !important;
-    margin: 0 !important;
-    padding: 0 !important;
+/* Tablet */
+@media (max-width: 1200px) {
+    .mcmm-scale-wrapper { transform: scale(1.07); }
 }
 
-.mcmm-app a {
-    color: inherit !important;
-    text-decoration: none !important;
+/* Mobile */
+@media (max-width: 900px) {
+    .mcmm-scale-wrapper { transform: scale(1.0); }
+}
+
+/* Make common elements inherit baseline */
+.mcmm-app :where(h1,h2,h3,h4,p,a,button,input,select,textarea) {
+    font: inherit;
+    color: inherit;
+}
+
+.mcmm-app a { 
+    text-decoration: none; 
 }
 
 .material-symbols-outlined {
@@ -76,20 +115,28 @@
     direction: ltr !important;
 }
 
-/* ===== BACKGROUND ===== */
-.mcmm-bg {
-    /* background:
+/* ===== UNRAID COMPAT (only where needed) ===== */
+html, body {
+    background:
         radial-gradient(circle at 15% 50%, rgb(76 29 149 / 15%) 0%, transparent 50%),
         radial-gradient(circle at 85% 30%, rgb(124 58 237 / 10%) 0%, transparent 50%),
-        linear-gradient(to bottom, rgb(11 12 22 / 100%) 0%, rgb(17 18 31 / 100%) 100%) !important; */
-    background: var(--bg-body) !important;
-    height: 100% !important;
-    left: 0 !important;
-    pointer-events: none !important;
-    position: fixed !important;
-    top: 0 !important;
-    width: 100% !important;
-    z-index: -1 !important;
+        linear-gradient(to bottom, rgb(11 12 22 / 100%) 0%, rgb(17 18 31 / 100%) 100%) !important;
+    background-attachment: fixed !important;
+    background-repeat: no-repeat !important;
+    background-size: cover !important;
+    margin: 0 !important;
+}
+
+/* ===== LAYOUT: CANONICAL CONTAINER (no end-overrides needed) ===== */
+.mcmm-app :is(.mcmm-header, .mcmm-tabs, .mcmm-main) {
+    width: 100%;
+    max-width: var(--content-max-width);
+    margin-left: auto;
+    margin-right: auto;
+
+    /* dynamic side padding */
+    padding-left: var(--gutter);
+    padding-right: var(--gutter);
 }
 
 /* ===== LAYOUT: HEADER ===== */
@@ -98,10 +145,10 @@
     background: transparent !important;
     display: flex !important;
     justify-content: space-between !important;
-    margin: 0 auto !important;
-    max-width: var(--content-max-width) !important;
-    padding: 2rem 2rem 0 !important;
-    width: 100% !important;
+
+    /* vertikale Abstände bleiben explizit */
+    padding-top: 2rem !important;
+    padding-bottom: 0 !important;
 }
 
 .mcmm-brand {
@@ -127,24 +174,24 @@
     padding: 0.4rem 0.8rem !important;
 }
 
-/* ===== LAYOUT: TABS ===== */
+/* ===== LAYOUT: TABS ===== 
 .mcmm-tabs {
     display: flex !important;
     gap: 0.5rem !important;
-    margin: 0 auto 2rem !important;
-    max-width: var(--content-max-width) !important;
-    padding: 1rem 2rem 0 !important;
+    padding-top: 1rem !important;
     position: relative !important;
-}
+}*/
 
-.mcmm-tabs::before {
-    background: rgb(157 78 221 / 100%);
-    bottom: 0;
+/* Tabs underline respects gutter automatically */
+.mcmm-app .mcmm-tabs::before {
     content: "";
-    height: 1px;
-    left: 2rem;
     position: absolute;
-    right: 2rem;
+    left: var(--gutter);
+    right: var(--gutter);
+    bottom: 0;
+    height: 1px;
+    background: rgb(157 78 221 / 100%);
+    pointer-events: none;
 }
 
 .mcmm-tab {
@@ -172,12 +219,10 @@
     box-shadow: 0 -4px 10px rgb(157 78 221 / 5%) !important;
 }
 
-/* ===== LAYOUT: MAIN CONTENT ===== */
+/* ===== LAYOUT: MAIN CONTENT =====  fluid + zentriert + max */
 .mcmm-main {
-    margin: 0 auto !important;
-    max-width: var(--content-max-width) !important;
-    padding: 0 2rem 4rem !important;
-    width: 100% !important;
+    padding-top: 0 !important;
+    padding-bottom: 4rem !important;
 }
 
 .mcmm-tab-content {
@@ -190,26 +235,23 @@
 
 /* ===== COMPONENTS: BUTTONS ===== */
 .mcmm-app .mcmm-btn {
-    align-items: center !important;
-    background: rgb(255 255 255 / 5%) !important;
-    background-color: rgb(255 255 255 / 5%) !important;
-    background-image: none !important;
-    border: 1px solid rgb(255 255 255 / 10%) !important;
-    border-radius: var(--radius-sm) !important;
-    box-shadow: none !important;
-    color: var(--text-secondary) !important;
-    cursor: pointer !important;
-    display: inline-flex !important;
-    font-family: inherit !important;
-    font-size: 0.95rem !important;
-    font-weight: 600 !important;
-    gap: 0.5rem !important;
-    justify-content: center !important;
-    line-height: normal !important;
-    padding: 0.7rem 1.4rem !important;
-    text-shadow: none !important;
-    text-transform: none !important;
-    transition: all 0.2s !important;
+    align-items: center;
+    background: rgb(255 255 255 / 5%);
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 0.95rem;
+    font-weight: 600;
+    gap: 0.5rem;
+    justify-content: center;
+    line-height: normal;
+    padding: 0.7rem 1.4rem;
+    text-shadow: none;
+    text-transform: none;
+    transition: all 0.2s;
 }
 
 /* ===== PAGINATION (moved here to satisfy no-descending-specificity) ===== */
@@ -302,11 +344,10 @@
 
 /* ===== BUTTON HOVER (after pagination-specific button rules) ===== */
 .mcmm-app .mcmm-btn:hover {
-    background: rgb(255 255 255 / 10%) !important;
-    background-color: rgb(255 255 255 / 10%) !important;
-    border-color: rgb(255 255 255 / 20%) !important;
-    box-shadow: 0 4px 12px rgb(0 0 0 / 10%) !important;
-    color: rgb(255 255 255 / 100%) !important;
+    background: rgb(255 255 255 / 10%);
+    border-color: rgb(255 255 255 / 20%);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
+    color: rgb(255 255 255 / 100%);
 }
 
 .mcmm-app .mcmm-btn-primary {
@@ -351,90 +392,155 @@
     gap: 1rem !important;
 }
 
+/* Core row (UNRAID-SAFE BORDER + layout polish + perf) */
 .mcmm-server-row {
     align-items: center !important;
+
+    /* Perf: make this cheap by default */
     background: var(--bg-surface) !important;
-    backdrop-filter: blur(var(--blur-strength)) !important;
-    border: 1px solid var(--border) !important;
+
+    /* IMPORTANT: Unraid/Chromium backdrop-filter can break borders.
+       Use inset shadow as the border source (reliable). */
+    border: none !important;
+    box-shadow: inset 0 0 0 2px var(--primary) !important;
+
     border-radius: var(--radius-md) !important;
     display: flex !important;
+
+    /* Layout: consistent spacing */
+    gap: 1.25rem !important;
+    min-height: 92px !important;
+
     overflow: hidden !important;
     padding: 1.2rem 1.5rem !important;
     position: relative !important;
-    transition: all 0.3s !important;
+
+    /* Smooth but not heavy */
+    transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease !important;
+    will-change: transform !important;
 }
 
+/* Apply blur only when supported (and keep background alpha consistent) */
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    .mcmm-server-row {
+        background: rgb(22 24 35 / 60%) !important;
+        -webkit-backdrop-filter: blur(var(--blur-strength)) !important;
+        backdrop-filter: blur(var(--blur-strength)) !important;
+    }
+}
+
+/* Hover styles */
 .mcmm-server-row:hover {
     background: var(--bg-surface-hover) !important;
-    border-color: rgb(157 78 221 / 40%) !important;
     transform: translateX(4px) !important;
 }
 
+/* Status-aware border tint (matches left strip) */
+.mcmm-server-row.running {
+    box-shadow:
+        inset 0 0 0 1px rgb(52 211 153 / 55%),
+        0 0 18px rgb(52 211 153 / 12%) !important;
+}
+
+.mcmm-server-row.stopped {
+    box-shadow:
+        inset 0 0 0 1px rgb(248 113 113 / 55%),
+        0 0 14px rgb(248 113 113 / 10%) !important;
+}
+
 .mcmm-server-row::before {
-    background: var(--border) !important;
-    bottom: 0 !important;
     content: "" !important;
-    left: 0 !important;
     position: absolute !important;
+    left: 0 !important;
     top: 0 !important;
-    width: 4px !important;
+    bottom: 0 !important;
+
+    /* Fade bis zur Icon-Kante */
+    width: 14px !important; /* ≈ Icon + Abstand, ggf. feinjustieren */
+
+    /* gleiche Rundung wie Card, aber nur links */
+    border-radius: var(--radius-md) 0 0 var(--radius-md) !important;
+
+    pointer-events: none !important;
+    z-index: 1 !important;
 }
 
 .mcmm-server-row.running::before {
-    background: var(--success) !important;
-    box-shadow: 2px 0 12px var(--success) !important;
+    background: linear-gradient(
+        90deg,
+        rgb(52 211 153 / 90%) 0%,
+        rgb(52 211 153 / 65%) 35%,
+        rgb(52 211 153 / 30%) 60%,
+        rgb(52 211 153 / 0%) 100%
+    ) !important;
 }
+
 
 .mcmm-server-row.stopped::before {
-    background: var(--danger) !important;
-    box-shadow: 2px 0 8px rgb(248 113 113 / 50%) !important;
+    background: linear-gradient(
+        90deg,
+        rgb(248 113 113 / 90%) 0%,
+        rgb(248 113 113 / 65%) 35%,
+        rgb(248 113 113 / 30%) 60%,
+        rgb(248 113 113 / 0%) 100%
+    ) !important;
 }
 
+
+/* Icon */
 .mcmm-server-icon {
     background-color: rgb(51 51 51 / 100%) !important;
     background-position: center !important;
     background-repeat: no-repeat !important;
     background-size: cover !important;
     border: 1px solid rgb(255 255 255 / 10%) !important;
-    border-radius: 12px !important;
+    border-radius: 14px !important;
     flex-shrink: 0 !important;
-    height: 56px !important;
-    margin-right: 1.5rem !important;
-    width: 56px !important;
+    height: 60px !important;
+    width: 60px !important;
+
+    /* slight lift */
+    box-shadow: 0 10px 24px rgb(0 0 0 / 18%) !important;
 }
 
+/* Info block (keeps titles aligned across rows) */
 .mcmm-server-info {
     display: flex !important;
-    flex: 1.5 !important;
     flex-direction: column !important;
+
+    /* consistent width so metrics align vertically */
+    flex: 0 0 clamp(240px, 26vw, 340px) !important;
+    min-width: 220px !important;
 }
 
 .mcmm-server-title {
     color: rgb(255 255 255 / 100%);
-    font-size: 1.15rem !important;
-    font-weight: 700 !important;
+    font-size: 1.12rem !important;
+    font-weight: 750 !important;
     margin-bottom: 0.2rem !important;
+    letter-spacing: -0.2px !important;
 }
 
 .mcmm-server-subtitle {
     align-items: center !important;
     color: var(--text-secondary) !important;
     display: flex !important;
+    flex-wrap: wrap !important;
     font-size: 0.9rem !important;
-    gap: 0.75rem !important;
+    gap: 0.65rem !important;
 }
 
 .mcmm-badge {
     background: rgb(255 255 255 / 6%) !important;
     border: 1px solid rgb(255 255 255 / 10%) !important;
-    border-radius: 6px !important;
+    border-radius: 999px !important;
     color: var(--text-secondary) !important;
-    display: inline-block !important;
+    display: inline-flex !important;
+    align-items: center !important;
     font-family: "Fira Code", monospace !important;
     font-size: 0.75rem !important;
     font-weight: 600 !important;
-    margin-left: 0.6rem !important;
-    padding: 0.1rem 0.6rem !important;
+    padding: 0.15rem 0.6rem !important;
     vertical-align: middle !important;
 }
 
@@ -464,45 +570,46 @@
 }
 
 @keyframes mcmm-dot-pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgb(52 211 153 / 70%);
-    }
-
-    70% {
-        box-shadow: 0 0 0 6px rgb(52 211 153 / 0%);
-    }
-
-    100% {
-        box-shadow: 0 0 0 0 rgb(52 211 153 / 0%);
-    }
+    0% { box-shadow: 0 0 0 0 rgb(52 211 153 / 70%); }
+    70% { box-shadow: 0 0 0 6px rgb(52 211 153 / 0%); }
+    100% { box-shadow: 0 0 0 0 rgb(52 211 153 / 0%); }
 }
 
+/* Metrics: cleaner alignment + responsive */
 .mcmm-server-metrics {
     display: flex !important;
-    flex: 2 !important;
-    gap: 2rem !important;
-    padding: 0 2rem !important;
+    flex: 1 1 auto !important;
+    gap: 1.4rem !important;
+
+    /* less aggressive than 0 2rem; keeps spacing consistent */
+    padding: 0 0.5rem !important;
+
+    min-width: 280px !important;
 }
 
 .mcmm-metric {
     display: flex !important;
     flex: 1 !important;
     flex-direction: column !important;
-    gap: 0.3rem !important;
+    gap: 0.35rem !important;
+    min-width: 160px !important;
 }
 
 .mcmm-metric-label {
     color: var(--text-secondary) !important;
     display: flex !important;
-    font-size: 0.75rem !important;
+    font-size: 0.72rem !important;
+    font-weight: 800 !important;
     justify-content: space-between !important;
+    letter-spacing: 0.08em !important;
     text-transform: uppercase !important;
+    opacity: 0.9 !important;
 }
 
 .mcmm-metric-bar {
     background: rgb(255 255 255 / 4%) !important;
-    border: 1px solid rgb(255 255 255 / 5%) !important;
-    border-radius: 6px !important;
+    border: 1px solid rgb(255 255 255 / 6%) !important;
+    border-radius: 999px !important;
     height: 8px !important;
     overflow: hidden !important;
     position: relative !important;
@@ -510,15 +617,15 @@
 }
 
 .mcmm-metric-fill {
-    border-radius: 6px !important;
+    border-radius: 999px !important;
     height: 100% !important;
     position: relative !important;
-    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: width 0.9s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .mcmm-metric-fill::after {
     animation: mcmm-pulse 2s infinite linear;
-    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 20%), transparent);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 18%), transparent);
     content: "";
     height: 100%;
     left: -100%;
@@ -528,18 +635,16 @@
 }
 
 @keyframes mcmm-pulse {
-    from {
-        left: -100%;
-    }
-
-    to {
-        left: 100%;
-    }
+    from { left: -100%; }
+    to { left: 100%; }
 }
 
+/* Actions: consistent right alignment + tighter grouping */
 .mcmm-server-actions {
     display: flex !important;
-    gap: 0.6rem !important;
+    gap: 0.55rem !important;
+    margin-left: auto !important;
+    align-items: center !important;
 }
 
 /* Icon buttons (server actions) */
@@ -547,22 +652,23 @@
     align-items: center !important;
     background: rgb(255 255 255 / 5%) !important;
     border: 1px solid var(--border) !important;
-    border-radius: 10px !important;
+    border-radius: 12px !important;
     color: var(--text-main) !important;
     cursor: pointer !important;
     display: flex !important;
     font-family: "Fira Code", monospace !important;
-    font-size: 1.1rem !important;
-    height: 44px !important;
+    font-size: 1.05rem !important;
+    height: 46px !important;
     justify-content: center !important;
-    transition: all 0.2s !important;
-    width: 44px !important;
+    transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
+    width: 46px !important;
+    box-shadow: 0 10px 24px rgb(0 0 0 / 14%) !important;
 }
 
 .mcmm-btn-icon:hover {
     background: var(--primary) !important;
     border-color: var(--primary) !important;
-    box-shadow: 0 0 15px rgb(157 78 221 / 40%) !important;
+    box-shadow: 0 0 18px rgb(157 78 221 / 35%), 0 14px 28px rgb(0 0 0 / 18%) !important;
     transform: translateY(-2px) !important;
 }
 
@@ -574,8 +680,8 @@
 .mcmm-btn-icon.danger:hover {
     background: var(--danger) !important;
     border-color: var(--danger) !important;
-    box-shadow: 0 0 15px rgb(248 113 113 / 40%) !important;
-    color: rgb(255 255 255 / 100%);
+    box-shadow: 0 0 16px rgb(248 113 113 / 35%), 0 14px 28px rgb(0 0 0 / 18%) !important;
+    color: rgb(255 255 255 / 100%) !important;
 }
 
 .mcmm-btn-icon.success {
@@ -586,7 +692,48 @@
 .mcmm-btn-icon.success:hover {
     background: var(--success) !important;
     border-color: var(--success) !important;
-    color: rgb(255 255 255 / 100%);
+    box-shadow: 0 0 16px rgb(52 211 153 / 30%), 0 14px 28px rgb(0 0 0 / 18%) !important;
+    color: rgb(255 255 255 / 100%) !important;
+}
+
+/* Responsive: stack metrics and keep actions usable */
+@media (max-width: 1200px) {
+    .mcmm-server-row {
+        flex-wrap: wrap !important;
+        row-gap: 1rem !important;
+    }
+
+    .mcmm-server-info {
+        flex: 1 1 360px !important;
+        min-width: 260px !important;
+    }
+
+    .mcmm-server-metrics {
+        flex: 1 1 520px !important;
+        min-width: 260px !important;
+        padding: 0 !important;
+    }
+
+    .mcmm-server-actions {
+        width: 100% !important;
+        justify-content: flex-end !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .mcmm-server-metrics {
+        flex-direction: column !important;
+        gap: 0.9rem !important;
+    }
+
+    .mcmm-metric {
+        min-width: 0 !important;
+    }
+
+    .mcmm-btn-icon {
+        height: 44px !important;
+        width: 44px !important;
+    }
 }
 
 /* ===== COMPONENTS: EMPTY STATE ===== */
@@ -628,28 +775,27 @@
 .mcmm-modal .mcmm-search {
     max-width: none !important;
 }
-
-.mcmm-search-input {
-    background: rgb(0 0 0 / 40%) !important;
-    border: 1px solid rgb(157 78 221 / 30%) !important;
-    border-radius: 50px !important;
-    color: var(--text-main) !important;
-    font-family: inherit !important;
-    font-size: 1rem !important;
-    padding: 0.9rem 1rem 0.9rem 3rem !important;
-    transition: all 0.3s !important;
-    width: 100% !important;
+.mcmm-app .mcmm-input,
+.mcmm-app .mcmm-search-input {
+    background: rgb(0 0 0 / 40%);
+    border: 1px solid rgb(157 78 221 / 30%);
+    border-radius: 10px;
+    color: var(--text-main);
+    padding: 0.85rem 3.25rem;
+    transition: all 0.3s;
+    width: 100%;
 }
 
-.mcmm-search-input:focus {
-    background: rgb(157 78 221 / 10%) !important;
-    border-color: var(--primary) !important;
-    outline: none !important;
+.mcmm-app .mcmm-input:focus,
+.mcmm-app .mcmm-search-input:focus {
+    background: rgb(157 78 221 / 10%);
+    border-color: var(--primary);
+    outline: none;
 }
 
 .mcmm-search-icon {
     color: var(--text-muted) !important;
-    font-size: 1.1rem !important;
+    font-size: 2rem !important;
     left: 1rem !important;
     pointer-events: none !important;
     position: absolute !important;
@@ -661,7 +807,10 @@
 .mcmm-modpack-grid {
     display: grid !important;
     gap: 1.5rem !important;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+}
+
+.mcmm-app .mcmm-modpack-grid{
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)) !important;
 }
 
 .mcmm-modpack-card {
@@ -1084,8 +1233,8 @@
 
 /* ===== SETTINGS ===== */
 .mcmm-settings-container {
+    width: min(100% - (var(--gutter) * 2), 1200px) !important;
     margin: 0 auto !important;
-    max-width: 1200px !important;
 }
 
 .mcmm-panel {
@@ -1533,6 +1682,18 @@
     flex: 1 !important;
     overflow-y: auto !important;
     padding: 1.25rem !important;
+}
+
+/* Tabs-Leiste soll im Mod Manager nur so breit sein wie die Tabs */
+.mcmm-modal .mcmm-tabs {
+    display: inline-flex !important;   /* statt flex */
+    width: fit-content !important;
+}
+
+/* Unterstrich nur über die Breite der Tabs */
+.mcmm-modal .mcmm-tabs::before {
+    left: 0 !important;
+    right: 0 !important;
 }
 
 /* ===== PREMIUM CONSOLE 2.0 ===== */
