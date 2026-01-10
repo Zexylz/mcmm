@@ -682,7 +682,7 @@ html, body {
 }
 
 /* Responsive: stack metrics and keep actions usable */
-@media (max-width <= 1200px) {
+@media (width <= 1200px) {
     .mcmm-server-row {
         flex-wrap: wrap !important;
         row-gap: 1rem !important;
@@ -705,7 +705,7 @@ html, body {
     }
 }
 
-@media (max-width <= 900px) {
+@media (width <= 900px) {
     .mcmm-server-metrics {
         flex-direction: column !important;
         gap: 0.9rem !important;
