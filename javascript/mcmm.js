@@ -195,7 +195,7 @@ function switchTab(tabId, element) {
     if (tabId === 'servers') {
         loadServers();
         if (!serverRefreshInterval) {
-            serverRefreshInterval = setInterval(loadServers, 10000);
+            serverRefreshInterval = setInterval(loadServers, 1000);
         }
     } else {
         if (serverRefreshInterval) {
@@ -251,6 +251,28 @@ function renderModpacks(data) {
     }
 
     grid.innerHTML = '';
+
+    // Add Vanilla card as the first option if search is empty
+    const searchVal = document.getElementById('modpackSearch')?.value || '';
+    if (!searchVal || searchVal.trim() === '') {
+        const vanillaCard = document.createElement('div');
+        vanillaCard.className = 'mcmm-modpack-card vanilla-card';
+        vanillaCard.style.border = '1px dashed var(--primary)';
+        vanillaCard.onclick = () => openVanillaDeploy();
+        vanillaCard.innerHTML = `
+            <div class="mcmm-modpack-thumb" style="background-image: url('https://media.forgecdn.net/avatars/8/228/635198031541315682.png'); background-size: 60%; background-color: rgb(255 255 255 / 5%);"></div>
+            <div class="mcmm-modpack-info">
+                 <div class="mcmm-modpack-name">Vanilla Minecraft</div>
+                 <div class="mcmm-modpack-meta">
+                     <span>Standard Server</span>
+                     <span class="mcmm-tag" style="background: var(--primary-dim); color: var(--primary-hover);">Official</span>
+                 </div>
+                 <div class="mcmm-modpack-desc" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">Pure Minecraft experience. No mods, just blocks.</div>
+            </div>
+        `;
+        grid.appendChild(vanillaCard);
+    }
+
     data.forEach(pack => {
         const tagsHtml = (pack.tags || []).map(t => `<span class="mcmm-tag">${t}</span>`).join('');
         const card = document.createElement('div');
@@ -1299,6 +1321,65 @@ async function openDeployModal(pack) {
     document.getElementById('deployModal').classList.add('open');
 }
 
+async function openVanillaDeploy() {
+    const pack = {
+        id: -1,
+        name: 'Vanilla Server',
+        author: 'Mojang',
+        img: '',
+        slug: 'vanilla'
+    };
+
+    selectedModpack = pack;
+    document.getElementById('deployTitle').textContent = 'Deploy Vanilla Server';
+    document.getElementById('deploySubtitle').textContent = 'Official Minecraft Experience';
+    document.getElementById('deploy_name').value = 'Vanilla Minecraft';
+
+    const versionList = document.getElementById('deployVersionList');
+    const versionStatus = document.getElementById('deployVersionStatus');
+    const versionInput = document.getElementById('deploy_version');
+
+    if (versionStatus) versionStatus.textContent = 'Choose Official Version:';
+    if (versionInput) versionInput.value = 'LATEST';
+
+    const vanillaVersions = [
+        { id: 'LATEST', displayName: 'Version: Latest Stable', gameVersions: ['LATEST'], releaseType: 1 },
+        { id: '1.20.4', displayName: 'Version: 1.20.4', gameVersions: ['1.20.4'], releaseType: 1 },
+        { id: '1.20.1', displayName: 'Version: 1.20.1', gameVersions: ['1.20.1'], releaseType: 1 },
+        { id: '1.19.4', displayName: 'Version: 1.19.4', gameVersions: ['1.19.4'], releaseType: 1 },
+        { id: '1.18.2', displayName: 'Version: 1.18.2', gameVersions: ['1.18.2'], releaseType: 1 },
+        { id: '1.16.5', displayName: 'Version: 1.16.5', gameVersions: ['1.16.5'], releaseType: 1 },
+        { id: '1.12.2', displayName: 'Version: 1.12.2', gameVersions: ['1.12.2'], releaseType: 1 }
+    ];
+
+    renderDeployVersions(vanillaVersions);
+
+    const defaults = await loadSettingsDefaults();
+    const cfg = defaults || (typeof mcmmConfig !== 'undefined' ? mcmmConfig : {});
+
+    document.getElementById('deploy_port').value = cfg.default_port || 25565;
+    document.getElementById('deploy_memory').value = cfg.default_memory || '4G';
+    document.getElementById('deploy_whitelist').value = cfg.default_whitelist || '';
+    // Leave icon URL empty for vanilla by default to avoid fatal download errors in container
+    document.getElementById('deploy_icon_url').value = '';
+
+    setChecked('deploy_pvp', cfg.default_pvp);
+    setChecked('deploy_hardcore', cfg.default_hardcore);
+    setChecked('deploy_allow_flight', cfg.default_allow_flight);
+    setChecked('deploy_command_blocks', cfg.default_command_blocks);
+    setChecked('deploy_rolling_logs', cfg.default_rolling_logs);
+    setChecked('deploy_log_timestamp', cfg.default_log_timestamp);
+    setChecked('deploy_aikar_flags', cfg.default_aikar_flags);
+    setChecked('deploy_meowice_flags', cfg.default_meowice_flags);
+    setChecked('deploy_graalvm_flags', cfg.default_graalvm_flags);
+
+    const jvmField = document.getElementById('deploy_jvm_flags');
+    if (jvmField) jvmField.value = cfg.jvm_flags || '';
+
+    setDeployStatus('');
+    document.getElementById('deployModal').classList.add('open');
+}
+
 function closeDeploy() {
     document.getElementById('deployModal').classList.remove('open');
     selectedModpack = null;
@@ -1652,7 +1733,39 @@ async function loadServers() {
 
         if (data.success) {
             localStorage.setItem('mcmm_servers_cache', JSON.stringify(data.data));
-            renderServers(data.data);
+
+            // Runtime Live Update: If the container already has servers, update metrics surgically
+            const listContainer = document.getElementById('serverListContainer');
+            if (listContainer && listContainer.children.length > 0) {
+                data.data.forEach(s => {
+                    const row = listContainer.querySelector(`.mcmm-server-row[data-server-id="${s.id}"]`);
+                    if (row) {
+                        const ramUsedLabel = (s.ramUsedMb || 0) > 0 ? (s.ramUsedMb / 1024).toFixed(1) + ' GB' : '0 GB';
+                        const ramCapLabel = (s.ramLimitMb || 0) > 0 ? (s.ramLimitMb / 1024).toFixed(1) + ' GB' : 'N/A';
+                        const ramPercent = Math.min(Math.max(s.ram || 0, 0), 100);
+                        const cpuUsage = s.cpu || 0;
+
+                        const ramTxt = row.querySelector('.mcmm-val-ram');
+                        const ramBar = row.querySelector('.mcmm-bar-ram');
+                        const cpuTxt = row.querySelector('.mcmm-val-cpu');
+                        const cpuBar = row.querySelector('.mcmm-bar-cpu');
+                        const playersTxt = row.querySelector('.mcmm-val-players');
+
+                        if (ramTxt) ramTxt.textContent = `${ramUsedLabel} / ${ramCapLabel}`;
+                        if (ramBar) ramBar.style.width = `${ramPercent}%`;
+                        if (cpuTxt) cpuTxt.textContent = `${Number(cpuUsage).toFixed(1)}%`;
+                        if (cpuBar) cpuBar.style.width = `${Math.min(Math.max(cpuUsage, 0), 100)}%`;
+
+                        if (playersTxt && s.isRunning) {
+                            const pOnline = s.players?.online || 0;
+                            const pMax = s.players?.max || 0;
+                            playersTxt.textContent = `${pOnline} / ${pMax > 0 ? pMax : '?'} players`;
+                        }
+                    }
+                });
+            } else {
+                renderServers(data.data);
+            }
             initServerPlayerCounts();
         }
     } catch (e) {
@@ -1715,7 +1828,7 @@ function renderServers(servers) {
         const cpuUsage = server.cpu || 0;
 
         html += `
-            <div class="mcmm-server-row ${statusClass}">
+            <div class="mcmm-server-row ${statusClass}" data-server-id="${server.id}">
                 <div class="mcmm-server-icon" style="background-image: url('${icon}');"></div>
                 
                 <div class="mcmm-server-info">
@@ -1731,7 +1844,7 @@ function renderServers(servers) {
                         <span>Port: ${server.ports}</span>
                         ${server.isRunning ? `
                             <span style="opacity:0.5;">|</span>
-                            <span id="players-${server.id}" data-server-id="${server.id}" data-port="${server.ports}" data-running="1">
+                            <span class="mcmm-val-players" id="players-${server.id}" data-server-id="${server.id}" data-port="${server.ports}" data-running="1">
                                 ${playersOnline} / ${playersMax > 0 ? playersMax : '?'} players
                             </span>
                         ` : ''}
@@ -1742,19 +1855,19 @@ function renderServers(servers) {
                     <div class="mcmm-metric">
                         <div class="mcmm-metric-label">
                             <span>RAM</span>
-                            <span>${ramUsedLabel} / ${ramCapLabel} ${rssLabel}</span>
+                            <span class="mcmm-val-ram">${ramUsedLabel} / ${ramCapLabel}</span>
                         </div>
                         <div class="mcmm-metric-bar">
-                            <div class="mcmm-metric-fill" style="width: ${ramPercent}%; background: linear-gradient(90deg, rgb(168 85 247 / 100%), rgb(236 72 153 / 100%));"></div>
+                            <div class="mcmm-metric-fill mcmm-bar-ram" style="width: ${ramPercent}%; background: linear-gradient(90deg, rgb(168 85 247 / 100%), rgb(236 72 153 / 100%));"></div>
                         </div>
                     </div>
                     <div class="mcmm-metric">
                         <div class="mcmm-metric-label">
                             <span>CPU</span>
-                            <span>${Number(cpuUsage).toFixed(2)}%</span>
+                            <span class="mcmm-val-cpu">${Number(cpuUsage).toFixed(1)}%</span>
                         </div>
                         <div class="mcmm-metric-bar">
-                            <div class="mcmm-metric-fill" style="width: ${Math.min(Math.max(cpuUsage, 0), 100)}%; background: linear-gradient(90deg, rgb(59 130 246 / 100%), rgb(6 182 212 / 100%));"></div>
+                            <div class="mcmm-metric-fill mcmm-bar-cpu" style="width: ${Math.min(Math.max(cpuUsage, 0), 100)}%; background: linear-gradient(90deg, rgb(59 130 246 / 100%), rgb(6 182 212 / 100%));"></div>
                         </div>
                     </div>
                 </div>
@@ -1850,7 +1963,7 @@ function renderDeployVersions(files) {
 }
 
 function pickJavaVersionLocal(mcVersion) {
-    if (!mcVersion) return '17';
+    if (!mcVersion || mcVersion === 'LATEST' || mcVersion === 'SNAPSHOT') return '21';
     const v = mcVersion.split('.').map(Number);
     if (v[0] === 1) {
         if (v[1] >= 20) return '21';
@@ -2109,7 +2222,8 @@ async function openPlayersModal(serverId, serverName, port) {
     currentPlayersTab = 'active';
 
     if (titleEl) {
-        titleEl.textContent = `Players: ${serverName} (${port})`;
+        const displayTitle = serverName || (port ? `Server (Port ${port})` : "Scanning Players...");
+        titleEl.textContent = displayTitle;
     }
 
     updatePlayerTabIndicator();

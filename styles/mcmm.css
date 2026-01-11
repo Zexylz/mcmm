@@ -817,6 +817,16 @@ html, body {
     transform: translateY(-8px) scale(1.02) !important;
 }
 
+.mcmm-modpack-card.vanilla-card {
+    border: 1px dashed var(--primary) !important;
+    background: linear-gradient(135deg, var(--bg-surface), rgb(157 78 221 / 5%)) !important;
+}
+
+.mcmm-modpack-card.vanilla-card:hover {
+    border-style: solid !important;
+    background: linear-gradient(135deg, var(--bg-surface), rgb(157 78 221 / 10%)) !important;
+}
+
 .mcmm-modpack-thumb {
     background-color: rgb(0 0 0 / 20%) !important;
     background-position: center !important;

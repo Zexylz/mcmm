@@ -125,7 +125,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                 <div class="mcmm-server-list" id="serverListContainer">
                     <?php
                     foreach ($servers as $index => $server) :
-                        $icon = isset($server['icon']) && $server['icon'] ? $server['icon'] : "https://media.forgecdn.net/avatars/855/527/638260492657788102.png";
+                        $icon = isset($server['icon']) && $server['icon'] ? $server['icon'] : "https://media.forgecdn.net/avatars/8/228/635198031541315682.png";
                         $ramUsage = isset($server['ram']) ? $server['ram'] : 0;
                         $cpuUsage = isset($server['cpu']) ? $server['cpu'] : 0;
                         $mcVersion = $server['mcVersion'] ?? 'Unknown';

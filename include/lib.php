@@ -85,54 +85,83 @@ function ensureMetricsAgent(string $containerName, string $containerId, string $
     $scriptPath = rtrim($dataDir, '/') . '/mcmm_agent.sh';
     $script = <<<'BASH'
 #!/bin/sh
+
 DATA_FILE="/data/mcmm_metrics.json"
-INTERVAL=10
-CPU_USAGE_PREV=""
-SYSTEM_USAGE_PREV=""
-TIMESTAMP_PREV=""
+INTERVAL=1
 
-while true; do
-  PID=$(pidof java | awk '{print $1}')
-  if [ -n "$PID" ] && [ -d "/proc/$PID" ]; then
-    # 1. RSS
-    RSS_KB=$(awk '/VmRSS/ {print $2}' /proc/$PID/status 2>/dev/null)
-    # 2. Heap
-    HEAP_USED_KB=0
-    if command -v jstat >/dev/null 2>&1; then
-      STATS=$(jstat -gc "$PID" 1 1 | tail -n 1)
-      HEAP_USED_KB=$(echo "$STATS" | awk '{print int($3 + $4 + $6 + $8)}')
-    fi
-    # 3. CPU Percent (Per-Core to match 'docker stats' where 100% = 1 full core)
-    SYSTEM_CPU_LINE=$(head -n1 /proc/stat)
-    SYSTEM_TOTAL_USAGE=0
-    for v in $(echo "$SYSTEM_CPU_LINE" | cut -d ' ' -f2-); do SYSTEM_TOTAL_USAGE=$((SYSTEM_TOTAL_USAGE + v)); done
-    
-    # Get number of cores
-    NPROC=$(grep -c ^processor /proc/cpuinfo)
-    [ "$NPROC" -lt 1 ] && NPROC=1
+CPU_USAGE_PREV_US=""
+TS_PREV_NS=""
 
-    PROC_STAT=$(cat /proc/$PID/stat)
-    PROC_UTIME=$(echo "$PROC_STAT" | awk '{print $14}')
-    PROC_STIME=$(echo "$PROC_STAT" | awk '{print $15}')
-    PROC_CPU_USAGE=$((PROC_UTIME + PROC_STIME))
-
-    CPU_VAL=0
-    if [ -n "$CPU_USAGE_PREV" ] && [ -n "$SYSTEM_USAGE_PREV" ]; then
-      D_PROC_USAGE=$((PROC_CPU_USAGE - CPU_USAGE_PREV))
-      D_SYSTEM_USAGE=$((SYSTEM_TOTAL_USAGE - SYSTEM_USAGE_PREV))
-      if [ "$D_SYSTEM_USAGE" -gt 0 ]; then
-        # CPU % = (process_delta / system_delta) * 100 * NPROC
-        # Multiply by 1000 for 3 decimal places in the final divided-by-1000 value
-        CPU_VAL=$(( (D_PROC_USAGE * 100000 * NPROC) / D_SYSTEM_USAGE ))
+# Read total CPU usage for the cgroup in microseconds
+get_cgroup_cpu_us() {
+  if [ -r /sys/fs/cgroup/cpu.stat ]; then
+    while read -r key value _; do
+      if [ "$key" = "usage_usec" ]; then
+        echo "$value"
+        return
       fi
-    fi
-    CPU_USAGE_PREV=$PROC_CPU_USAGE
-    SYSTEM_USAGE_PREV=$SYSTEM_TOTAL_USAGE
-    
-    TS=$(date +%s)
-    echo "{\"ts\":$TS,\"pid\":\"$PID\",\"heap_used_mb\":$((HEAP_USED_KB / 1024)),\"rss_mb\":$((RSS_KB / 1024)),\"cpu_milli\":$CPU_VAL}" > "$DATA_FILE"
+    done < /sys/fs/cgroup/cpu.stat
+  elif [ -r /sys/fs/cgroup/cpuacct/cpuacct.usage ]; then
+    read -r ns < /sys/fs/cgroup/cpuacct/cpuacct.usage
+    echo $((ns / 1000))
+    return
   fi
-  sleep 5
+}
+
+# Monotonic timestamp in nanoseconds
+get_now_ns() {
+  if [ -r /proc/uptime ]; then
+    read -r uptime _ < /proc/uptime
+    awk -v t="$uptime" 'BEGIN{printf "%.0f", t * 1000000000}'
+  else
+    date +%s%N
+  fi
+}
+
+while :; do
+  PID=$(pidof java | awk '{print $1}')
+  if [ -z "$PID" ] || [ ! -d "/proc/$PID" ]; then
+    sleep "$INTERVAL"
+    continue
+  fi
+
+  # 1. Memory Metrics (RSS)
+  RSS_KB=0
+  while read -r line; do
+    case "$line" in
+      VmRSS:*) RSS_KB=$(echo "$line" | awk '{print $2}'); break ;;
+    esac
+  done < "/proc/$PID/status"
+
+  # 2. Heap Metrics (jstat)
+  HEAP_USED_KB=0
+  if command -v jstat >/dev/null 2>&1; then
+    HEAP_USED_KB=$(jstat -gc "$PID" 1 1 2>/dev/null | tail -n 1 | awk '{print int($3 + $4 + $6 + $8)}')
+  fi
+
+  # 3. CPU Metrics (Milli-cores)
+  CPU_US=$(get_cgroup_cpu_us)
+  NOW_NS=$(get_now_ns)
+
+  CPU_MILLI=0
+  if [ -n "$CPU_USAGE_PREV_US" ] && [ -n "$TS_PREV_NS" ]; then
+    D_CPU_US=$((CPU_US - CPU_USAGE_PREV_US))
+    D_TIME_NS=$((NOW_NS - TS_PREV_NS))
+
+    if [ "$D_TIME_NS" -gt 0 ] && [ "$D_CPU_US" -ge 0 ]; then
+      # Formula: (D_CPU_US / 1,000,000) / (D_TIME_NS / 1,000,000,000) * 1000
+      CPU_MILLI=$(( (D_CPU_US * 1000000) / D_TIME_NS ))
+    fi
+  fi
+
+  CPU_USAGE_PREV_US="$CPU_US"
+  TS_PREV_NS="$NOW_NS"
+
+  TS=$(date +%s)
+  JSON="{\"ts\":$TS,\"pid\":$PID,\"heap_used_mb\":$((HEAP_USED_KB/1024)),\"rss_mb\":$((RSS_KB/1024)),\"cpu_milli\":$CPU_MILLI}"
+  echo "$JSON" > "$DATA_FILE.tmp" && mv -f "$DATA_FILE.tmp" "$DATA_FILE"
+
+  sleep "$INTERVAL"
 done
 BASH;
     // Always update the script to ensure latest version is running
@@ -1686,8 +1715,8 @@ function handleDeploy(array $config, array $defaults): void
     }
 
     $modId = intval($input['modpack_id'] ?? 0);
-    $fileId = intval($input['modpack_file_id'] ?? 0);
-    if ($modId <= 0) {
+    $fileId = $input['modpack_file_id'] ?? '';
+    if ($modId === 0) {
         jsonResponse(['success' => false, 'error' => 'Missing modpack_id'], 400);
     }
 
@@ -1722,21 +1751,25 @@ function handleDeploy(array $config, array $defaults): void
     $iconUrl = trim($input['icon_url'] ?? $config['default_icon_url'] ?? '');
     $javaVer = trim($input['java_version'] ?? '');
 
-    [$resolvedFileId, $downloadUrl] = getModpackDownload($modId, $config['curseforge_api_key'], $fileId ?: null);
-    if (!$downloadUrl) {
-        $logDir = __DIR__;
-        $logFile = "{$logDir}/deploy_fail.log";
-        @file_put_contents(
-            $logFile,
-            "Failed to resolve download URL\nmodpack_id: $modId\npreferred_file_id: " . ($fileId ?: 'none') . "\n" .
-            "serverPack/main/latest and files list exhausted\n\n",
-            FILE_APPEND
-        );
-        jsonResponse([
-            'success' => false,
-            'error' => 'Could not resolve modpack download URL. Check CurseForge API key and network, or choose a different version.',
-            'output' => []
-        ], 502);
+    if ($modId !== -1) {
+        [$resolvedFileId, $downloadUrl] = getModpackDownload($modId, $config['curseforge_api_key'], $fileId ?: null);
+        if (!$downloadUrl) {
+            $logDir = __DIR__;
+            $logFile = "{$logDir}/deploy_fail.log";
+            @file_put_contents(
+                $logFile,
+                "Failed to resolve download URL\nmodpack_id: $modId\npreferred_file_id: " . ($fileId ?: 'none') . "\n" .
+                "serverPack/main/latest and files list exhausted\n\n",
+                FILE_APPEND
+            );
+            jsonResponse([
+                'success' => false,
+                'error' => 'Could not resolve modpack download URL. Check CurseForge API key and network, or choose a different version.',
+                'output' => []
+            ], 502);
+        }
+    } else {
+        $resolvedFileId = $fileId ?: 'LATEST';
     }
 
     $dataDir = "/mnt/user/appdata/{$containerName}";
@@ -1756,10 +1789,19 @@ function handleDeploy(array $config, array $defaults): void
 
     $env = [
         'EULA' => 'TRUE',
-        'TYPE' => 'AUTO_CURSEFORGE',
-        'CF_API_KEY' => $config['curseforge_api_key'],
-        'CF_SLUG' => $safeSlug ?: $serverName,
-        'CF_FILE_ID' => $resolvedFileId ?: '',
+    ];
+
+    if ($modId === -1) {
+        $env['TYPE'] = 'VANILLA';
+        $env['VERSION'] = $resolvedFileId;
+    } else {
+        $env['TYPE'] = 'AUTO_CURSEFORGE';
+        $env['CF_API_KEY'] = $config['curseforge_api_key'] ?? '';
+        $env['CF_SLUG'] = $safeSlug ?: $serverName;
+        $env['CF_FILE_ID'] = $resolvedFileId ?: '';
+    }
+
+    $env += [
         'MEMORY' => $memory,
         'SERVER_NAME' => $serverName,
         'SERVER_IP' => $serverIp,
@@ -1769,7 +1811,6 @@ function handleDeploy(array $config, array $defaults): void
         'MAX_PLAYERS' => $maxPlayers,
         'ENABLE_WHITELIST' => $whitelist !== '' ? 'TRUE' : 'FALSE',
         'WHITELIST' => $whitelist,
-        'ICON' => $iconUrl,
         'PVP' => $flagPvp ? 'TRUE' : 'FALSE',
         'HARDCORE' => $flagHardcore ? 'TRUE' : 'FALSE',
         'ALLOW_FLIGHT' => $flagFlight ? 'TRUE' : 'FALSE',
@@ -1779,6 +1820,10 @@ function handleDeploy(array $config, array $defaults): void
         'USE_AIKAR_FLAGS' => $flagAikar ? 'TRUE' : 'FALSE',
         'JVM_OPTS' => $jvmFlags
     ];
+
+    if ($iconUrl !== '') {
+        $env['ICON'] = $iconUrl;
+    }
 
     if ($flagMeowice) {
         if ($javaVer !== '8') {

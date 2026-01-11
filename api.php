@@ -801,14 +801,30 @@ try {
                 $opOut = [];
                 $opExit = 0;
                 exec($opCmd, $opOut, $opExit);
-                if ($opExit === 0 && !empty($opOut)) {
-                    $line = implode(' ', $opOut);
-                    if (preg_match('/Opped players:? (.*)$/i', $line, $m)) {
-                        $names = array_map('trim', explode(',', $m[1]));
-                        foreach ($names as $n) {
-                            $name = $sanitizeName($n);
-                            if ($name !== '') {
-                                $ops[] = $name;
+                $fullOpOut = implode(' ', $opOut);
+
+                // Flexible regex for Spigot/Paper/Forge/Vanilla variations
+                if ($opExit === 0 && preg_match('/(?:opped players|opped player|operators):? (.*)$/i', $fullOpOut, $m)) {
+                    $names = array_map('trim', explode(',', $m[1]));
+                    foreach ($names as $n) {
+                        $name = $sanitizeName($n);
+                        if ($name !== '') {
+                            $ops[] = $name;
+                        }
+                    }
+                }
+
+                // Fallback: If RCON list failed or returned nothing, try reading ops.json directly from disk
+                if (empty($ops)) {
+                    $opsJsonCmd = "docker exec " . escapeshellarg($id) . " cat ops.json 2>/dev/null";
+                    $opsJsonRaw = shell_exec($opsJsonCmd);
+                    if ($opsJsonRaw) {
+                        $opsData = json_decode($opsJsonRaw, true);
+                        if (is_array($opsData)) {
+                            foreach ($opsData as $entry) {
+                                if (isset($entry['name'])) {
+                                    $ops[] = $entry['name'];
+                                }
                             }
                         }
                     }
