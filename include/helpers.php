@@ -2,6 +2,26 @@
 
 declare(strict_types=1);
 
+<<<<<<< HEAD
+=======
+function mcmm_autov(string $path): string
+{
+    $docroot = $_SERVER['DOCUMENT_ROOT'] ?? '/usr/local/emhttp';
+    $full = rtrim($docroot, '/') . $path;
+
+    $v = @filemtime($full);
+    if (!$v) {
+        $v = time();
+    }
+
+    return $path . '?v=' . $v;
+}
+
+
+/**
+ * Helper to get servers (view logic) - now uses config files like the API
+ */
+>>>>>>> 5880908a2c53ff18f619314327908dccecfa2837
 function getMinecraftServers()
 {
     global $config;
