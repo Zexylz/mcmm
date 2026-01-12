@@ -1,4 +1,14 @@
  /* ===== CSS RESET FOR UNRAID ===== */
+ div.title {
+    display:none!important
+}
+
+#displaybox {
+    margin:0;
+    padding:0;
+    max-width:100%!important
+}
+
  .mcmm-app,
  .mcmm-app * {
      all: revert;
