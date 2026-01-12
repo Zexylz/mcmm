@@ -116,6 +116,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (document.getElementById('tab-servers')?.classList.contains('active')) {
         loadServers();
+        if (!serverRefreshInterval) {
+            serverRefreshInterval = setInterval(loadServers, 1000);
+        }
     }
 
     // --- Interactive Hover Effects ---
@@ -127,6 +130,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const y = e.clientY - rect.top;
             panel.style.setProperty('--mouse-x', `${x}px`);
             panel.style.setProperty('--mouse-y', `${y}px`);
+        }
+    });
+
+    // --- ESC Key to Close Modals ---
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            if (document.getElementById('versionSelectModal')?.classList.contains('open')) {
+                closeVersionSelect();
+            } else if (document.getElementById('globalSettingsModal')?.classList.contains('open')) {
+                closeGlobalSettings();
+            } else if (document.getElementById('modManagerModal')?.classList.contains('open')) {
+                closeModManager();
+            } else if (document.getElementById('deployModal')?.classList.contains('open')) {
+                closeDeploy();
+            } else if (document.getElementById('deployProgressModal')?.classList.contains('open')) {
+                closeDeployProgress();
+            } else if (document.getElementById('consoleModal')?.classList.contains('open')) {
+                closeConsole();
+            } else if (document.getElementById('playersModal')?.classList.contains('open')) {
+                closePlayersModal();
+            } else if (document.getElementById('serverSettingsModal')?.classList.contains('open')) {
+                closeServerSettings();
+            }
         }
     });
 });
@@ -1750,16 +1776,59 @@ async function loadServers() {
                         const cpuTxt = row.querySelector('.mcmm-val-cpu');
                         const cpuBar = row.querySelector('.mcmm-bar-cpu');
                         const playersTxt = row.querySelector('.mcmm-val-players');
+                        const statusTxt = row.querySelector('.mcmm-status-text');
+                        const actionsArea = row.querySelector('.mcmm-server-actions');
 
                         if (ramTxt) ramTxt.textContent = `${ramUsedLabel} / ${ramCapLabel}`;
                         if (ramBar) ramBar.style.width = `${ramPercent}%`;
                         if (cpuTxt) cpuTxt.textContent = `${Number(cpuUsage).toFixed(1)}%`;
                         if (cpuBar) cpuBar.style.width = `${Math.min(Math.max(cpuUsage, 0), 100)}%`;
 
-                        if (playersTxt && s.isRunning) {
-                            const pOnline = s.players?.online || 0;
-                            const pMax = s.players?.max || 0;
-                            playersTxt.textContent = `${pOnline} / ${pMax > 0 ? pMax : '?'} players`;
+                        // Update Running/Stopped class on row
+                        const wasRunning = row.classList.contains('running');
+                        if (s.isRunning !== wasRunning) {
+                            row.classList.toggle('running', s.isRunning);
+                            row.classList.toggle('stopped', !s.isRunning);
+
+                            if (statusTxt) {
+                                statusTxt.textContent = s.isRunning ? 'Online' : 'Offline';
+                            }
+
+                            // If status changed, we might need a more heavy update of the actions to show/hide the right buttons
+                            if (actionsArea) {
+                                actionsArea.innerHTML = `
+                                    ${s.isRunning ? `
+                                        <button class="mcmm-btn-icon danger" title="Stop Server" onclick="controlServer('${s.id}', 'stop')"><span class="material-symbols-outlined">stop</span></button>
+                                        <button class="mcmm-btn-icon" title="Console" onclick="openConsole('${s.id}', '${s.name}')"><span class="material-symbols-outlined">terminal</span></button>
+                                        <button class="mcmm-btn-icon" title="Players" onclick="openPlayersModal('${s.id}', '${s.name}', '${s.ports}')"><span class="material-symbols-outlined">groups</span></button>
+                                    ` : `
+                                        <button class="mcmm-btn-icon success" title="Start Server" onclick="controlServer('${s.id}', 'start')"><span class="material-symbols-outlined">play_arrow</span></button>
+                                        <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Console Offline"><span class="material-symbols-outlined">terminal</span></button>
+                                        <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Players Offline"><span class="material-symbols-outlined">groups</span></button>
+                                    `}
+                                    <button class="mcmm-btn-icon" title="Mods" onclick="openModManager('${s.id}', '${s.name}')"><span class="material-symbols-outlined">extension</span></button>
+                                    <button class="mcmm-btn-icon" title="Backup" onclick="createBackup('${s.id}')"><span class="material-symbols-outlined">cloud_upload</span></button>
+                                    <button class="mcmm-btn-icon" title="Settings" onclick="openServerSettings('${s.id}')"><span class="material-symbols-outlined">settings</span></button>
+                                    <button class="mcmm-btn-icon danger" title="Delete Server" onclick="deleteServer('${s.id}')"><span class="material-symbols-outlined">delete</span></button>
+                                `;
+                            }
+                        }
+
+                        if (playersTxt) {
+                            if (s.isRunning) {
+                                const pOnline = s.players?.online || 0;
+                                const pMax = s.players?.max || 0;
+                                playersTxt.textContent = `${pOnline} / ${pMax > 0 ? pMax : '?'} players`;
+                                playersTxt.style.display = 'inline';
+                                if (playersTxt.previousElementSibling && playersTxt.previousElementSibling.textContent.trim() === '|') {
+                                    playersTxt.previousElementSibling.style.display = 'inline';
+                                }
+                            } else {
+                                playersTxt.style.display = 'none';
+                                if (playersTxt.previousElementSibling && playersTxt.previousElementSibling.textContent.trim() === '|') {
+                                    playersTxt.previousElementSibling.style.display = 'none';
+                                }
+                            }
                         }
                     }
                 });
@@ -1840,15 +1909,13 @@ function renderServers(servers) {
                     </div>
                     <div class="mcmm-server-subtitle">
                         <span class="mcmm-status-dot"></span>
-                        <span>${server.isRunning ? 'Online' : 'Offline'}</span>
+                        <span class="mcmm-status-text">${server.isRunning ? 'Online' : 'Offline'}</span>
                         <span style="opacity:0.5;">|</span>
                         <span>Port: ${server.ports}</span>
-                        ${server.isRunning ? `
-                            <span style="opacity:0.5;">|</span>
-                            <span class="mcmm-val-players" id="players-${server.id}" data-server-id="${server.id}" data-port="${server.ports}" data-running="1">
-                                ${playersOnline} / ${playersMax > 0 ? playersMax : '?'} players
-                            </span>
-                        ` : ''}
+                        <span style="opacity:0.5; ${server.isRunning ? '' : 'display:none;'}">|</span>
+                        <span class="mcmm-val-players" id="players-${server.id}" data-server-id="${server.id}" data-port="${server.ports}" data-running="1" style="${server.isRunning ? '' : 'display:none;'}">
+                            ${playersOnline} / ${playersMax > 0 ? playersMax : '?'} players
+                        </span>
                     </div>
                 </div>
                 

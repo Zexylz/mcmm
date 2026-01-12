@@ -296,11 +296,45 @@ if (!function_exists('write_ini_file')) {
 }
 
     // Debug log function
+// Debug log function
 function dbg($msg)
 {
     $logFile = '/tmp/mcmm.log';
     $timestamp = date('Y-m-d H:i:s');
     file_put_contents($logFile, "[$timestamp] $msg\n", FILE_APPEND);
+}
+
+/**
+ * Cache data to /tmp/mcmm_cache for speed
+ */
+function mcmm_cache_set($key, $data, $ttl = 3600)
+{
+    $cacheDir = '/tmp/mcmm_cache';
+    if (!is_dir($cacheDir)) {
+        @mkdir($cacheDir, 0777, true);
+    }
+    $file = $cacheDir . '/' . md5($key) . '.json';
+    $cacheData = [
+        'expires' => time() + $ttl,
+        'data' => $data
+    ];
+    @file_put_contents($file, json_encode($cacheData));
+}
+
+function mcmm_cache_get($key)
+{
+    $cacheDir = '/tmp/mcmm_cache';
+    $file = $cacheDir . '/' . md5($key) . '.json';
+    if (file_exists($file)) {
+        $content = @file_get_contents($file);
+        if ($content) {
+            $cacheData = json_decode($content, true);
+            if ($cacheData && $cacheData['expires'] > time()) {
+                return $cacheData['data'];
+            }
+        }
+    }
+    return null;
 }
 
 function getRequestData()
@@ -1235,6 +1269,12 @@ function getModrinthDownloadUrl(string $versionId): ?string
 
 function mrRequest(string $path, bool $isFullUrl = false): ?array
 {
+    $cacheKey = "mr_" . ($isFullUrl ? $path : $path);
+    $cached = mcmm_cache_get($cacheKey);
+    if ($cached !== null) {
+        return $cached;
+    }
+
     $url = $isFullUrl ? $path : ('https://api.modrinth.com/v2' . $path);
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -1260,6 +1300,8 @@ function mrRequest(string $path, bool $isFullUrl = false): ?array
         dbg("MR JSON Decode Error. Response: $response");
         return null;
     }
+
+    mcmm_cache_set($cacheKey, $json, 300); // 5 min cache
     return $json;
 }
 
@@ -1299,6 +1341,15 @@ function getModDownloadUrl(int $modId, string $fileId, string $apiKey): ?string
 
 function cfRequest(string $path, string $apiKey, bool $isFullUrl = false, string $method = 'GET', $data = null): ?array
 {
+    $method = strtoupper($method);
+    $cacheKey = "cf_" . ($isFullUrl ? $path : $path);
+    if ($method === 'GET') {
+        $cached = mcmm_cache_get($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+    }
+
     $url = $isFullUrl ? $path : ('https://api.curseforge.com/v1' . $path);
     dbg("CF Request ($method): $url");
 
@@ -1312,7 +1363,7 @@ function cfRequest(string $path, string $apiKey, bool $isFullUrl = false, string
         'x-api-key: ' . $apiKey
     ];
 
-    if (strtoupper($method) === 'POST') {
+    if ($method === 'POST') {
         curl_setopt($ch, CURLOPT_POST, true);
         if ($data) {
             $jsonData = json_encode($data);
@@ -1343,6 +1394,10 @@ function cfRequest(string $path, string $apiKey, bool $isFullUrl = false, string
     if (!$json) {
         dbg("CF JSON Decode Error. Response: $response");
         return null;
+    }
+
+    if ($method === 'GET') {
+        mcmm_cache_set($cacheKey, $json, 300); // 5 min cache
     }
 
     return $json;

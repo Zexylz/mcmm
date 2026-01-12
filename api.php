@@ -309,6 +309,12 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Missing server ID'], 400);
             }
 
+            $updateCacheKey = "srv_updates_" . $id;
+            $cachedUpdates = mcmm_cache_get($updateCacheKey);
+            if ($cachedUpdates !== null) {
+                jsonResponse(['success' => true, 'updates' => $cachedUpdates]);
+            }
+
             $metaFile = "/boot/config/plugins/mcmm/servers/$id/installed_mods.json";
             if (!file_exists($metaFile)) {
                 jsonResponse(['success' => true, 'updates' => []]);
@@ -424,6 +430,7 @@ try {
                 }
             }
 
+            mcmm_cache_set($updateCacheKey, $updates, 3600); // 1 hour cache for updates
             jsonResponse(['success' => true, 'updates' => $updates]);
             break;
 
@@ -668,10 +675,10 @@ try {
                                 'cpuPercent' => $cpuUsage,
                                 'source' => $ramSource,
                                 'agent' => [
-                                    'exists' => $agentExists,
-                                    'mtime' => $agentMtime,
-                                    'ageSec' => $agentAgeSec,
-                                    'ts' => $agentTs
+                            'exists' => $agentExists,
+                            'mtime' => $agentMtime,
+                            'ageSec' => $agentAgeSec,
+                            'ts' => $agentTs
                                 ],
                                 'cgroup' => [
                                     'memUsedMb' => $cg['mem_used_mb'] ?? null,
@@ -696,14 +703,14 @@ try {
                                 'cpu' => round($cpuUsage, 2),
                                 'ramDetails' => $ramDetails,
                                 'debug' => [
-                                    'dataDir' => $dataDir,
-                                    'agentPath' => $agentPath,
-                                    'agentExists' => $agentExists,
-                                    'agentTs' => $agentTs,
-                                    'cgroupStats' => $cg,
-                                    'javaHeapUsedMb' => $javaHeapUsedMb,
-                                    'envMemoryMb' => $envMemoryMb,
-                                    'configMemMb' => $configMem
+                            'dataDir' => $dataDir,
+                            'agentPath' => $agentPath,
+                            'agentExists' => $agentExists,
+                            'agentTs' => $agentTs,
+                            'cgroupStats' => $cg,
+                            'javaHeapUsedMb' => $javaHeapUsedMb,
+                            'envMemoryMb' => $envMemoryMb,
+                            'configMemMb' => $configMem
                                 ],
                                 'players' => [
                                     'online' => $playersOnline,
@@ -1086,15 +1093,15 @@ try {
             jsonResponse([
                 'success' => true,
                 'data' => [
-                    'id' => $c['Id'],
-                    'name' => $containerName,
-                    'env' => $env,
-                    'mcVersion' => $mcVersion,
-                    'loader' => $loader,
-                    'maxPlayers' => $maxPlayers,
-                    'port' => $port,
-                    'image' => $c['Config']['Image'],
-                    'metadata_debug' => $metadata['_debug'] ?? []
+            'id' => $c['Id'],
+            'name' => $containerName,
+            'env' => $env,
+            'mcVersion' => $mcVersion,
+            'loader' => $loader,
+            'maxPlayers' => $maxPlayers,
+            'port' => $port,
+            'image' => $c['Config']['Image'],
+            'metadata_debug' => $metadata['_debug'] ?? []
                 ]
             ]);
             break;
@@ -1255,24 +1262,33 @@ try {
 
             // If version/loader missing, try to auto-detect from server
             if (($version === '' || $loader === '') && $serverId) {
-                $inspectJson = shell_exec("docker inspect " . escapeshellarg($serverId));
-                $inspectData = json_decode($inspectJson, true);
-                if ($inspectData && isset($inspectData[0])) {
-                    $c = $inspectData[0];
-                    $containerName = ltrim($c['Name'] ?? $serverId, '/');
-                    $envMap = [];
-                    foreach (($c['Config']['Env'] ?? []) as $e) {
-                        $parts = explode('=', $e, 2);
-                        if (count($parts) === 2) {
-                            $envMap[$parts[0]] = $parts[1];
+                $metaCacheKey = "srv_meta_det_" . $serverId;
+                $cachedMeta = mcmm_cache_get($metaCacheKey);
+                if ($cachedMeta && is_array($cachedMeta)) {
+                    $version = $version ?: ($cachedMeta['version'] ?? '');
+                    $loader = $loader ?: ($cachedMeta['loader'] ?? '');
+                } else {
+                    $inspectJson = shell_exec("docker inspect " . escapeshellarg($serverId));
+                    $inspectData = json_decode($inspectJson, true);
+                    if ($inspectData && isset($inspectData[0])) {
+                        $c = $inspectData[0];
+                        $containerName = ltrim($c['Name'] ?? $serverId, '/');
+                        $envMap = [];
+                        foreach (($c['Config']['Env'] ?? []) as $e) {
+                            $parts = explode('=', $e, 2);
+                            if (count($parts) === 2) {
+                                $envMap[$parts[0]] = $parts[1];
+                            }
                         }
-                    }
-                    $meta = getServerMetadata($envMap, $config, $containerName, $config['curseforge_api_key'] ?? '');
-                    if (!$version) {
-                        $version = $meta['mcVersion'];
-                    }
-                    if (!$loader) {
-                        $loader = $meta['loader'];
+                        $meta = getServerMetadata($envMap, $config, $containerName, $config['curseforge_api_key'] ?? '');
+                        if (!$version) {
+                            $version = $meta['mcVersion'];
+                        }
+                        if (!$loader) {
+                            $loader = $meta['loader'];
+                        }
+                        // Cache for 10 minutes
+                        mcmm_cache_set($metaCacheKey, ['version' => $version, 'loader' => $loader], 600);
                     }
                 }
             }
@@ -1380,6 +1396,31 @@ try {
                 }
             }
 
+            $serversDir = '/boot/config/plugins/mcmm/servers';
+            $allConfigsByContainer = [];
+            $allConfigsBySlug = [];
+            $allConfigsByName = [];
+            if (is_dir($serversDir)) {
+                $dirs = glob($serversDir . '/*', GLOB_ONLYDIR);
+                foreach ($dirs as $dir) {
+                    $configFile = $dir . '/config.json';
+                    if (file_exists($configFile)) {
+                        $c = json_decode(@file_get_contents($configFile), true);
+                        if ($c) {
+                            if (isset($c['containerName'])) {
+                                $allConfigsByContainer[$c['containerName']] = $c;
+                            }
+                            if (isset($c['slug'])) {
+                                $allConfigsBySlug[$c['slug']] = $c;
+                            }
+                            if (isset($c['name'])) {
+                                $allConfigsByName[safeContainerName($c['name'])] = $c;
+                            }
+                        }
+                    }
+                }
+            }
+
             $files = glob($backupDir . '/*.zip');
             $backups = [];
             foreach ($files as $file) {
@@ -1390,40 +1431,17 @@ try {
                     $serverName = $m[1];
                     $timestamp = $m[2];
 
-                    // Identify slug for fallback lookup
                     $slugCandidate = $serverName;
                     if (preg_match('/^(.*?)-[a-f0-9]{6}$/', $serverName, $sm)) {
                         $slugCandidate = $sm[1];
                     }
 
-                    // Load server config for metadata
-                    $cfg = [];
-                    $serversDir = '/boot/config/plugins/mcmm/servers';
-                    $serversSearch = glob($serversDir . '/*/config.json');
+                    // Use batched configs
+                    $cfg = $allConfigsByContainer[$serverName] ??
+                           $allConfigsBySlug[$slugCandidate] ??
+                           $allConfigsByName[safeContainerName($serverName)] ??
+                           [];
 
-                    if ($serversSearch) {
-                        // Pass 1: Direct container name match (Best)
-                        foreach ($serversSearch as $cfgFile) {
-                            $tempCfg = json_decode(@file_get_contents($cfgFile), true);
-                            if ($tempCfg && isset($tempCfg['containerName']) && $tempCfg['containerName'] === $serverName) {
-                                $cfg = $tempCfg;
-                                break;
-                            }
-                        }
-
-                        // Pass 2: Slug match (Fallback)
-                        if (empty($cfg)) {
-                            foreach ($serversSearch as $cfgFile) {
-                                $tempCfg = json_decode(@file_get_contents($cfgFile), true);
-                                if ($tempCfg && ((isset($tempCfg['slug']) && $tempCfg['slug'] === $slugCandidate) || (isset($tempCfg['name']) && safeContainerName($tempCfg['name']) === safeContainerName($serverName)))) {
-                                    $cfg = $tempCfg;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    // Pass 3: Live Docker match (Fallback if still no icon)
                     $icon = $cfg['icon'] ?? $cfg['logo'] ?? $cfg['icon_url'] ?? '';
                     if (!$icon && isset($liveMetadata[$serverName])) {
                         $icon = $liveMetadata[$serverName]['icon'];
@@ -1442,10 +1460,12 @@ try {
                     ];
                 }
             }
+
             // Sort by date desc
             usort($backups, function ($a, $b) {
                 return $b['date'] - $a['date'];
             });
+
             jsonResponse(['success' => true, 'data' => $backups]);
             break;
 
@@ -1455,7 +1475,7 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Missing ID'], 400);
             }
 
-            // 1. Get container info
+        // 1. Get container info
             $json = shell_exec("docker inspect " . escapeshellarg($id));
             $containers = json_decode($json, true);
             if (!$containers || !isset($containers[0])) {
@@ -1464,13 +1484,13 @@ try {
             $c = $containers[0];
             $serverName = ltrim($c['Name'], '/');
 
-            // 2. Locate data directory
+// 2. Locate data directory
             $dataDir = "";
             if (isset($c['Mounts'])) {
                 foreach ($c['Mounts'] as $m) {
                     if ($m['Destination'] === '/data') {
-                        $dataDir = $m['Source'];
-                        break;
+                            $dataDir = $m['Source'];
+                            break;
                     }
                 }
             }
@@ -1478,7 +1498,7 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Could not locate /data mount for this server'], 500);
             }
 
-            // 3. Prepare backup
+// 3. Prepare backup
             $backupDir = '/mnt/user/appdata/mcmm/backups';
             if (!is_dir($backupDir)) {
                 @mkdir($backupDir, 0755, true);
@@ -1487,17 +1507,17 @@ try {
             $backupName = "backup_{$serverName}_{$ts}.zip";
             $backupPath = $backupDir . '/' . $backupName;
 
-            // 4. Create metadata
+// 4. Create metadata
             $meta = [
-                'serverName' => $serverName,
-                'timestamp' => $ts,
-                'containerConfig' => $c['Config'],
-                'hostConfig' => $c['HostConfig']
+            'serverName' => $serverName,
+            'timestamp' => $ts,
+            'containerConfig' => $c['Config'],
+            'hostConfig' => $c['HostConfig']
             ];
             $metaPath = $dataDir . '/mcmm_backup_meta.json';
             @file_put_contents($metaPath, json_encode($meta, JSON_PRETTY_PRINT));
 
-            // 5. ZIP it
+// 5. ZIP it
             $cmd = "cd " . escapeshellarg($dataDir) . " && zip -r " . escapeshellarg($backupPath) . " . -x \"*.log\" \"*.lck\" \"mcmm_metrics.json\"";
             $output = shell_exec($cmd . " 2>&1");
             @unlink($metaPath);
@@ -1514,7 +1534,7 @@ try {
             if (!$name) {
                 jsonResponse(['success' => false, 'error' => 'Missing filename'], 400);
             }
-            // Safety check: ensure no path traversal
+        // Safety check: ensure no path traversal
             $name = basename($name);
             $path = '/mnt/user/appdata/mcmm/backups/' . $name;
             if (file_exists($path)) {
@@ -1536,7 +1556,7 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Backup file not found'], 404);
             }
 
-            // 1. Peek into ZIP for metadata
+// 1. Peek into ZIP for metadata
             $tempDir = '/tmp/mcmm_restore_' . uniqid();
             @mkdir($tempDir, 0755, true);
             $cmd = "unzip -p " . escapeshellarg($backupPath) . " mcmm_backup_meta.json > " . escapeshellarg($tempDir . '/meta.json');
@@ -1551,25 +1571,25 @@ try {
             $serverName = ltrim($meta['serverName'], '/');
             $dataDir = "/mnt/user/appdata/{$serverName}";
 
-            // 2. Stop/Remove existing container if exists
+// 2. Stop/Remove existing container if exists
             $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
             @shell_exec("$dockerBin stop " . escapeshellarg($serverName));
             @shell_exec("$dockerBin rm " . escapeshellarg($serverName));
 
-            // 3. Cycle the data directory
+// 3. Cycle the data directory
             if (is_dir($dataDir)) {
                 $oldDir = $dataDir . '.reinstall_old_' . time();
                 @rename($dataDir, $oldDir);
             }
             @mkdir($dataDir, 0775, true);
 
-            // 4. Extract backup
+// 4. Extract backup
             $cmd = "unzip " . escapeshellarg($backupPath) . " -d " . escapeshellarg($dataDir);
             $output = shell_exec($cmd . " 2>&1");
             @unlink($dataDir . '/mcmm_backup_meta.json');
 
-            // 5. Re-create container (Build docker run command from meta)
-            // We use the raw meta to reconstruct the env, ports, and volumes.
+// 5. Re-create container (Build docker run command from meta)
+// We use the raw meta to reconstruct the env, ports, and volumes.
             $envArgs = "";
             if (isset($meta['containerConfig']['Env'])) {
                 foreach ($meta['containerConfig']['Env'] as $e) {
@@ -1581,7 +1601,7 @@ try {
             if (isset($meta['hostConfig']['PortBindings'])) {
                 foreach ($meta['hostConfig']['PortBindings'] as $contPort => $hostBindings) {
                     foreach ($hostBindings as $hb) {
-                        $portArgs .= " -p " . escapeshellarg($hb['HostPort'] . ":" . $contPort);
+                            $portArgs .= " -p " . escapeshellarg($hb['HostPort'] . ":" . $contPort);
                     }
                 }
             }
@@ -1595,9 +1615,9 @@ try {
 
             $image = $meta['containerConfig']['Image'] ?? 'itzg/minecraft-server';
             $runCmd = "$dockerBin run -d --name " . escapeshellarg($serverName) .
-                $envArgs . $portArgs . $labelsArgs .
-                " -v " . escapeshellarg($dataDir . ":/data") .
-                " --restart unless-stopped " . escapeshellarg($image);
+            $envArgs . $portArgs . $labelsArgs .
+            " -v " . escapeshellarg($dataDir . ":/data") .
+            " --restart unless-stopped " . escapeshellarg($image);
 
             dbg("Reinstalling server: $serverName");
             dbg("Run CMD: $runCmd");
@@ -1634,15 +1654,15 @@ try {
             foreach (scandir($modsDir) as $file) {
                 if (substr($file, -4) === '.jar') {
                     $modInfo = [];
-                    // Try to find matching metadata
-                    // 1. Exact filename match
+            // Try to find matching metadata
+            // 1. Exact filename match
                     foreach ($metadata as $mid => $info) {
                         if (($info['fileName'] ?? '') === $file) {
                             $modInfo = $info;
                             break;
                         }
                     }
-                    // 2. Fuzzy match if not found (filename contains mod name or vice versa)
+            // 2. Fuzzy match if not found (filename contains mod name or vice versa)
                     if (empty($modInfo)) {
                         foreach ($metadata as $mid => $info) {
                             $metaName = strtolower($info['name'] ?? '');
@@ -1653,8 +1673,8 @@ try {
                                 ($metaFileRef && strpos($diskFile, $metaFileRef) !== false) ||
                                 ($metaName && strpos($diskFile, str_replace(' ', '', $metaName)) !== false)
                             ) {
-                                $modInfo = $info;
-                                break;
+                                    $modInfo = $info;
+                                    break;
                             }
                         }
                     }
@@ -1662,11 +1682,11 @@ try {
                     $needsIdentification = empty($modInfo['author']) || empty($modInfo['logo']);
 
                     $mods[] = array_merge([
-                        'id' => $modInfo['modId'] ?? md5($file),
-                        'name' => $file,
-                        'file' => $file,
-                        'size' => formatBytes(filesize("$modsDir/$file")),
-                        'needsIdentification' => $needsIdentification
+                    'id' => $modInfo['modId'] ?? md5($file),
+                    'name' => $file,
+                    'file' => $file,
+                    'size' => formatBytes(filesize("$modsDir/$file")),
+                    'needsIdentification' => $needsIdentification
                     ], $modInfo);
                 }
             }
@@ -1684,7 +1704,7 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Missing mod ID'], 400);
             }
 
-            // Auto-detect version/loader if missing
+        // Auto-detect version/loader if missing
             if (($mcVersion === '' || $loader === '') && $serverId) {
                 $inspectJson = shell_exec("docker inspect " . escapeshellarg($serverId));
                 $inspectData = json_decode($inspectJson, true);
@@ -1739,12 +1759,12 @@ try {
                 @mkdir($modsDir, 0775, true);
             }
 
-            // Get download URL
+// Get download URL
             if ($source === 'modrinth') {
                 if (!$fileId) {
                     $mrFiles = fetchModrinthFiles($modId, '', '');
                     if (!empty($mrFiles)) {
-                        $fileId = $mrFiles[0]['id'] ?? '';
+                            $fileId = $mrFiles[0]['id'] ?? '';
                     }
                 }
                 $fileUrl = getModrinthDownloadUrl($fileId);
@@ -1761,37 +1781,37 @@ try {
                 }
             }
 
-            // Download
+// Download
             $fileName = basename(parse_url($fileUrl, PHP_URL_PATH));
             if (!$fileName) {
                 $fileName = "mod-$modId" . ($fileId ? "-$fileId" : "") . ".jar";
             }
 
             if (file_put_contents("$modsDir/$fileName", fopen($fileUrl, 'r'))) {
-                // Fix permissions
+            // Fix permissions
                 @chown("$modsDir/$fileName", 99); // nobody
                 @chgrp("$modsDir/$fileName", 100); // users
                 @chmod("$modsDir/$fileName", 0664);
 
-                // Clean up old version if it exists
+            // Clean up old version if it exists
                 $serversDir = '/boot/config/plugins/mcmm/servers';
                 $metaFile = "$serversDir/$id/installed_mods.json";
                 if (file_exists($metaFile)) {
                     $metadata = json_decode(file_get_contents($metaFile), true) ?: [];
                     if (isset($metadata[$modId])) {
-                        $oldFileName = $metadata[$modId]['fileName'] ?? '';
+                            $oldFileName = $metadata[$modId]['fileName'] ?? '';
                         if ($oldFileName && $oldFileName !== $fileName) {
                             @unlink("$modsDir/$oldFileName");
                         }
                     }
                 }
 
-                // Save Metadata
+            // Save Metadata
                 $extra = [
-                    'author' => $_REQUEST['author'] ?? 'Unknown',
-                    'summary' => $_REQUEST['summary'] ?? '',
-                    'downloads' => $_REQUEST['downloads'] ?? '',
-                    'mcVersion' => $_REQUEST['mc_version'] ?? ''
+                'author' => $_REQUEST['author'] ?? 'Unknown',
+                'summary' => $_REQUEST['summary'] ?? '',
+                'downloads' => $_REQUEST['downloads'] ?? '',
+                'mcVersion' => $_REQUEST['mc_version'] ?? ''
                 ];
                 saveModMetadata(
                     $id,
@@ -1817,8 +1837,8 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Missing parameters'], 400);
             }
 
-            // Clean filename to search query
-            // Strip .jar, version strings, common prefixes/suffixes
+        // Clean filename to search query
+        // Strip .jar, version strings, common prefixes/suffixes
             $query = preg_replace('/\.jar$/i', '', $filename);
             $query = preg_replace('/[-_][vV]?\d+\.?\d+.*$/', '', $query); // Strip -1.20.1 etc
             $query = preg_replace('/[-_]\d{4,}.*$/', '', $query); // Strip long numbers
@@ -1826,21 +1846,21 @@ try {
 
             dbg("Identifying mod from filename '$filename' -> Query: '$query'");
 
-            // Try CurseForge first
+        // Try CurseForge first
             $cfResult = [];
             if (!empty($config['curseforge_api_key'])) {
                 $cfData = fetchCurseForgeMods($query, '', '', 1, 1, $config['curseforge_api_key']);
                 $cfResult = $cfData[0] ?? [];
             }
 
-            // Try Modrinth
+// Try Modrinth
             $mrData = fetchModrinthMods($query, '', '', 1, 1);
             $mrResult = $mrData[0] ?? [];
 
             $found = null;
             $source = '';
 
-            // Heuristic: prefer CurseForge if it's an exact or high-quality match
+// Heuristic: prefer CurseForge if it's an exact or high-quality match
             if (!empty($cfResult)) {
                 $found = $cfResult[0];
                 $source = 'curseforge';
@@ -1852,10 +1872,10 @@ try {
             if ($found) {
                 dbg("Matched mod '$filename' to " . ($found['name'] ?? 'unknown') . " via $source");
                 $extra = [
-                    'author' => $found['author'] ?? 'Unknown',
-                    'summary' => $found['summary'] ?? '',
-                    'downloads' => $found['downloads'] ?? '',
-                    'mcVersion' => $found['mcVersion'] ?? ''
+                'author' => $found['author'] ?? 'Unknown',
+                'summary' => $found['summary'] ?? '',
+                'downloads' => $found['downloads'] ?? '',
+                'mcVersion' => $found['mcVersion'] ?? ''
                 ];
                 saveModMetadata(
                     $id,
@@ -1884,7 +1904,7 @@ try {
             $filePath = "$modsDir/" . basename($file); // prevent directory traversal
 
             if (file_exists($filePath) && unlink($filePath)) {
-                // Also remove from metadata
+        // Also remove from metadata
                 $serversDir = '/boot/config/plugins/mcmm/servers';
                 $metaFile = "$serversDir/$id/installed_mods.json";
                 if (file_exists($metaFile)) {

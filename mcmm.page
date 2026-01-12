@@ -154,15 +154,13 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                 </div>
                                 <div class="mcmm-server-subtitle">
                                     <span class="mcmm-status-dot"></span>
-                                    <span><?php echo $server['isRunning'] ? 'Online' : 'Offline'; ?></span>
+                                    <span class="mcmm-status-text"><?php echo $server['isRunning'] ? 'Online' : 'Offline'; ?></span>
                                     <span style="opacity:0.5;">|</span>
                                     <span>Port: <?php echo htmlspecialchars($server['ports']); ?></span>
-                                    <?php if ($server['isRunning']) : ?>
-                                        <span style="opacity:0.5;">|</span>
-                                        <span id="players-<?php echo $server['id']; ?>" data-server-id="<?php echo $server['id']; ?>" data-port="<?php echo htmlspecialchars($server['ports']); ?>" data-running="<?php echo $server['isRunning'] ? '1' : '0'; ?>">
-                                            <?php echo intval($playersOnline); ?> / <?php echo ($playersMax > 0 ? intval($playersMax) : '?'); ?> players
-                                        </span>
-                                    <?php endif; ?>
+                                    <span style="opacity:0.5; <?php echo $server['isRunning'] ? '' : 'display:none;'; ?>">|</span>
+                                    <span class="mcmm-val-players" id="players-<?php echo $server['id']; ?>" data-server-id="<?php echo $server['id']; ?>" data-port="<?php echo htmlspecialchars($server['ports']); ?>" data-running="<?php echo $server['isRunning'] ? '1' : '0'; ?>" style="<?php echo $server['isRunning'] ? '' : 'display:none;'; ?>">
+                                        <?php echo intval($playersOnline); ?> / <?php echo ($playersMax > 0 ? intval($playersMax) : '?'); ?> players
+                                    </span>
                                 </div>
                             </div>
 
@@ -170,19 +168,19 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                 <div class="mcmm-metric">
                                     <div class="mcmm-metric-label">
                                         <span>RAM</span>
-                                        <span><?php echo $ramUsedLabel; ?> / <?php echo $ramCapLabel; ?></span>
+                                        <span class="mcmm-val-ram"><?php echo $ramUsedLabel; ?> / <?php echo $ramCapLabel; ?></span>
                                     </div>
                                     <div class="mcmm-metric-bar">
-                                        <div class="mcmm-metric-fill" style="<?php echo 'width:' . min(max($ramPercent, 0), 100) . '%'; ?>; background: linear-gradient(90deg, #a855f7, #ec4899);"></div>
+                                        <div class="mcmm-metric-fill mcmm-bar-ram" style="<?php echo 'width:' . min(max($ramPercent, 0), 100) . '%'; ?>; background: linear-gradient(90deg, #a855f7, #ec4899);"></div>
                                     </div>
                                 </div>
                                 <div class="mcmm-metric">
                                     <div class="mcmm-metric-label">
                                         <span>CPU</span>
-                                        <span><?php echo number_format($cpuUsage, 2); ?>%</span>
+                                        <span class="mcmm-val-cpu"><?php echo number_format($cpuUsage, 2); ?>%</span>
                                     </div>
                                     <div class="mcmm-metric-bar">
-                                        <div class="mcmm-metric-fill" style="<?php echo 'width:' . min(max($cpuUsage, 0), 100) . '%'; ?>; background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
+                                        <div class="mcmm-metric-fill mcmm-bar-cpu" style="<?php echo 'width:' . min(max($cpuUsage, 0), 100) . '%'; ?>; background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
                                     </div>
                                 </div>
                             </div>
@@ -193,11 +191,12 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                     <button class="mcmm-btn-icon" title="Console" onclick="openConsole('<?php echo $server['id']; ?>', '<?php echo htmlspecialchars($server['name']); ?>')"><span class="material-symbols-outlined">terminal</span></button>
                                     <button class="mcmm-btn-icon" title="Players" onclick="openPlayersModal('<?php echo $server['id']; ?>', '<?php echo htmlspecialchars($server['name']); ?>', '<?php echo htmlspecialchars($server['ports']); ?>')"><span class="material-symbols-outlined">groups</span></button>
                                 <?php else : ?>
-                                    <button class="mcmm-btn-icon success" title="Start Server" onclick="controlServer('<?php echo $server['id']; ?>', 'start')">▶</button>
-                                    <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Console Offline">_></button>
-                                    <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Players Offline">👥</button>
+                                    <button class="mcmm-btn-icon success" title="Start Server" onclick="controlServer('<?php echo $server['id']; ?>', 'start')"><span class="material-symbols-outlined">play_arrow</span></button>
+                                    <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Console Offline"><span class="material-symbols-outlined">terminal</span></button>
+                                    <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Players Offline"><span class="material-symbols-outlined">groups</span></button>
                                 <?php endif; ?>
                                 <button class="mcmm-btn-icon" title="Mods" onclick="openModManager('<?php echo $server['id']; ?>', '<?php echo htmlspecialchars($server['name']); ?>')"><span class="material-symbols-outlined">extension</span></button>
+                                <button class="mcmm-btn-icon" title="Backup" onclick="createBackup('<?php echo $server['id']; ?>')"><span class="material-symbols-outlined">cloud_upload</span></button>
                                 <button class="mcmm-btn-icon" title="Settings" onclick="openServerSettings('<?php echo $server['id']; ?>')"><span class="material-symbols-outlined">settings</span></button>
                                 <button class="mcmm-btn-icon danger" title="Delete Server" onclick="deleteServer('<?php echo $server['id']; ?>')"><span class="material-symbols-outlined">delete</span></button>
                             </div>
