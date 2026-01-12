@@ -1939,6 +1939,7 @@ function handleDeploy(array $config, array $defaults): void
     $loaderSelected = trim($input['loader'] ?? '');
     $safeSlug = $modpackSlug ? strtolower(preg_replace('/[^a-z0-9-]/', '-', $modpackSlug)) : '';
     $safeSlug = trim($safeSlug, '-');
+
     $resolvedFileId = $fileId ?: ($input['resolved_file_id'] ?? '');
     $uniqueSuffix = substr(md5(($fileId ?: $resolvedFileId ?: '') . '-' . $modId . '-' . $serverId), 0, 6);
     $containerName = safeContainerName(($safeSlug ?: $serverName) . '-' . $uniqueSuffix);
@@ -1960,8 +1961,19 @@ function handleDeploy(array $config, array $defaults): void
     $iconUrl = trim($input['icon_url'] ?? $config['default_icon_url'] ?? '');
     $javaVer = trim($input['java_version'] ?? '');
 
+    // ---------------------------
+    // FIX: Ensure $downloadUrl is always defined
+    // Optional behavior: only include it in the response if non-null/non-empty
+    // ---------------------------
+    $downloadUrl = null;
+
     if ($modId !== -1) {
-        [$resolvedFileId, $downloadUrl] = getModpackDownload($modId, $config['curseforge_api_key'], $fileId ?: null);
+        [$resolvedFileId, $downloadUrl] = getModpackDownload(
+            $modId,
+            $config['curseforge_api_key'],
+            $fileId ?: null
+        );
+
         if (!$downloadUrl) {
             $logDir = __DIR__;
             $logFile = "{$logDir}/deploy_fail.log";
@@ -1971,6 +1983,7 @@ function handleDeploy(array $config, array $defaults): void
                 "serverPack/main/latest and files list exhausted\n\n",
                 FILE_APPEND
             );
+
             jsonResponse([
                 'success' => false,
                 'error' => 'Could not resolve modpack download URL. Check CurseForge API key and network, or choose a different version.',
@@ -1978,7 +1991,9 @@ function handleDeploy(array $config, array $defaults): void
             ], 502);
         }
     } else {
+        // Vanilla path: keep $downloadUrl as null
         $resolvedFileId = $fileId ?: 'LATEST';
+        $downloadUrl = null; // explicit (optional)
     }
 
     $dataDir = "/mnt/user/appdata/{$containerName}";
@@ -2174,13 +2189,21 @@ XML;
 
     file_put_contents($serverDir . '/config.json', json_encode($serverConfig, JSON_PRETTY_PRINT));
 
-    jsonResponse([
+    // ---------------------------
+    // OPTIONAL: Only include download in response when present
+    // ---------------------------
+    $response = [
         'success' => true,
         'container' => $containerName,
         'id' => trim($output[0] ?? ''),
         'fileId' => $fileId,
-        'download' => $downloadUrl
-    ]);
+    ];
+
+    if ($downloadUrl !== null && $downloadUrl !== '') {
+        $response['download'] = $downloadUrl;
+    }
+
+    jsonResponse($response);
 }
 
 /**
