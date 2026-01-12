@@ -1823,8 +1823,9 @@ function renderServers(servers) {
         const ramPercent = Math.min(Math.max(server.ram || 0, 0), 100);
         const ramUsedLabel = (server.ramUsedMb || 0) > 0 ? (server.ramUsedMb / 1024).toFixed(1) + ' GB' : '0 GB';
         const ramCapLabel = (server.ramLimitMb || 0) > 0 ? (server.ramLimitMb / 1024).toFixed(1) + ' GB' : 'N/A';
+        const ramSource = server.ramDetails?.source || 'unknown';
         const rssValue = (server.ramDetails?.rssMb || 0);
-        const rssLabel = rssValue > 0 ? `<span style="opacity: 0.6; font-size: 0.75rem; margin-left: 4px;">RSS: ${(rssValue / 1024).toFixed(1)}GB</span>` : '';
+        const rssLabel = rssValue > 0 ? `<span style="opacity: 0.4; font-size: 0.7rem; margin-left: 4px;">(${ramSource})</span>` : '';
         const cpuUsage = server.cpu || 0;
 
         html += `

@@ -9,8 +9,9 @@
 // Falls back to /mnt/user/appdata/<name> if not found.
 function getContainerDataDir(string $containerName, string $containerId = '')
 {
+    $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
     if ($containerId) {
-        $cmd = "docker inspect -f '{{range .Mounts}}{{if eq .Destination \"/data\"}}{{.Source}}{{end}}{{end}}' " . escapeshellarg($containerId);
+        $cmd = "$dockerBin inspect -f '{{range .Mounts}}{{if eq .Destination \"/data\"}}{{.Source}}{{end}}{{end}}' " . escapeshellarg($containerId);
         $path = trim((string) shell_exec($cmd));
         if ($path && is_dir($path)) {
             return $path;
@@ -21,6 +22,17 @@ function getContainerDataDir(string $containerName, string $containerId = '')
         return $path;
     }
     return null;
+}
+
+/**
+ * Get the full 64-character container ID from a short ID or name.
+ */
+function getContainerLongId(string $idOrName): ?string
+{
+    $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
+    $cmd = "$dockerBin inspect -f '{{.Id}}' " . escapeshellarg($idOrName);
+    $longId = trim((string) @shell_exec($cmd . ' 2>/dev/null'));
+    return !empty($longId) ? $longId : null;
 }
 
 // Get container stats from docker stats command as a fallback.
@@ -54,28 +66,43 @@ function getContainerCgroupStats(string $containerId)
 // Read agent metrics from mcmm_metrics.json in the container data dir.
 function readAgentMetrics(string $containerName, string $containerId = '', string $dataDir = '')
 {
+    $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
     if (!$dataDir) {
         $dataDir = getContainerDataDir($containerName, $containerId);
     }
-    if (!$dataDir) {
-        return null;
+
+    $data = null;
+
+    // Attempt 1: Host File (Fastest)
+    if ($dataDir) {
+        $metricsFile = rtrim($dataDir, '/') . '/mcmm_metrics.json';
+        if (file_exists($metricsFile)) {
+            $content = @file_get_contents($metricsFile);
+            if ($content) {
+                $decoded = json_decode($content, true);
+                // Check if not stale (5 mins)
+                if ($decoded && (time() - filemtime($metricsFile) < 300)) {
+                    $data = $decoded;
+                }
+            }
+        }
     }
-    $metricsFile = rtrim($dataDir, '/') . '/mcmm_metrics.json';
-    if (!file_exists($metricsFile)) {
-        return null;
+
+    // Attempt 2: Container Direct (Most reliable, fallback)
+    if (!$data && $containerId) {
+        $cmd = "$dockerBin exec " . escapeshellarg($containerId) . " cat /tmp/mcmm_metrics.json 2>/dev/null";
+        $content = trim((string)@shell_exec($cmd));
+        if ($content && strpos($content, '{') === 0) {
+            $decoded = json_decode($content, true);
+            if ($decoded && isset($decoded['ts'])) {
+                // Check if not stale (5 mins)
+                if (time() - intval($decoded['ts']) < 300) {
+                    $data = $decoded;
+                }
+            }
+        }
     }
-    $content = file_get_contents($metricsFile);
-    if (!$content) {
-        return null;
-    }
-    $data = json_decode($content, true);
-    if (!$data) {
-        return null;
-    }
-    // Check for mtime to ensure it's not stale (1 minute)
-    if (time() - filemtime($metricsFile) > 60) {
-        return null;
-    }
+
     return $data;
 }
 
@@ -119,59 +146,108 @@ get_now_ns() {
 }
 
 while :; do
-  PID=$(pidof java | awk '{print $1}')
+  PID=$(pidof java 2>/dev/null | awk '{print $1}')
+  [ -z "$PID" ] && PID=$(pgrep -f "java.*\.jar" | head -n 1)
+  
   if [ -z "$PID" ] || [ ! -d "/proc/$PID" ]; then
-    sleep "$INTERVAL"
+    echo "$(date) Waiting for Java process..." >> /data/mcmm_agent.log
+    sleep 5
     continue
   fi
 
-  # 1. Memory Metrics (RSS)
+  # 1. Memory Metrics (High Precision)
   RSS_KB=0
-  while read -r line; do
-    case "$line" in
-      VmRSS:*) RSS_KB=$(echo "$line" | awk '{print $2}'); break ;;
-    esac
-  done < "/proc/$PID/status"
+  PSS_KB=0
+  
+  if [ -r "/proc/$PID/smaps_rollup" ]; then
+    STATS=$(awk '/^Rss:|^Pss:/ {print $1, $2}' "/proc/$PID/smaps_rollup" 2>/dev/null)
+    RSS_KB=$(echo "$STATS" | awk '/^Rss:/ {print $2}')
+    PSS_KB=$(echo "$STATS" | awk '/^Pss:/ {print $2}')
+  fi
 
-  # 2. Heap Metrics (jstat)
+  # Fallback RSS
+  if [ -z "$RSS_KB" ] || [ "$RSS_KB" -le 0 ]; then
+    RSS_KB=$(awk '/VmRSS:/ {print $2}' "/proc/$PID/status" 2>/dev/null)
+    [ -z "$RSS_KB" ] && RSS_KB=0
+  fi
+  # If PSS failed, use RSS
+  if [ -z "$PSS_KB" ] || [ "$PSS_KB" -le 0 ]; then
+    PSS_KB=$RSS_KB
+  fi
+
+  # 2. Container "Working Set"
+  WS_KB=0
+  if [ -r "/sys/fs/cgroup/memory.current" ]; then
+    CUR=$(cat /sys/fs/cgroup/memory.current)
+    INA=$(awk '/inactive_file/ {print $2}' /sys/fs/cgroup/memory.stat 2>/dev/null || echo "0")
+    WS_KB=$(( (CUR - INA) / 1024 ))
+  elif [ -r "/sys/fs/cgroup/memory/memory.usage_in_bytes" ]; then
+    CUR=$(cat /sys/fs/cgroup/memory/memory.usage_in_bytes)
+    INA=$(awk '/total_inactive_file/ {print $2}' /sys/fs/cgroup/memory/memory.stat 2>/dev/null || echo "0")
+    WS_KB=$(( (CUR - INA) / 1024 ))
+  fi
+
+  # 3. Heap Metrics
   HEAP_USED_KB=0
   if command -v jstat >/dev/null 2>&1; then
     HEAP_USED_KB=$(jstat -gc "$PID" 1 1 2>/dev/null | tail -n 1 | awk '{print int($3 + $4 + $6 + $8)}')
   fi
 
-  # 3. CPU Metrics (Milli-cores)
-  CPU_US=$(get_cgroup_cpu_us)
-  NOW_NS=$(get_now_ns)
-
-  CPU_MILLI=0
-  if [ -n "$CPU_USAGE_PREV_US" ] && [ -n "$TS_PREV_NS" ]; then
-    D_CPU_US=$((CPU_US - CPU_USAGE_PREV_US))
-    D_TIME_NS=$((NOW_NS - TS_PREV_NS))
-
-    if [ "$D_TIME_NS" -gt 0 ] && [ "$D_CPU_US" -ge 0 ]; then
-      # Formula: (D_CPU_US / 1,000,000) / (D_TIME_NS / 1,000,000,000) * 1000
-      CPU_MILLI=$(( (D_CPU_US * 1000000) / D_TIME_NS ))
-    fi
+  # 4. CPU (Milli-cores)
+  CPU_US=0
+  if [ -r "/sys/fs/cgroup/cpu.stat" ]; then
+    CPU_US=$(awk '/usage_usec/ {print $2}' /sys/fs/cgroup/cpu.stat)
+  elif [ -r "/sys/fs/cgroup/cpuacct/cpuacct.usage" ]; then
+    CPU_US=$(( $(cat /sys/fs/cgroup/cpuacct/cpuacct.usage) / 1000 ))
   fi
 
+  NOW_NS=$(date +%s%N)
+  CPU_MILLI=0
+  if [ -n "$CPU_USAGE_PREV_US" ] && [ "$CPU_USAGE_PREV_US" -gt 0 ]; then
+    D_CPU_US=$((CPU_US - CPU_USAGE_PREV_US))
+    D_TIME_NS=$((NOW_NS - TS_PREV_NS))
+    if [ "$D_TIME_NS" -gt 0 ] && [ "$D_CPU_US" -ge 0 ]; then
+       CPU_MILLI=$(( (D_CPU_US * 1000000) / D_TIME_NS ))
+    fi
+  fi
   CPU_USAGE_PREV_US="$CPU_US"
   TS_PREV_NS="$NOW_NS"
 
   TS=$(date +%s)
-  JSON="{\"ts\":$TS,\"pid\":$PID,\"heap_used_mb\":$((HEAP_USED_KB/1024)),\"rss_mb\":$((RSS_KB/1024)),\"cpu_milli\":$CPU_MILLI}"
+  JSON="{\"ts\":$TS,\"pid\":$PID,\"heap_used_mb\":$((HEAP_USED_KB/1024)),\"rss_mb\":$((RSS_KB/1024)),\"pss_mb\":$((PSS_KB/1024)),\"ws_mb\":$((WS_KB/1024)),\"cpu_milli\":$CPU_MILLI}"
   echo "$JSON" > "$DATA_FILE.tmp" && mv -f "$DATA_FILE.tmp" "$DATA_FILE"
-
+  
   sleep "$INTERVAL"
 done
 BASH;
-    // Always update the script to ensure latest version is running
-    file_put_contents($scriptPath, $script);
-    chmod($scriptPath, 0755);
-    // Restart it if it's running to apply new logic, or just start if missing
-    $killCmd = "docker exec " . escapeshellarg($containerId) . " pkill -f mcmm_agent.sh";
-    shell_exec($killCmd);
-    $startCmd = "docker exec -d " . escapeshellarg($containerId) . " sh -c \"nohup /data/mcmm_agent.sh > /data/mcmm_agent.log 2>&1 &\"";
-    shell_exec($startCmd);
+    // Inject script into container /tmp (Path agnostic)
+    $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
+
+    // Use sh -c to write the script file into the container
+    $escapedScript = escapeshellarg($script);
+    $injectCmd = "$dockerBin exec " . escapeshellarg($containerId) . " sh -c \"printf %s $escapedScript > /tmp/mcmm_agent.sh && chmod +x /tmp/mcmm_agent.sh\"";
+    shell_exec($injectCmd);
+
+    // Also write to host-side dataDir for persistence if it exists
+    if ($dataDir && is_dir($dataDir)) {
+        file_put_contents(rtrim($dataDir, '/') . '/mcmm_agent.sh', $script);
+        chmod(rtrim($dataDir, '/') . '/mcmm_agent.sh', 0755);
+    }
+
+    // Restart it if it's running
+    shell_exec("$dockerBin exec " . escapeshellarg($containerId) . " pkill -f mcmm_agent.sh 2>&1");
+
+    // Start in background
+    $startCmd = "$dockerBin exec -d " . escapeshellarg($containerId) . " sh -c \"/tmp/mcmm_agent.sh > /tmp/mcmm_agent.log 2>&1 &\"";
+    $startOut = shell_exec($startCmd . " 2>&1");
+
+    // Diagnostic log
+    @mkdir('/tmp/mcmm', 0777, true);
+    $logMsg = date('[Y-m-d H:i:s]') . " Telemetry Bridge Push: $containerName ($containerId)\n";
+    if ($startOut) {
+        $logMsg .= "Start Result: $startOut\n";
+    }
+    @file_put_contents('/tmp/mcmm/agent.log', $logMsg, FILE_APPEND);
 }
 
 // Helper to write INI file
@@ -219,7 +295,7 @@ if (!function_exists('write_ini_file')) {
     }
 }
 
-// Debug log function
+    // Debug log function
 function dbg($msg)
 {
     $logFile = '/tmp/mcmm.log';
@@ -377,6 +453,72 @@ function parseMemoryToMB($val): float
         default:
             return $num; // assume MB if no unit
     }
+}
+
+/**
+ * Get accurate 'Working Set' RAM (Usage - Inactive Cache) from Host Cgroups.
+ * This is the ultimate fallback for when the agent is missing.
+ */
+function getContainerCgroupRamMb(string $containerId): ?float
+{
+    $longId = getContainerLongId($containerId);
+    if (!$longId) {
+        return null;
+    }
+
+    // Try Cgroup v1
+    $v1Path = "/sys/fs/cgroup/memory/docker/$longId/memory.usage_in_bytes";
+    $v1Stat = "/sys/fs/cgroup/memory/docker/$longId/memory.stat";
+
+    if (file_exists($v1Path)) {
+        $usage = (float)@file_get_contents($v1Path);
+        $statContent = (string)@file_get_contents($v1Stat);
+        $cache = 0.0;
+        // Search for total_cache or sum of (in)active
+        if (preg_match('/total_cache\s+(\d+)/', $statContent, $m)) {
+            $cache = (float)$m[1];
+        } else {
+            if (preg_match('/total_inactive_file\s+(\d+)/', $statContent, $m)) {
+                $cache += (float)$m[1];
+            }
+            if (preg_match('/total_active_file\s+(\d+)/', $statContent, $m)) {
+                $cache += (float)$m[1];
+            }
+        }
+        return ($usage - $cache) / (1024 * 1024);
+    }
+
+    // Try Cgroup v2 (Various possible root paths on Unraid/Linux)
+    $v2Roots = [
+        "/sys/fs/cgroup/system.slice/docker-$longId.scope",
+        "/sys/fs/cgroup/docker/$longId",
+        "/sys/fs/cgroup/$longId"
+    ];
+
+    foreach ($v2Roots as $root) {
+        if (file_exists("$root/memory.current")) {
+            $usage = (float)@file_get_contents("$root/memory.current");
+            $statContent = (string)@file_get_contents("$root/memory.stat");
+            $cache = 0.0;
+            // In v2, 'file' is the general cache term
+            if (preg_match('/\binactive_file\s+(\d+)/', $statContent, $m)) {
+                $cache += (float)$m[1];
+            }
+            if (preg_match('/\bactive_file\s+(\d+)/', $statContent, $m)) {
+                $cache += (float)$m[1];
+            }
+            // If still high, subtract anything marked as 'file' cache
+            if (preg_match('/\bfile\s+(\d+)/', $statContent, $m)) {
+                $fileCache = (float)$m[1];
+                if ($fileCache > $cache) {
+                    $cache = $fileCache;
+                }
+            }
+            return ($usage - $cache) / (1024 * 1024);
+        }
+    }
+
+    return null;
 }
 
 /**

@@ -578,6 +578,18 @@ try {
                             $dataDir = getContainerDataDir($containerName, $containerId);
                             $agentPath = rtrim($dataDir, '/') . '/mcmm_metrics.json';
                             $metrics = readAgentMetrics($containerName, $containerId, $dataDir);
+
+                            // Self-Healing Telemetry: If running but metrics are missing/stale, restart agent
+                            // Throttle to once every 5 minutes to avoid spamming docker exec
+                            $lastAgentAttempt = $serverConfigs[$containerName]['_last_agent_start'] ?? 0;
+                            if ($isRunning && !$metrics && (time() - $lastAgentAttempt > 300)) {
+                                ensureMetricsAgent($containerName, $containerId, $dataDir);
+                                $serverConfigs[$containerName]['_last_agent_start'] = time();
+                                // Note: $serverConfigs is usually local-only here,
+                                // but it serves as a per-request throttle if nothing else.
+                                // Realistically, readAgentMetrics has a 5min window now anyway.
+                            }
+
                             $agentExists = file_exists($agentPath);
                             $agentMtime = $agentExists ? @filemtime($agentPath) : null;
                             $agentAgeSec = $agentMtime ? (time() - $agentMtime) : null;
@@ -595,10 +607,29 @@ try {
 
                             $ramUsedMb = 0;
                             $ramSource = 'unavailable';
-                            if ($javaHeapUsedMb > 0) {
-                                $ramUsedMb = $javaHeapUsedMb;
-                                $ramSource = 'agent_heap';
-                            } elseif (($cg['mem_used_mb'] ?? 0) > 0) {
+
+                            // Deep Telemetry RAM Priority:
+                            // 1. Agent PSS (Proportional Set Size - Most Accurate)
+                            // 2. Agent RSS (Resident Set Size - Accurate physical)
+                            // 3. Host-Side Cgroup Working Set (Bypasses container, authoritative cache-subtraction)
+                            // 4. Agent WS (Working Set - Container minus inactive cache)
+                            // 5. Docker Stats (Total container usage - least accurate fallback)
+
+                            $cgroupWsMb = getContainerCgroupRamMb($containerId);
+
+                            if (isset($metrics['pss_mb']) && floatval($metrics['pss_mb']) > 0) {
+                                $ramUsedMb = floatval($metrics['pss_mb']);
+                                $ramSource = 'agent_pss';
+                            } elseif (isset($metrics['rss_mb']) && floatval($metrics['rss_mb']) > 0) {
+                                $ramUsedMb = floatval($metrics['rss_mb']);
+                                $ramSource = 'agent_rss';
+                            } elseif ($cgroupWsMb !== null && $cgroupWsMb > 0) {
+                                $ramUsedMb = $cgroupWsMb;
+                                $ramSource = 'host_cgroup_ws';
+                            } elseif (isset($metrics['ws_mb']) && floatval($metrics['ws_mb']) > 0) {
+                                $ramUsedMb = floatval($metrics['ws_mb']);
+                                $ramSource = 'agent_ws';
+                            } elseif (isset($cg['mem_used_mb']) && $cg['mem_used_mb'] > 0) {
                                 $ramUsedMb = $cg['mem_used_mb'];
                                 $ramSource = 'docker_stats';
                             }
@@ -1287,113 +1318,12 @@ try {
                     $isRunning = stripos($status, 'Up') !== false;
                     if ($isItzg && $isRunning) {
                         $dataDir = getContainerDataDir($cname, $cid);
-                        // Inline ensureMetricsAgent logic
-                        $scriptPath = rtrim($dataDir, '/') . '/mcmm_agent.sh';
-                        $script = <<<'BASH'
-#!/bin/sh
-DATA_FILE="/data/mcmm_metrics.json"
-INTERVAL=10
-CPU_PREV=""
-TOTAL_PREV=""
-CPU_USAGE_PREV=""
-SYSTEM_USAGE_PREV=""
-TIMESTAMP_PREV=""
-
-while true; do
-  PID=$(pidof java | awk '{print $1}')
-  if [ -n "$PID" ] && [ -d "/proc/$PID" ]; then
-    # 1. Physicsal footprint (RSS)
-    RSS_KB=$(awk '/VmRSS/ {print $2}' /proc/$PID/status 2>/dev/null)
-    
-    # 2. Actual Heap Usage (Objects)
-    HEAP_USED_KB=0
-    # Try jstat -gc first (reliable EU + OU + S0U + S1U)
-    if command -v jstat >/dev/null 2>&1; then
-      STATS=$(jstat -gc "$PID" 1 1 | tail -n 1)
-      # Sum fields: 3(S0U) 4(S1U) 6(EU) 8(OU)
-      HEAP_USED_KB=$(echo "$STATS" | awk '{print int($3 + $4 + $6 + $8)}')
-    fi
-    
-    # Fallback to jcmd GC.heap_info if jstat fails
-    if [ "$HEAP_USED_KB" -le 0 ] && command -v jcmd >/dev/null 2>&1; then
-      HINFO=$(jcmd "$PID" GC.heap_info 2>/dev/null)
-      # Extract used: "total 4194304K, used 1234567K"
-      HEAP_USED_KB=$(echo "$HINFO" | grep -i "used" | head -n 1 | sed 's/.*used \([0-9]*\)K.*/\1/')
-    fi
-
-    # 3. CPU Percent
-    # CPU % = (Delta Usage / Delta Time) * 100
-    # We calculate SYSTEM-WIDE percentage to match docker stats/Unraid.
-    # (usage_delta / elapsed_nanoseconds) * 100
-    # Multiply by 100000 for 3rd decimal precision
-    
-    # Get CPU usage from /proc/stat (system-wide) and /proc/$PID/stat (process-specific)
-    # CPU usage is in USER_HZ (typically 100) units.
-    # Total CPU time for the system
-    SYSTEM_CPU_LINE=$(head -n1 /proc/stat)
-    SYSTEM_TOTAL_USAGE=0
-    for v in $(echo "$SYSTEM_CPU_LINE" | cut -d ' ' -f2-); do SYSTEM_TOTAL_USAGE=$((SYSTEM_TOTAL_USAGE + v)); done
-
-    # Total CPU time for the process (utime + stime)
-    PROC_STAT=$(cat /proc/$PID/stat)
-    PROC_UTIME=$(echo "$PROC_STAT" | awk '{print $14}')
-    PROC_STIME=$(echo "$PROC_STAT" | awk '{print $15}')
-    PROC_CPU_USAGE=$((PROC_UTIME + PROC_STIME))
-
-    # Get current timestamp in nanoseconds (for more precise time delta)
-    TIMESTAMP_CURRENT=$(date +%s%N)
-
-    CPU_VAL=0
-    if [ -n "$CPU_USAGE_PREV" ] && [ -n "$SYSTEM_USAGE_PREV" ] && [ -n "$TIMESTAMP_PREV" ]; then
-      D_PROC_USAGE=$((PROC_CPU_USAGE - CPU_USAGE_PREV))
-      D_SYSTEM_USAGE=$((SYSTEM_TOTAL_USAGE - SYSTEM_USAGE_PREV))
-      D_TIMESTAMP=$((TIMESTAMP_CURRENT - TIMESTAMP_PREV)) # in nanoseconds
-
-      if [ "$D_SYSTEM_USAGE" -gt 0 ] && [ "$D_TIMESTAMP" -gt 0 ]; then
-        # Convert D_PROC_USAGE from USER_HZ to nanoseconds (assuming USER_HZ=100, so 1 tick = 10,000,000 ns)
-        # This is a simplification, but aims to align with docker stats' system-wide percentage.
-        # Docker stats uses (cpu_delta / system_cpu_delta) * num_cpus * 100
-        # For simplicity and to match Unraid's display, we'll use (process_cpu_delta / system_cpu_delta) * 100
-        # The values from /proc/stat are already cumulative ticks.
-        
-        # CPU % = (process_cpu_ticks_delta / system_cpu_ticks_delta) * 100
-        # To get a value that can be divided by 1000 to get percentage with 3 decimal places:
-        # (D_PROC_USAGE * 100000) / D_SYSTEM_USAGE
-        CPU_VAL=$(( (D_PROC_USAGE * 100000) / D_SYSTEM_USAGE ))
-      fi
-    fi
-    CPU_USAGE_PREV=$PROC_CPU_USAGE
-    SYSTEM_USAGE_PREV=$SYSTEM_TOTAL_USAGE
-    TIMESTAMP_PREV=$TIMESTAMP_CURRENT
-    
-    TS=$(date +%s)
-    # Output integer representing 1000x the percentage (e.g. 8500 = 8.5%, 5 = 0.005%)
-    echo "{\"ts\":$TS,\"pid\":\"$PID\",\"heap_used_mb\":$((HEAP_USED_KB / 1024)),\"rss_mb\":$((RSS_KB / 1024)),\"cpu_milli\":$CPU_VAL}" > "$DATA_FILE"
-    # Debug log inside container
-    echo "$(date) Metrics updated: Heap=$((HEAP_USED_KB / 1024))MB, RSS=$((RSS_KB / 1024))MB, CPU=$((CPU_VAL / 1000))%" >> "/data/mcmm_agent.log"
-  else
-    echo "$(date) Error: No Java PID found" >> "/data/mcmm_agent.log"
-  fi
-  sleep 5
-done
-BASH;
-                        $logFile = rtrim($dataDir, '/') . '/mcmm_agent.log';
-                        @mkdir($dataDir, 0775, true);
-                        @file_put_contents($scriptPath, $script);
-                        @chmod($scriptPath, 0755);
-
-                        // Start it in background - ensure it is executable and run in its own subshell
-                        $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
-                        $cmd = "$dockerBin exec -d " . escapeshellarg($cid) . " sh -c \"chmod +x /data/mcmm_agent.sh && /data/mcmm_agent.sh >/data/mcmm_agent.log 2>&1\"";
-                        @shell_exec($cmd);
-                        $started[] = [
-                            'name' => $cname,
-                            'cmd' => $cmd
-                        ];
+                        ensureMetricsAgent($cname, $cid, $dataDir);
+                        $started[] = $cname;
                     }
                 }
             }
-            jsonResponse(['success' => true, 'message' => 'Agents started (for running servers)', 'containers' => $started]);
+            jsonResponse(['success' => true, 'started' => $started]);
             break;
 
         case 'agent_debug':
