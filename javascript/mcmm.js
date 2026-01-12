@@ -1365,6 +1365,7 @@ async function openVanillaDeploy() {
     const versionStatus = document.getElementById('deployVersionStatus');
     const versionInput = document.getElementById('deploy_version');
 
+    if (versionList.length === 0) throw new Error("No versions found");
     if (versionStatus) versionStatus.textContent = 'Choose Official Version:';
     if (versionInput) versionInput.value = 'LATEST';
 
