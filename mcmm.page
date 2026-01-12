@@ -15,19 +15,6 @@ $plugin = 'mcmm';
 $config = parse_plugin_cfg($plugin);
 $docroot = $_SERVER['DOCUMENT_ROOT'] ?? '/usr/local/emhttp';
 
-// Cache-busting helper (works without Unraid's autov())
-function mcmm_autov(string $path): string {
-    $docroot = $_SERVER['DOCUMENT_ROOT'] ?? '/usr/local/emhttp';
-    $full = rtrim($docroot, '/') . $path;
-
-    $v = @filemtime($full);
-    if (!$v) {
-        // fallback if filemtime fails (e.g. path mismatch during dev)
-        $v = time();
-    }
-    return $path . '?v=' . $v;
-}
-
 // Include helpers if available
 if (file_exists("$docroot/plugins/$plugin/include/helpers.php")) {
     require_once "$docroot/plugins/$plugin/include/helpers.php";

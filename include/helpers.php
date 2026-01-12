@@ -2,6 +2,19 @@
 
 declare(strict_types=1);
 
+function mcmm_autov(string $path): string
+{
+    $docroot = $_SERVER['DOCUMENT_ROOT'] ?? '/usr/local/emhttp';
+    $full = rtrim($docroot, '/') . $path;
+
+    $v = @filemtime($full);
+    if (!$v) {
+        $v = time();
+    }
+
+    return $path . '?v=' . $v;
+}
+
 function getMinecraftServers()
 {
     global $config;
