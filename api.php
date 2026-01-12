@@ -478,7 +478,7 @@ try {
                         $sCapMb = isset($sMemParts[1]) ? parseMemoryToMB($sMemParts[1]) : 0;
 
                         $statsData = [
-                            'cpu_percent' => floatval($sCpuStr),
+                            'cpu_percent' => floatval($sCpuStr) / getSystemCpuCount(),
                             'mem_used_mb' => $sUsedMb,
                             'mem_cap_mb' => $sCapMb
                         ];
@@ -647,11 +647,10 @@ try {
                                 $cpuUsage = $allStats[$containerId]['cpu_percent'];
                             } elseif (isset($allStats[$containerName])) {
                                 $cpuUsage = $allStats[$containerName]['cpu_percent'];
-                            } elseif (isset($metrics['cpu_milli'])) {
                                 // Fallback to agent if docker stats failed to return this container
-                                $cpuUsage = $metrics['cpu_milli'] / 1000.0;
+                                $cpuUsage = ($metrics['cpu_milli'] / 10.0) / getSystemCpuCount();
                             } elseif (isset($metrics['cpu_percent'])) {
-                                $cpuUsage = floatval($metrics['cpu_percent']);
+                                $cpuUsage = floatval($metrics['cpu_percent']) / getSystemCpuCount();
                             }
 
                             // Safety clamp for display

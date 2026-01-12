@@ -4,6 +4,25 @@
  * MCMM API Library
  * Contains all helper functions for the MCMM API.
  */
+/**
+ * Get the total number of logical CPU cores on the system.
+ */
+function getSystemCpuCount(): int
+{
+    static $cpuCount = null;
+    if ($cpuCount === null) {
+        $cpuinfo = @file_get_contents('/proc/cpuinfo');
+        if ($cpuinfo) {
+            $cpuCount = substr_count($cpuinfo, 'processor');
+        } else {
+            $cpuCount = intval(shell_exec('nproc 2>/dev/null') ?: 1);
+        }
+        if ($cpuCount < 1) {
+            $cpuCount = 1;
+        }
+    }
+    return $cpuCount;
+}
 
 // Resolve host data directory for a container by inspecting the /data mount.
 // Falls back to /mnt/user/appdata/<name> if not found.
@@ -632,14 +651,7 @@ function getJavaHeapUsedMb(string $containerId, int $cacheTtlSec = 4): float
  */
 function getCgroupStats(string $cid, ?float $configuredMemMb = null): array
 {
-    static $cpuCount = null;
-    if ($cpuCount === null) {
-        $cpuinfo = @file_get_contents('/proc/cpuinfo');
-        $cpuCount = $cpuinfo ? substr_count($cpuinfo, 'processor') : 1;
-        if ($cpuCount < 1) {
-            $cpuCount = 1;
-        }
-    }
+    $cpuCount = getSystemCpuCount();
 
     $paths = [
         "/sys/fs/cgroup/docker/$cid/",

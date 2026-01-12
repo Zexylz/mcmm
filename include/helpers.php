@@ -2,9 +2,6 @@
 
 declare(strict_types=1);
 
-/**
- * Helper to get servers (view logic) - now uses config files like the API
- */
 function getMinecraftServers()
 {
     global $config;

@@ -286,7 +286,7 @@ function renderModpacks(data) {
         vanillaCard.style.border = '1px dashed var(--primary)';
         vanillaCard.onclick = () => openVanillaDeploy();
         vanillaCard.innerHTML = `
-            <div class="mcmm-modpack-thumb" style="background-image: url('https://media.forgecdn.net/avatars/8/228/635198031541315682.png'); background-size: 60%; background-color: rgb(255 255 255 / 5%);"></div>
+            <div class="mcmm-modpack-thumb" style="background-image: url('/plugins/mcmm/images/vanilla-logo.png'); background-size: cover; background-position: center; background-color: rgb(0 0 0 / 20%);"></div>
             <div class="mcmm-modpack-info">
                  <div class="mcmm-modpack-name">Vanilla Minecraft</div>
                  <div class="mcmm-modpack-meta">
@@ -1760,12 +1760,48 @@ async function loadServers() {
         if (data.success) {
             localStorage.setItem('mcmm_servers_cache', JSON.stringify(data.data));
 
-            // Runtime Live Update: If the container already has servers, update metrics surgically
+            const tabContainer = document.getElementById('tab-servers');
             const listContainer = document.getElementById('serverListContainer');
-            if (listContainer && listContainer.children.length > 0) {
-                data.data.forEach(s => {
-                    const row = listContainer.querySelector(`.mcmm-server-row[data-server-id="${s.id}"]`);
+
+            // 1. Handle "No Servers" Empty State Transition
+            if (data.data.length === 0) {
+                if (tabContainer && (!listContainer || tabContainer.querySelector('.mcmm-empty') === null)) {
+                    renderServers([]);
+                }
+                return;
+            }
+
+            // 2. Ensure container exists if data is present
+            if (!listContainer && tabContainer) {
+                renderServers(data.data);
+                return;
+            }
+
+            // 3. Sync DOM with Data (Live Add/Remove/Update)
+            if (listContainer) {
+                const fetchedIds = data.data.map(s => String(s.id));
+                const existingRows = Array.from(listContainer.querySelectorAll('.mcmm-server-row'));
+
+                // Remove servers that are no longer in the data
+                existingRows.forEach(row => {
+                    const sid = String(row.getAttribute('data-server-id'));
+                    if (!fetchedIds.includes(sid)) {
+                        row.remove();
+                    }
+                });
+
+                // Sort data to ensure Online servers are at the top
+                const sortedData = [...data.data].sort((a, b) => {
+                    if (a.isRunning !== b.isRunning) return a.isRunning ? -1 : 1;
+                    return a.name.localeCompare(b.name);
+                });
+
+                // Update, Add, and REORDER
+                sortedData.forEach(s => {
+                    let row = listContainer.querySelector(`.mcmm-server-row[data-server-id="${s.id}"]`);
+
                     if (row) {
+                        // SURGICAL UPDATE (Fast, no flicker)
                         const ramUsedLabel = (s.ramUsedMb || 0) > 0 ? (s.ramUsedMb / 1024).toFixed(1) + ' GB' : '0 GB';
                         const ramCapLabel = (s.ramLimitMb || 0) > 0 ? (s.ramLimitMb / 1024).toFixed(1) + ' GB' : 'N/A';
                         const ramPercent = Math.min(Math.max(s.ram || 0, 0), 100);
@@ -1784,25 +1820,21 @@ async function loadServers() {
                         if (cpuTxt) cpuTxt.textContent = `${Number(cpuUsage).toFixed(1)}%`;
                         if (cpuBar) cpuBar.style.width = `${Math.min(Math.max(cpuUsage, 0), 100)}%`;
 
-                        // Update Running/Stopped class on row
                         const wasRunning = row.classList.contains('running');
                         if (s.isRunning !== wasRunning) {
                             row.classList.toggle('running', s.isRunning);
                             row.classList.toggle('stopped', !s.isRunning);
+                            if (statusTxt) statusTxt.textContent = s.isRunning ? 'Online' : 'Offline';
 
-                            if (statusTxt) {
-                                statusTxt.textContent = s.isRunning ? 'Online' : 'Offline';
-                            }
-
-                            // If status changed, we might need a more heavy update of the actions to show/hide the right buttons
+                            // Swap action buttons if status changed
                             if (actionsArea) {
                                 actionsArea.innerHTML = `
                                     ${s.isRunning ? `
-                                        <button class="mcmm-btn-icon danger" title="Stop Server" onclick="controlServer('${s.id}', 'stop')"><span class="material-symbols-outlined">stop</span></button>
+                                        <button class="mcmm-btn-icon danger" title="Stop Server" onclick="controlServer('${s.id}', 'stop', true)"><span class="material-symbols-outlined">stop</span></button>
                                         <button class="mcmm-btn-icon" title="Console" onclick="openConsole('${s.id}', '${s.name}')"><span class="material-symbols-outlined">terminal</span></button>
                                         <button class="mcmm-btn-icon" title="Players" onclick="openPlayersModal('${s.id}', '${s.name}', '${s.ports}')"><span class="material-symbols-outlined">groups</span></button>
                                     ` : `
-                                        <button class="mcmm-btn-icon success" title="Start Server" onclick="controlServer('${s.id}', 'start')"><span class="material-symbols-outlined">play_arrow</span></button>
+                                        <button class="mcmm-btn-icon success" title="Start Server" onclick="controlServer('${s.id}', 'start', true)"><span class="material-symbols-outlined">play_arrow</span></button>
                                         <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Console Offline"><span class="material-symbols-outlined">terminal</span></button>
                                         <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Players Offline"><span class="material-symbols-outlined">groups</span></button>
                                     `}
@@ -1830,10 +1862,18 @@ async function loadServers() {
                                 }
                             }
                         }
+                    } else {
+                        // NEW SERVER (Append)
+                        const rowHtml = renderServerRow(s);
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = rowHtml;
+                        row = tempDiv.firstElementChild;
                     }
+
+                    // CRITICAL: appendChild moves the element if it already exists.
+                    // By doing this in the sorted loop, the DOM order will always match sortedData.
+                    listContainer.appendChild(row);
                 });
-            } else {
-                renderServers(data.data);
             }
             initServerPlayerCounts();
         }
@@ -1842,8 +1882,91 @@ async function loadServers() {
     }
 }
 
+/**
+ * Render a single server row (HTML snippet)
+ */
+function renderServerRow(server) {
+    const icon = server.icon || "https://media.forgecdn.net/avatars/855/527/638260492657788102.png";
+    const statusClass = server.isRunning ? 'running' : 'stopped';
+    const playersOnline = server.players?.online || 0;
+    const playersMax = server.players?.max || 0;
+    const mcVersion = server.mcVersion || 'Unknown';
+    const loader = server.loader || 'Vanilla';
+
+    const ramPercent = Math.min(Math.max(server.ram || 0, 0), 100);
+    const ramUsedLabel = (server.ramUsedMb || 0) > 0 ? (server.ramUsedMb / 1024).toFixed(1) + ' GB' : '0 GB';
+    const ramCapLabel = (server.ramLimitMb || 0) > 0 ? (server.ramLimitMb / 1024).toFixed(1) + ' GB' : 'N/A';
+    const cpuUsage = server.cpu || 0;
+
+    return `
+        <div class="mcmm-server-row ${statusClass}" data-server-id="${server.id}">
+            <div class="mcmm-server-icon" style="background-image: url('${icon}');"></div>
+            
+            <!-- Backup Status Overlay -->
+            <div class="mcmm-backup-status" id="backup-status-${server.id}" style="display: none; position: absolute; top: 8px; left: 80px; background: rgba(59, 130, 246, 0.95); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; align-items: center; gap: 6px; z-index: 10;">
+                <span class="material-symbols-outlined" style="font-size: 0.9rem; animation: spin 1s linear infinite;">autorenew</span>
+                Backing up...
+            </div>
+            
+            <div class="mcmm-server-info">
+                <div class="mcmm-server-title">
+                    ${server.name}
+                    <span class="mcmm-badge">${mcVersion}</span>
+                    <span class="mcmm-badge secondary">${loader}</span>
+                </div>
+                <div class="mcmm-server-subtitle">
+                    <span class="mcmm-status-dot"></span>
+                    <span class="mcmm-status-text">${server.isRunning ? 'Online' : 'Offline'}</span>
+                    <span style="opacity:0.5;">|</span>
+                    <span>Port: ${server.ports}</span>
+                    <span style="opacity:0.5; ${server.isRunning ? '' : 'display:none;'}">|</span>
+                    <span class="mcmm-val-players" id="players-${server.id}" data-server-id="${server.id}" data-port="${server.ports}" style="${server.isRunning ? '' : 'display:none;'}">
+                        ${playersOnline} / ${playersMax > 0 ? playersMax : '?'} players
+                    </span>
+                </div>
+            </div>
+            
+            <div class="mcmm-server-metrics">
+                <div class="mcmm-metric">
+                    <div class="mcmm-metric-label">
+                        <span>RAM</span>
+                        <span class="mcmm-val-ram">${ramUsedLabel} / ${ramCapLabel}</span>
+                    </div>
+                    <div class="mcmm-metric-bar">
+                        <div class="mcmm-metric-fill mcmm-bar-ram" style="width: ${ramPercent}%; background: linear-gradient(90deg, #a855f7, #ec4899);"></div>
+                    </div>
+                </div>
+                <div class="mcmm-metric">
+                    <div class="mcmm-metric-label">
+                        <span>CPU</span>
+                        <span class="mcmm-val-cpu">${Number(cpuUsage).toFixed(1)}%</span>
+                    </div>
+                    <div class="mcmm-metric-bar">
+                        <div class="mcmm-metric-fill mcmm-bar-cpu" style="width: ${Math.min(Math.max(cpuUsage, 0), 100)}%; background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mcmm-server-actions">
+                ${server.isRunning ? `
+                    <button class="mcmm-btn-icon danger" title="Stop Server" onclick="controlServer('${server.id}', 'stop', true)"><span class="material-symbols-outlined">stop</span></button>
+                    <button class="mcmm-btn-icon" title="Console" onclick="openConsole('${server.id}', '${server.name}')"><span class="material-symbols-outlined">terminal</span></button>
+                    <button class="mcmm-btn-icon" title="Players" onclick="openPlayersModal('${server.id}', '${server.name}', '${server.ports}')"><span class="material-symbols-outlined">groups</span></button>
+                ` : `
+                    <button class="mcmm-btn-icon success" title="Start Server" onclick="controlServer('${server.id}', 'start', true)"><span class="material-symbols-outlined">play_arrow</span></button>
+                    <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Console Offline"><span class="material-symbols-outlined">terminal</span></button>
+                    <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Players Offline"><span class="material-symbols-outlined">groups</span></button>
+                `}
+                <button class="mcmm-btn-icon" title="Mods" onclick="openModManager('${server.id}', '${server.name}')"><span class="material-symbols-outlined">extension</span></button>
+                <button class="mcmm-btn-icon" title="Backup" onclick="createBackup('${server.id}')"><span class="material-symbols-outlined">cloud_upload</span></button>
+                <button class="mcmm-btn-icon" title="Settings" onclick="openServerSettings('${server.id}')"><span class="material-symbols-outlined">settings</span></button>
+                <button class="mcmm-btn-icon danger" title="Delete Server" onclick="deleteServer('${server.id}')"><span class="material-symbols-outlined">delete</span></button>
+            </div>
+        </div>
+    `;
+}
+
 function renderServers(servers) {
-    console.log("MCMM Rendering Servers:", servers);
     const container = document.getElementById('tab-servers');
     if (!container) return;
 
@@ -1856,6 +1979,7 @@ function renderServers(servers) {
                 </button>
             </div>
             <div class="mcmm-empty">
+                <span class="material-symbols-outlined" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;">dns</span>
                 <h3>No servers found</h3>
                 <p>Get started by deploying your first modpack server.</p>
                 <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog')">Browse Catalog</button>
@@ -1875,99 +1999,22 @@ function renderServers(servers) {
     `;
 
     const sortedServers = [...servers].sort((a, b) => {
-        if (a.isRunning !== b.isRunning) {
-            return a.isRunning ? -1 : 1;
-        }
+        if (a.isRunning !== b.isRunning) return a.isRunning ? -1 : 1;
         return a.name.localeCompare(b.name);
     });
 
     sortedServers.forEach(server => {
-        const icon = server.icon || "https://media.forgecdn.net/avatars/855/527/638260492657788102.png";
-        const statusClass = server.isRunning ? 'running' : 'stopped';
-        const playersOnline = server.players?.online || 0;
-        const playersMax = server.players?.max || 0;
-        const mcVersion = server.mcVersion || 'Unknown';
-        const loader = server.loader || 'Vanilla';
-
-        const ramPercent = Math.min(Math.max(server.ram || 0, 0), 100);
-        const ramUsedLabel = (server.ramUsedMb || 0) > 0 ? (server.ramUsedMb / 1024).toFixed(1) + ' GB' : '0 GB';
-        const ramCapLabel = (server.ramLimitMb || 0) > 0 ? (server.ramLimitMb / 1024).toFixed(1) + ' GB' : 'N/A';
-        const ramSource = server.ramDetails?.source || 'unknown';
-        const rssValue = (server.ramDetails?.rssMb || 0);
-        const rssLabel = rssValue > 0 ? `<span style="opacity: 0.4; font-size: 0.7rem; margin-left: 4px;">(${ramSource})</span>` : '';
-        const cpuUsage = server.cpu || 0;
-
-        html += `
-            <div class="mcmm-server-row ${statusClass}" data-server-id="${server.id}">
-                <div class="mcmm-server-icon" style="background-image: url('${icon}');"></div>
-                
-                <div class="mcmm-server-info">
-                    <div class="mcmm-server-title">
-                        ${server.name}
-                        <span class="mcmm-badge">${mcVersion}</span>
-                        <span class="mcmm-badge secondary">${loader}</span>
-                    </div>
-                    <div class="mcmm-server-subtitle">
-                        <span class="mcmm-status-dot"></span>
-                        <span class="mcmm-status-text">${server.isRunning ? 'Online' : 'Offline'}</span>
-                        <span style="opacity:0.5;">|</span>
-                        <span>Port: ${server.ports}</span>
-                        <span style="opacity:0.5; ${server.isRunning ? '' : 'display:none;'}">|</span>
-                        <span class="mcmm-val-players" id="players-${server.id}" data-server-id="${server.id}" data-port="${server.ports}" data-running="1" style="${server.isRunning ? '' : 'display:none;'}">
-                            ${playersOnline} / ${playersMax > 0 ? playersMax : '?'} players
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="mcmm-server-metrics">
-                    <div class="mcmm-metric">
-                        <div class="mcmm-metric-label">
-                            <span>RAM</span>
-                            <span class="mcmm-val-ram">${ramUsedLabel} / ${ramCapLabel}</span>
-                        </div>
-                        <div class="mcmm-metric-bar">
-                            <div class="mcmm-metric-fill mcmm-bar-ram" style="width: ${ramPercent}%; background: linear-gradient(90deg, rgb(168 85 247 / 100%), rgb(236 72 153 / 100%));"></div>
-                        </div>
-                    </div>
-                    <div class="mcmm-metric">
-                        <div class="mcmm-metric-label">
-                            <span>CPU</span>
-                            <span class="mcmm-val-cpu">${Number(cpuUsage).toFixed(1)}%</span>
-                        </div>
-                        <div class="mcmm-metric-bar">
-                            <div class="mcmm-metric-fill mcmm-bar-cpu" style="width: ${Math.min(Math.max(cpuUsage, 0), 100)}%; background: linear-gradient(90deg, rgb(59 130 246 / 100%), rgb(6 182 212 / 100%));"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="mcmm-server-actions">
-                    ${server.isRunning ? `
-                        <button class="mcmm-btn-icon danger" title="Stop Server" onclick="controlServer('${server.id}', 'stop')"><span class="material-symbols-outlined">stop</span></button>
-                        <button class="mcmm-btn-icon" title="Console" onclick="openConsole('${server.id}', '${server.name}')"><span class="material-symbols-outlined">terminal</span></button>
-                        <button class="mcmm-btn-icon" title="Players" onclick="openPlayersModal('${server.id}', '${server.name}', '${server.ports}')"><span class="material-symbols-outlined">groups</span></button>
-                    ` : `
-                        <button class="mcmm-btn-icon success" title="Start Server" onclick="controlServer('${server.id}', 'start')"><span class="material-symbols-outlined">play_arrow</span></button>
-                        <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Console Offline"><span class="material-symbols-outlined">terminal</span></button>
-                        <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Players Offline"><span class="material-symbols-outlined">groups</span></button>
-                    `}
-                    <button class="mcmm-btn-icon" title="Mods" onclick="openModManager('${server.id}', '${server.name}')"><span class="material-symbols-outlined">extension</span></button>
-                    <button class="mcmm-btn-icon" title="Backup" onclick="createBackup('${server.id}')"><span class="material-symbols-outlined">cloud_upload</span></button>
-                    <button class="mcmm-btn-icon" title="Settings" onclick="openServerSettings('${server.id}')"><span class="material-symbols-outlined">settings</span></button>
-                    <button class="mcmm-btn-icon danger" title="Delete Server" onclick="deleteServer('${server.id}')"><span class="material-symbols-outlined">delete</span></button>
-                </div>
-            </div>
-        `;
+        html += renderServerRow(server);
     });
 
     html += `
         </div>
-        <div style="margin-top: 1rem;">
-            <button class="mcmm-btn mcmm-btn-primary" style="display: flex; align-items: center; gap: 0.6rem;" onclick="startAgents()">
-                <span class="material-symbols-outlined">refresh</span> Restart Metrics Agents
+        <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+             <button class="mcmm-btn" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.5rem;" onclick="startAgents()">
+                <span class="material-symbols-outlined" style="font-size: 1.2rem;">restart_alt</span> Restart Agents
             </button>
         </div>
     `;
-
     container.innerHTML = html;
 }
 
@@ -2487,28 +2534,35 @@ function copyToClipboard(text, successMsg) {
 }
 
 // --- Server Control ---
-function controlServer(id, action) {
-    if (confirm(`Are you sure you want to ${action} this server?`)) {
-        fetch('/plugins/mcmm/api.php?action=server_control&id=' + id + '&cmd=' + action)
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    loadServers();
-                } else {
-                    alert('Error: ' + (data.error || 'Unknown error'));
-                }
-            })
-            .catch(err => alert('Error: ' + err.message));
+function controlServer(id, action, skipConfirm = false) {
+    if (!skipConfirm && !confirm(`Are you sure you want to ${action} this server?`)) {
+        return;
     }
+
+    // Visual feedback: disable the button or show loading state? 
+    // For now, next poll will show it.
+
+    fetch('/plugins/mcmm/api.php?action=server_control&id=' + id + '&cmd=' + action)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // Immediate refresh for snappy feel
+                loadServers();
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(err => alert('Error: ' + err.message));
 }
 
 function deleteServer(id) {
-    if (!confirm('Delete this server container?')) return;
+    if (!confirm('EXTREMELY IMPORTANT: This will PERMANENTLY delete this server container.\n\nAre you sure you want to proceed?')) return;
+
     fetch('/plugins/mcmm/api.php?action=server_delete&id=' + id)
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                alert('Server deleted');
+                // No more alert('Server deleted') - the live refresh will just make it vanish!
                 loadServers();
             } else {
                 alert('Error: ' + (data.error || 'Unknown error'));
@@ -3262,11 +3316,34 @@ function renderBackups(backups) {
 }
 
 async function createBackup(serverId) {
+    // Show backup status indicator
+    const statusEl = document.getElementById(`backup-status-${serverId}`);
+    if (statusEl) {
+        statusEl.style.display = 'flex';
+    }
+
     try {
         const res = await fetch(`/plugins/mcmm/api.php?action=backup_create&id=${serverId}`);
         const data = await res.json();
+
+        // Hide backup status indicator
+        if (statusEl) {
+            statusEl.style.display = 'none';
+        }
+
         if (data.success) {
-            alert('Backup created successfully!');
+            // Show success notification briefly
+            if (statusEl) {
+                statusEl.style.background = 'rgba(34, 197, 94, 0.95)';
+                statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size: 0.9rem; color: white;">check_circle</span>Backup done';
+                statusEl.style.display = 'flex';
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                    statusEl.style.background = 'rgba(59, 130, 246, 0.95)';
+                    statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size: 0.9rem; animation: spin 1s linear infinite;">autorenew</span>Backing up...';
+                }, 2000);
+            }
+
             if (document.getElementById('tab-backups').classList.contains('active')) {
                 loadBackups();
             }
@@ -3274,6 +3351,10 @@ async function createBackup(serverId) {
             alert('Error: ' + data.error);
         }
     } catch (e) {
+        // Hide indicator on error
+        if (statusEl) {
+            statusEl.style.display = 'none';
+        }
         alert('Failed to trigger backup: ' + e.message);
     }
 }
