@@ -55,27 +55,47 @@ $clientConfig = $config;
 $clientConfig['has_api_key'] = !empty($clientConfig['curseforge_api_key']);
 unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic if not needed, though it is needed for settings form population.
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Modpack Manager</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
-    <link rel="stylesheet" href="/plugins/mcmm/styles/mcmm.css?v=<?php echo time(); ?>" />
-    <style>
-        div.title { 
-            display: none !important;
-        }
-        #displaybox { 
-            margin: 0; 
-            padding: 0; 
-            max-width: 100% !important;
-        }
-    </style>
-</head>
-<body>
+<script>
+(function () {
+  function addOnce(el) {
+    if (el.id && document.getElementById(el.id)) return;
+    document.head.appendChild(el);
+  }
+
+  // Google Fonts
+  addOnce(Object.assign(document.createElement('link'), {
+    id: 'mcmm-fonts-outfit',
+    rel: 'stylesheet',
+    href: 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap'
+  }));
+  addOnce(Object.assign(document.createElement('link'), {
+    id: 'mcmm-fonts-symbols',
+    rel: 'stylesheet',
+    href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200'
+  }));
+
+  // Plugin CSS
+  addOnce(Object.assign(document.createElement('link'), {
+    id: 'mcmm-css',
+    rel: 'stylesheet',
+    href: '<?php echo autov("/plugins/mcmm/styles/mcmm.css"); ?>'
+  }));
+
+  // Kleine Overrides
+  addOnce(Object.assign(document.createElement('style'), {
+    id: 'mcmm-overrides',
+    textContent: 'div.title{display:none!important}#displaybox{margin:0;padding:0;max-width:100%!important}'
+  }));
+
+  // Plugin JS
+  addOnce(Object.assign(document.createElement('script'), {
+    id: 'mcmm-js',
+    src: '<?php echo autov("/plugins/mcmm/javascript/mcmm.js"); ?>',
+    defer: true
+  }));
+})();
+</script>
+
 <div class="mcmm-app">
     <!-- Debug banner to confirm render -->
     <div id="mcmm-debug-banner" style="position:fixed;top:8px;right:8px;z-index:4000;background:#7c3aed;color:#fff;padding:6px 10px;border-radius:8px;font-weight:700;font-family:Arial, sans-serif;box-shadow:0 4px 12px rgb(0 0 0 / 30%);">
@@ -987,5 +1007,3 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
     const csrfToken = "<?php echo $var['csrf_token'] ?? ''; ?>";
 </script>
 <script src="/plugins/mcmm/javascript/mcmm.js?v=<?php echo time(); ?>"></script>
-</body>
-</html>
