@@ -22,6 +22,7 @@ jobs:
         run: |
           mkdir -p release/mcmm
           cp -r include release/mcmm/
+          cp -r images release/mcmm/
           cp -r javascript release/mcmm/
           cp -r styles release/mcmm/
           cp api.php release/mcmm/
