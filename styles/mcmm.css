@@ -3,6 +3,7 @@
     display:none!important
 }
 
+/* stylelint-disable-next-line selector-max-id */
 #displaybox {
     margin:0;
     padding:0;
