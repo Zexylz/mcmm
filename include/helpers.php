@@ -15,6 +15,7 @@ function mcmm_autov(string $path): string
     return $path . '?v=' . $v;
 }
 
+
 /**
  * Helper to get servers (view logic) - now uses config files like the API
  */
