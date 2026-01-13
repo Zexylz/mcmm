@@ -1450,6 +1450,7 @@
      display: flex;
      flex-direction: column;
      gap: 0.5rem;
+     position: relative;
  }
 
  .mcmm-label {
@@ -1886,38 +1887,9 @@
    Ensures the toggle is positioned inside the input field and does not get
    displaced by generic button/input styles.
    ========================================================================== */
-.mcmm-form-group {
-    position: relative;
-}
-
 .mcmm-form-group input[type="password"].mcmm-input,
 .mcmm-form-group input[type="text"].mcmm-input.is-password {
     padding-right: 3rem;
-}
-
-.mcmm-password-toggle {
-    align-items: center;
-    background: none;
-    border: none;
-    color: rgb(255 255 255 / 30%);
-    cursor: pointer;
-    display: flex;
-    font-size: 1.1rem;
-    height: 32px;
-    justify-content: center;
-    margin: 0;
-    padding: 0;
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 32px;
-    z-index: 5;
-}
-
-.mcmm-password-toggle:hover {
-    color: rgb(157 78 221 / 100%);
-    transform: translateY(-50%) scale(1.15);
 }
 
 .mcmm-password-toggle .material-symbols-outlined {
@@ -2558,38 +2530,38 @@
      .mcmm-backup-panel-item .material-symbols-outlined {
          background: none;
          /* stylelint-disable-next-line property-no-vendor-prefix */
-         -webkit-text-fill-color: currentColor;
+         -webkit-text-fill-color: currentcolor;
      }
 }
 
-/* Floating Info Panel */
- .mcmm-backup-info-panel {
-     backdrop-filter: blur(20px);
-     background: rgb(10 11 20 / 98%);
-     border: 1px solid rgb(255 255 255 / 10%);
-     border-radius: 14px;
-     box-shadow: 0 15px 35px rgb(0 0 0 / 60%);
-     opacity: 0;
-     padding: 1.25rem;
-     position: absolute;
-     right: 0;
-     text-align: left;
-     top: 42px;
-     transform: translateY(-10px);
-     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-     visibility: hidden;
-     width: 260px;
-     z-index: 200;
- }
-
-
-/* Backup info panel: isolate typography from the "i" trigger (prevents italic/bold inheritance) */
+/* Floating Info Panel (canonical, merged) */
 .mcmm-backup-info-panel {
+    background: rgb(10 11 20 / 100%);
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 14px;
+    box-shadow: 0 15px 35px rgb(0 0 0 / 60%);
+    filter: none;
+    text-rendering: geometricprecision;
+    -webkit-font-smoothing: antialiased;
     font-family: Outfit, Inter, -apple-system, BlinkMacSystemFont, sans-serif;
     font-style: normal;
     font-weight: 500;
     letter-spacing: normal;
     text-shadow: none;
+    /* stylelint-disable-next-line property-no-vendor-prefix */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    opacity: 0;
+    padding: 1.25rem;
+    position: absolute;
+    right: 0;
+    text-align: left;
+    top: 42px;
+    transform: translateY(-10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    visibility: hidden;
+    width: 260px;
+    z-index: 200;
 }
 
 .mcmm-backup-info-panel * {
@@ -2606,7 +2578,7 @@
     font-size: 0.6rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--text-muted);
+    color: rgb(148 163 184 / 85%);
     font-weight: 800;
     margin: 0;
 }
@@ -2614,7 +2586,7 @@
 .mcmm-backup-panel-text span {
     display: block;
     font-size: 0.82rem;
-    color: var(--text-main);
+    color: rgb(255 255 255 / 92%);
     font-weight: 600;
     margin: 0;
 }
@@ -2716,38 +2688,6 @@
     line-height: 1;
 }
 
-
-/* ==========================================================================
-   FIX: Backup "Modpack Manifest" panel text looks washed/blurred (Unraid/Chromium)
-   --------------------------------------------------------------------------
-   Root cause is backdrop-filter + translucent layers causing subpixel blur.
-   We keep the same visual style but render text crisp by:
-   - removing backdrop-filter on the info panel
-   - using a fully opaque dark background
-   - disabling any inherited filter effects
-   ========================================================================== */
-.mcmm-backup-info-panel {
-    background: rgb(10 11 20 / 100%);
-    filter: none;
-    text-rendering: geometricPrecision;
-    -webkit-font-smoothing: antialiased;
-}
-
-/* In case backdrop-filter is reintroduced elsewhere, hard-disable on this panel */
-.mcmm-backup-info-panel {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-}
-
-/* Slightly strengthen panel text without changing overall palette */
-.mcmm-backup-panel-text span {
-    color: rgb(255 255 255 / 92%);
-}
-
-.mcmm-backup-panel-text label {
-    color: rgb(148 163 184 / 85%);
-}
-
 /* ==========================================================================
    FIX: Settings "API key" eye toggle (show/hide password) positioning
    --------------------------------------------------------------------------
@@ -2806,4 +2746,3 @@
     font-size: 1.15rem;
     line-height: 1;
 }
-
