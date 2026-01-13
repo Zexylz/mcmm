@@ -41,7 +41,6 @@
       This scales typography + key sizing variables without using transform (safe for Unraid/Chromium scrolling).
       ========================================================= */
      --ui-scale: 1;
-
      --bg-body: rgb(11 12 22 / 100%);
      --bg-surface: rgb(22 24 35 / 70%);
      --bg-surface-hover: rgb(30 32 45 / 80%);
@@ -716,23 +715,28 @@
         /* stylelint-disable-next-line property-no-vendor-prefix */
         -webkit-overflow-scrolling: touch;
     }
+
     .mcmm-tab {
         flex: 0 0 auto;
         white-space: nowrap;
     }
+
     .mcmm-server-row {
         flex-wrap: wrap;
     }
+
     .mcmm-server-info {
         flex: 1 1 100%;
         min-width: 0;
     }
+
     .mcmm-server-metrics {
         flex: 1 1 100%;
         flex-direction: column;
         min-width: 0;
         padding: 0;
     }
+    
     .mcmm-server-actions {
         width: 100%;
         justify-content: flex-end;
