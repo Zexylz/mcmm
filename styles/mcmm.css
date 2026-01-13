@@ -910,16 +910,6 @@
     background-size: cover;
 }
 
-/* If mod icons are <img> instead of background-image */
-.mcmm-mod-icon img,
-.mcmm-mod-icon.large img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: inherit;
-}
-
 /* Backup card thumb sizing (restore consistent visuals) */
 .mcmm-backup-card-thumb-container {
     height: clamp(160px, 12vw, 200px);
