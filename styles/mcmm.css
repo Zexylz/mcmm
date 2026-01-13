@@ -706,9 +706,8 @@
      color: rgb(255 255 255 / 100%);
  }
 
- 
 /* Extra-small screens: prevent tab overflow + improve stacking */
-@media (max-width: 600px) {
+@media (width <= 600px) {
     .mcmm-tabs {
         overflow-x: auto;
         padding-bottom: 6px;
@@ -736,7 +735,7 @@
         min-width: 0;
         padding: 0;
     }
-    
+
     .mcmm-server-actions {
         width: 100%;
         justify-content: flex-end;
@@ -744,44 +743,44 @@
 }
 
 /* Responsive: stack metrics and keep actions usable */
- @media (max-width: 1200px) {
-     .mcmm-server-row {
-         flex-wrap: wrap;
-         row-gap: 1rem;
-     }
+@media (width <= 1200px) {
+    .mcmm-server-row {
+        flex-wrap: wrap;
+        row-gap: 1rem;
+    }
 
-     .mcmm-server-info {
-         flex: 1 1 360px;
-         min-width: 260px;
-     }
+    .mcmm-server-info {
+        flex: 1 1 360px;
+        min-width: 260px;
+    }
 
-     .mcmm-server-metrics {
-         flex: 1 1 520px;
-         min-width: 260px;
-         padding: 0;
-     }
+    .mcmm-server-metrics {
+        flex: 1 1 520px;
+        min-width: 260px;
+        padding: 0;
+    }
 
-     .mcmm-server-actions {
-         width: 100%;
-         justify-content: flex-end;
-     }
- }
+    .mcmm-server-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
 
- @media (max-width: 900px) {
-     .mcmm-server-metrics {
-         flex-direction: column;
-         gap: 0.9rem;
-     }
+@media (width <= 900px) {
+    .mcmm-server-metrics {
+        flex-direction: column;
+        gap: 0.9rem;
+    }
 
-     .mcmm-metric {
-         min-width: 0;
-     }
+    .mcmm-metric {
+        min-width: 0;
+    }
 
-     .mcmm-btn-icon {
-         height: var(--mcmm-btn-icon-sm);
-         width: var(--mcmm-btn-icon-sm);
-     }
- }
+    .mcmm-btn-icon {
+        height: var(--mcmm-btn-icon-sm);
+        width: var(--mcmm-btn-icon-sm);
+    }
+}
 
  /* ===== COMPONENTS: EMPTY STATE ===== */
  .mcmm-empty {
@@ -2564,6 +2563,7 @@
      font-size: 1.15rem;
      margin-top: 2px;
  }
+
 @supports not ((-webkit-background-clip: text) and (-webkit-text-fill-color: transparent)) {
      .mcmm-backup-panel-item .material-symbols-outlined {
          background: none;
@@ -2571,7 +2571,6 @@
          -webkit-text-fill-color: currentColor;
      }
 }
-
 
 /* Floating Info Panel */
  .mcmm-backup-info-panel {
