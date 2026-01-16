@@ -2,58 +2,105 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "mcmm">
 <!ENTITY author    "Zexylz">
-<!ENTITY version   "2023.12.08">
+<!ENTITY version   "2023.12.08-fixed1">
 <!ENTITY launch    "Settings/mcmm">
 <!ENTITY gitURL    "https://github.com/Zexylz/MCMM">
 <!ENTITY pluginURL "https://github.com/Zexylz/MCMM/releases/latest/download/mcmm.plg">
 ]>
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0">
 <CHANGES>
-###2023.12.08
-- Nightly Build Fetcher
+###2023.12.08-fixed1
+- Ensure persistent storage under /boot/config/plugins/&name;
+- Do not delete persistent config on remove (prevents settings loss on update/reinstall)
+- More robust GitHub latest-release asset lookup
+- Optional symlinks: /usr/local/emhttp/plugins/&name;/config and /data -> /boot/config/plugins/&name;
 </CHANGES>
+
 <FILE Run="/bin/bash">
 <INLINE>
-# 1. Fetch Latest Nightly URL
-echo "Checking for latest nightly build from &gitURL;..."
-API_URL="https://api.github.com/repos/Zexylz/MCMM/releases"
-# Get the browser_download_url for mcmm-plugin.zip from the first (latest) release
-# We use curl with a User-Agent (required by GitHub) and jq to parse
-DOWNLOAD_URL=$(curl -s -H "User-Agent: Unraid-MCMM-Installer" "$API_URL" | jq -r '.[0].assets[] | select(.name == "mcmm-plugin.zip") | .browser_download_url')
+set -euo pipefail
 
-if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" == "null" ]; then
-    echo "Error: Could not find mcmm-plugin.zip in the latest release."
-    exit 1
+echo "Checking for latest build from &gitURL;..."
+
+# Persistent data/config path (USB flash)
+PERSIST_DIR="/boot/config/plugins/&name;"
+mkdir -p "$PERSIST_DIR"
+
+# Work dir in RAM
+WORKDIR="/tmp/&name;-install"
+rm -rf "$WORKDIR"
+mkdir -p "$WORKDIR"
+
+# Use the latest release endpoint (more robust than indexing releases array)
+API_URL="https://api.github.com/repos/Zexylz/MCMM/releases/latest"
+
+# NOTE: This requires jq to be present (common on many Unraid installs). If not present, install will fail fast.
+DOWNLOAD_URL="$(curl -fsSL -H "User-Agent: Unraid-&name;-Installer" "$API_URL" \
+  | jq -r '.assets[] | select(.name == "mcmm-plugin.zip") | .browser_download_url' \
+  | head -n 1)"
+
+if [ -z "${DOWNLOAD_URL:-}" ] || [ "$DOWNLOAD_URL" = "null" ]; then
+  echo "Error: Could not find mcmm-plugin.zip in the latest release assets."
+  exit 1
 fi
 
-echo "Downloading Nightly: $DOWNLOAD_URL"
-mkdir -p /boot/config/plugins/&name;
-wget -q --no-check-certificate -O /boot/config/plugins/&name;/install.zip "$DOWNLOAD_URL"
+echo "Downloading: $DOWNLOAD_URL"
+ZIPFILE="$WORKDIR/install.zip"
+wget -q --no-check-certificate -O "$ZIPFILE" "$DOWNLOAD_URL"
 
-# 2. Extract
-unzip -q -o /boot/config/plugins/&name;/install.zip -d /tmp/mcmm-install
+echo "Extracting..."
+unzip -q -o "$ZIPFILE" -d "$WORKDIR"
 
-# 3. Install
-mkdir -p /usr/local/emhttp/plugins/&name;
+echo "Installing plugin files..."
+INSTALL_DIR="/usr/local/emhttp/plugins/&name;"
+mkdir -p "$INSTALL_DIR"
+
 # The zip contains a folder 'mcmm', so we copy contents of that folder
-cp -r /tmp/mcmm-install/mcmm/* /usr/local/emhttp/plugins/&name;/
+if [ -d "$WORKDIR/mcmm" ]; then
+  cp -r "$WORKDIR/mcmm/"* "$INSTALL_DIR/"
+else
+  # Fallback: copy everything if structure differs
+  cp -r "$WORKDIR/"* "$INSTALL_DIR/"
+fi
 
-# 4. Cleanup
-rm -rf /tmp/mcmm-install
-rm -f /boot/config/plugins/&name;/install.zip
+# Ensure ownership/permissions
+chown -R root:root "$INSTALL_DIR"
+chmod -R 755 "$INSTALL_DIR"
 
-# 5. Permissions
-chown -R root:root /usr/local/emhttp/plugins/&name;
-chmod -R 755 /usr/local/emhttp/plugins/&name;
+# Optional: force config/data to be persistent by symlinking common directories
+# This prevents "settings not saved" when the plugin writes into /usr/local (RAM).
+for d in config data; do
+  target="$PERSIST_DIR/$d"
+  link="$INSTALL_DIR/$d"
 
-echo "&name; nightly installed successfully."
+  mkdir -p "$target"
+
+  if [ -e "$link" ] && [ ! -L "$link" ]; then
+    # If the plugin shipped a real directory/file here, move it aside once to avoid losing shipped defaults
+    mv "$link" "$link.bak.$(date +%s)" || true
+  fi
+
+  if [ ! -L "$link" ]; then
+    ln -s "$target" "$link"
+  fi
+done
+
+# Cleanup workdir only (leave $PERSIST_DIR intact)
+rm -rf "$WORKDIR"
+
+echo "&name; installed successfully. Persistent storage: $PERSIST_DIR"
 </INLINE>
 </FILE>
+
 <FILE Run="/bin/bash" Method="remove">
 <INLINE>
+set -euo pipefail
+
+# Remove RAM install only. Keep persistent config/data to avoid losing settings on update/reinstall.
 rm -rf /usr/local/emhttp/plugins/&name;
-rm -rf /boot/config/plugins/&name;
-echo "&name; removed"
+
+echo "&name; removed (persistent data kept in /boot/config/plugins/&name;)"
 </INLINE>
 </FILE>
+
 </PLUGIN>
