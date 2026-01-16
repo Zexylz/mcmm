@@ -121,7 +121,7 @@ function getMinecraftServers()
                     // Try to hydrate basic stats from cached metrics files (extremely fast)
                     $ramUsedMb = 0;
                     $cpuUsage = 0;
-                    $mcVer = 'Unknown';
+                    $mcVer = 'Latest';
                     $loaderVer = 'Vanilla';
 
                     $dataDir = "/mnt/user/appdata/mcmm/servers/$containerName";
@@ -143,7 +143,7 @@ function getMinecraftServers()
                     if (file_exists($metaFile)) {
                         $meta = json_decode(file_get_contents($metaFile), true);
                         if ($meta) {
-                            $mcVer = $meta['mcVersion'] ?? 'Unknown';
+                            $mcVer = $meta['mcVersion'] ?? 'Latest';
                             $loaderVer = $meta['loader'] ?? 'Vanilla';
                         }
                     }

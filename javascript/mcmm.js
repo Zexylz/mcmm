@@ -686,20 +686,48 @@ async function loadInstalledMods() {
         const data = await res.json();
         if (data.success) {
             modState.installed = data.data || [];
-            if (modState.view === 'installed') renderMods();
 
-            // Trigger identification for unknown mods
-            const unknownMods = modState.installed.filter(m => m.needsIdentification);
+            // Trigger identification for unknown mods in BATCH
+            const unknownMods = modState.installed.filter(m => m.needsIdentification).map(m => m.file);
             if (unknownMods.length > 0) {
-                console.log(`[MCMM] Found ${unknownMods.length} mods needing identification.`);
-                // Identify them sequentially to avoid rate limiting
-                for (const mod of unknownMods) {
-                    await identifyModBackground(mod.file);
-                }
+                console.log(`[MCMM] Identifying ${unknownMods.length} mods in batch...`);
+                await identifyModsBatch(unknownMods);
             }
+
+            if (modState.view === 'installed') renderMods();
         }
     } catch (e) {
         console.error(e);
+    }
+}
+
+async function identifyModsBatch(filenames) {
+    if (!currentServerId || !filenames.length) return;
+    try {
+        const res = await fetch(`/plugins/mcmm/api.php?action=mod_identify_batch&id=${currentServerId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(filenames)
+        });
+        const data = await res.json();
+        if (data.success && data.data) {
+            console.log(`[MCMM] Successfully identified batch of ${Object.keys(data.data).length} mods`);
+            // Update the state
+            modState.installed = modState.installed.map(m => {
+                const identified = data.data[m.file];
+                if (identified) {
+                    return {
+                        ...m,
+                        ...identified,
+                        needsIdentification: false
+                    };
+                }
+                return m;
+            });
+            if (modState.view === 'installed') renderMods();
+        }
+    } catch (e) {
+        console.error(`[MCMM] Failed to identify mods batch:`, e);
     }
 }
 
@@ -840,13 +868,22 @@ function renderMods() {
                             <span>by ${author}</span>
                             ${size ? `<span style="width: 4px; height: 4px; background: var(--text-muted); border-radius: 50%;"></span><span>${size}</span>` : ''}
                             <span style="width: 4px; height: 4px; background: var(--text-muted); border-radius: 50%;"></span>
-                            <span style="color: var(--success); font-weight: 600;">Installed</span>
+                            ${mod.update_available
+                    ? `<span style="color: var(--warning); font-weight: 700; display: flex; align-items: center; gap: 0.3rem;"><span class="material-symbols-outlined" style="font-size: 1rem;">update</span> Update Available</span>`
+                    : `<span style="color: var(--success); font-weight: 600;">Installed</span>`}
                         </div>
                     </div>
                     
-                    <button class="mcmm-btn-icon danger" style="width: 44px; height: 44px; font-size: 1.1rem; border-radius: 10px; flex-shrink: 0;" title="Delete Mod" onclick="deleteMod('${mod.fileName || mod.name || mod.file}')">
-                        <span class="material-symbols-outlined">delete</span>
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        ${mod.update_available ? `
+                            <button class="mcmm-btn-icon success" style="width: 44px; height: 44px; border-radius: 10px;" title="Update Mod" onclick="installMod('${mod.modId || mod.id}', '${safeModName}', this)">
+                                <span class="material-symbols-outlined">update</span>
+                            </button>
+                        ` : ''}
+                        <button class="mcmm-btn-icon danger" style="width: 44px; height: 44px; font-size: 1.1rem; border-radius: 10px; flex-shrink: 0;" title="Delete Mod" onclick="deleteMod('${mod.fileName || mod.name || mod.file}')">
+                            <span class="material-symbols-outlined">delete</span>
+                        </button>
+                    </div>
                 </div>
             `;
         } else {
@@ -1839,7 +1876,9 @@ async function loadServers() {
                                         <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Console Offline"><span class="material-symbols-outlined">terminal</span></button>
                                         <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Players Offline"><span class="material-symbols-outlined">groups</span></button>
                                     `}
-                                    <button class="mcmm-btn-icon" title="Mods" onclick="openModManager('${s.id}', '${s.name}')"><span class="material-symbols-outlined">extension</span></button>
+                                    ${(s.loader || 'Vanilla').toLowerCase() !== 'vanilla' ? `
+                                        <button class="mcmm-btn-icon" title="Mods" onclick="openModManager('${s.id}', '${s.name}')"><span class="material-symbols-outlined">extension</span></button>
+                                    ` : ''}
                                     <button class="mcmm-btn-icon" title="Backup" onclick="createBackup('${s.id}')"><span class="material-symbols-outlined">cloud_upload</span></button>
                                     <button class="mcmm-btn-icon" title="Settings" onclick="openServerSettings('${s.id}')"><span class="material-symbols-outlined">settings</span></button>
                                     <button class="mcmm-btn-icon danger" title="Delete Server" onclick="deleteServer('${s.id}')"><span class="material-symbols-outlined">delete</span></button>
@@ -1891,8 +1930,14 @@ function renderServerRow(server) {
     const statusClass = server.isRunning ? 'running' : 'stopped';
     const playersOnline = server.players?.online || 0;
     const playersMax = server.players?.max || 0;
-    const mcVersion = server.mcVersion || 'Unknown';
-    const loader = server.loader || 'Vanilla';
+    const mcVersion = server.mcVersion || 'Latest';
+    const loaderRaw = server.loader || 'Vanilla';
+    // Properly capitalize loader names
+    const loader = loaderRaw === 'neoforge' ? 'NeoForge' :
+        loaderRaw === 'forge' ? 'Forge' :
+            loaderRaw === 'fabric' ? 'Fabric' :
+                loaderRaw === 'quilt' ? 'Quilt' :
+                    loaderRaw.charAt(0).toUpperCase() + loaderRaw.slice(1);
 
     const ramPercent = Math.min(Math.max(server.ram || 0, 0), 100);
     const ramUsedLabel = (server.ramUsedMb || 0) > 0 ? (server.ramUsedMb / 1024).toFixed(1) + ' GB' : '0 GB';
@@ -1958,7 +2003,9 @@ function renderServerRow(server) {
                     <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Console Offline"><span class="material-symbols-outlined">terminal</span></button>
                     <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Players Offline"><span class="material-symbols-outlined">groups</span></button>
                 `}
-                <button class="mcmm-btn-icon" title="Mods" onclick="openModManager('${server.id}', '${server.name}')"><span class="material-symbols-outlined">extension</span></button>
+                ${loaderRaw.toLowerCase() !== 'vanilla' ? `
+                    <button class="mcmm-btn-icon" title="Mods" onclick="openModManager('${server.id}', '${server.name}')"><span class="material-symbols-outlined">extension</span></button>
+                ` : ''}
                 <button class="mcmm-btn-icon" title="Backup" onclick="createBackup('${server.id}')"><span class="material-symbols-outlined">cloud_upload</span></button>
                 <button class="mcmm-btn-icon" title="Settings" onclick="openServerSettings('${server.id}')"><span class="material-symbols-outlined">settings</span></button>
                 <button class="mcmm-btn-icon danger" title="Delete Server" onclick="deleteServer('${server.id}')"><span class="material-symbols-outlined">delete</span></button>

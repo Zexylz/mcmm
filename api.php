@@ -352,9 +352,9 @@ try {
 
             // 1. Check CurseForge
             if (!empty($cfIds) && !empty($config['curseforge_api_key'])) {
-                $payload = cfRequest('/mods', $config['curseforge_api_key'], false, 'POST', ['modIds' => $cfIds]);
-                if ($payload && isset($payload['data'])) {
-                    foreach ($payload['data'] as $mod) {
+                $batchData = fetchCurseForgeModsBatch($cfIds, $config['curseforge_api_key']);
+                if ($batchData) {
+                    foreach ($batchData as $mod) {
                         $targetFile = null;
                         if (!empty($mod['latestFiles'])) {
                             foreach ($mod['latestFiles'] as $file) {
@@ -1648,32 +1648,53 @@ try {
             if (file_exists($metaFile)) {
                 $metadata = json_decode(file_get_contents($metaFile), true) ?: [];
             }
+            $mcVersion = $_GET['mc_version'] ?? '';
+            $loader = $_GET['loader'] ?? '';
+            $checkUpdates = isset($_GET['check_updates']) && $_GET['check_updates'] === 'true';
+
+            // If we need to check updates, we'll need mcVersion and loader
+            if ($checkUpdates && (!$mcVersion || !$loader)) {
+                $inspectJson = shell_exec("docker inspect " . escapeshellarg($id));
+                $inspectData = json_decode($inspectJson, true);
+                if ($inspectData && isset($inspectData[0])) {
+                    $c = $inspectData[0];
+                    $containerName = ltrim($c['Name'] ?? $id, '/');
+                    $envMap = [];
+                    foreach (($c['Config']['Env'] ?? []) as $e) {
+                        $parts = explode('=', $e, 2);
+                        if (count($parts) === 2) {
+                            $envMap[$parts[0]] = $parts[1];
+                        }
+                    }
+                    $meta = getServerMetadata($envMap, $config, $containerName, $config['curseforge_api_key'] ?? '');
+                    $mcVersion = $mcVersion ?: $meta['mcVersion'];
+                    $loader = $loader ?: $meta['loader'];
+                }
+            }
 
             $mods = [];
             foreach (scandir($modsDir) as $file) {
                 if (substr($file, -4) === '.jar') {
                     $modInfo = [];
-            // Try to find matching metadata
-            // 1. Exact filename match
+                    // 1. Exact filename match
                     foreach ($metadata as $mid => $info) {
                         if (($info['fileName'] ?? '') === $file) {
                             $modInfo = $info;
                             break;
                         }
                     }
-            // 2. Fuzzy match if not found (filename contains mod name or vice versa)
+                    // 2. Fuzzy match
                     if (empty($modInfo)) {
                         foreach ($metadata as $mid => $info) {
                             $metaName = strtolower($info['name'] ?? '');
                             $metaFileRef = strtolower($info['fileName'] ?? '');
                             $diskFile = strtolower($file);
-
                             if (
                                 ($metaFileRef && strpos($diskFile, $metaFileRef) !== false) ||
                                 ($metaName && strpos($diskFile, str_replace(' ', '', $metaName)) !== false)
                             ) {
-                                    $modInfo = $info;
-                                    break;
+                                $modInfo = $info;
+                                break;
                             }
                         }
                     }
@@ -1689,7 +1710,114 @@ try {
                     ], $modInfo);
                 }
             }
+
+            // --- Update Checking Logic ---
+            if ($checkUpdates && !empty($mods)) {
+                $cfIds = [];
+                $mrIds = [];
+                foreach ($mods as $idx => $m) {
+                    if (isset($m['modId']) && isset($m['platform'])) {
+                        if ($m['platform'] === 'curseforge') {
+                            $cfIds[] = $m['modId'];
+                        } elseif ($m['platform'] === 'modrinth') {
+                            $mrIds[] = $m['modId'];
+                        }
+                    }
+                }
+
+                $updates = [];
+                // CurseForge Batch
+                if (!empty($cfIds) && !empty($config['curseforge_api_key'])) {
+                    $batchResult = fetchCurseForgeModsBatch($cfIds, $config['curseforge_api_key']);
+                    foreach ($batchResult as $cfMod) {
+                        $targetFile = null;
+                        foreach ($cfMod['latestFiles'] as $f) {
+                            $gv = $f['gameVersions'] ?? [];
+                            $hasVer = in_array($mcVersion, $gv);
+                            $hasLoader = false;
+                            $loaderMap = ['forge' => 1, 'fabric' => 4, 'quilt' => 5, 'neoforge' => 6];
+                            $li = $loaderMap[strtolower($loader)] ?? 0;
+                            if (isset($f['modLoaderType']) && (int)$f['modLoaderType'] === $li) {
+                                $hasLoader = true;
+                            }
+                            if ($hasVer && $hasLoader) {
+                                $targetFile = $f;
+                                break;
+                            }
+                        }
+                        if ($targetFile) {
+                            $updates['curseforge_' . $cfMod['id']] = [
+                            'latestFileId' => $targetFile['id'],
+                            'latestFileName' => $targetFile['fileName'],
+                            'latestVersion' => $targetFile['displayName']
+                            ];
+                        }
+                    }
+                }
+
+                // Modrinth updates (one by one for now as MR batch is project_id based but complex to filter)
+                // We'll just do minimal for MR to avoid slowness
+
+                foreach ($mods as &$m) {
+                    $key = ($m['platform'] ?? '') . '_' . ($m['modId'] ?? '');
+                    if (isset($updates[$key])) {
+                        $up = $updates[$key];
+                        $m['update_available'] = (string)$up['latestFileId'] !== (string)($m['fileId'] ?? '');
+                        $m['latest_version'] = $up['latestVersion'] ?? '';
+                        $m['latest_file_id'] = $up['latestFileId'];
+                    }
+                }
+            }
+
             jsonResponse(['success' => true, 'data' => $mods]);
+            break;
+
+        case 'mod_identify_batch':
+            $id = $_GET['id'] ?? '';
+            $files = json_decode(file_get_contents('php://input'), true) ?: [];
+            if (!$id || empty($files)) {
+                jsonResponse(['success' => false, 'error' => 'Missing parameters'], 400);
+            }
+
+            $results = [];
+            foreach ($files as $filename) {
+                // Heuristic query
+                $query = preg_replace('/\.jar$/i', '', $filename);
+                $query = preg_replace('/[-_][vV]?\d+\.?\d+.*$/', '', $query);
+                $query = trim(preg_replace('/([a-z])([A-Z])/', '$1 $2', $query));
+
+                $found = null;
+                $source = '';
+
+                // Try CF (Cache should handle high frequency)
+                if (!empty($config['curseforge_api_key'])) {
+                    [$cfData, $total] = fetchCurseForgeMods($query, '', '', 1, 1, $config['curseforge_api_key']);
+                    if (!empty($cfData)) {
+                        $found = $cfData[0];
+                        $source = 'curseforge';
+                    }
+                }
+
+                if (!$found) {
+                    [$mrData, $total] = fetchModrinthMods($query, '', '', 1, 1);
+                    if (!empty($mrData)) {
+                        $found = $mrData[0];
+                        $source = 'modrinth';
+                    }
+                }
+
+                if ($found) {
+                    $extra = [
+                        'author' => $found['author'] ?? 'Unknown',
+                        'summary' => $found['summary'] ?? '',
+                        'downloads' => $found['downloads'] ?? '',
+                        'mcVersion' => $found['mcVersion'] ?? ''
+                    ];
+                    saveModMetadata($id, $found['id'], $source, $found['name'], $filename, $found['latestFileId'] ?? null, $found['icon'] ?? '', $extra);
+                    $results[$filename] = array_merge($found, ['platform' => $source]);
+                }
+            }
+            jsonResponse(['success' => true, 'data' => $results]);
             break;
 
         case 'mod_files':

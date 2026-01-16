@@ -141,7 +141,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                         $icon = isset($server['icon']) && $server['icon'] ? $server['icon'] : "https://media.forgecdn.net/avatars/8/228/635198031541315682.png";
                         $ramUsage = isset($server['ram']) ? $server['ram'] : 0;
                         $cpuUsage = isset($server['cpu']) ? $server['cpu'] : 0;
-                        $mcVersion = $server['mcVersion'] ?? 'Unknown';
+                        $mcVersion = $server['mcVersion'] ?? 'Latest';
                         $loader = $server['loader'] ?? 'Vanilla';
                         $statusClass = $server['isRunning'] ? 'running' : 'stopped';
                         $playersOnline = isset($server['players']['online']) ? intval($server['players']['online']) : 0;

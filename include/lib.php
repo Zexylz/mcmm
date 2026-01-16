@@ -1030,6 +1030,28 @@ function fetchCurseForgeMods(string $search, string $version, string $loader, in
     return [$mods, $total];
 }
 
+/**
+ * Fetches multiple mods by ID in a single request (Batch)
+ */
+function fetchCurseForgeModsBatch(array $modIds, string $apiKey): array
+{
+    if (empty($modIds)) {
+        return [];
+    }
+
+    $chunks = array_chunk($modIds, 200);
+    $allMods = [];
+
+    foreach ($chunks as $chunk) {
+        $result = cfRequest('/mods', $apiKey, false, 'POST', ['modIds' => $chunk]);
+        if ($result && isset($result['data'])) {
+            $allMods = array_merge($allMods, $result['data']);
+        }
+    }
+
+    return $allMods;
+}
+
 function fetchCurseForgeFiles(int $modId, string $version, string $loader, string $apiKey): array
 {
     $url = "https://api.curseforge.com/v1/mods/$modId/files";
@@ -1762,6 +1784,27 @@ function getServerMetadata(array $env, array $config, string $containerName, str
     if ($srvCfg) {
         $mcVersion = $srvCfg['mc_version'] ?? $srvCfg['gameVersion'] ?? '';
         $loader = $srvCfg['loader'] ?? '';
+
+        // If config has 'LATEST' or empty, try to get actual version from cached metadata
+        if (!$mcVersion && $containerName) {
+            $metaDir = $serversDir . '/' . md5($containerName);
+            $metaFile = $metaDir . '/metadata.json';
+            if (file_exists($metaFile)) {
+                $cachedMeta = json_decode(@file_get_contents($metaFile), true);
+                if ($cachedMeta && !empty($cachedMeta['mcVersion']) && $cachedMeta['mcVersion'] !== 'Unknown') {
+                    $mcVersion = $cachedMeta['mcVersion'];
+                    $debug['metadataCache'] = ['source' => 'cached', 'version' => $mcVersion];
+                }
+                if (!$loader && !empty($cachedMeta['loader'])) {
+                    $loader = $cachedMeta['loader'];
+                }
+            }
+        }
+
+        // If config says 'LATEST', reset to empty so we try to detect the REAL version via API/Env
+        if (strtoupper($mcVersion) === 'LATEST') {
+            $mcVersion = '';
+        }
     }
 
     $debug['localConfig'] = ['mcVersion' => $mcVersion, 'loader' => $loader];
@@ -1777,27 +1820,25 @@ function getServerMetadata(array $env, array $config, string $containerName, str
     // 2b. Image Tag Fallback
     if (!$mcVersion && $image) {
         // e.g. itzg/minecraft-server:1.20.1 or my-repo/mc-1.18.2:latest
-        if (preg_match('/:(\d+\.\d+(\.\d+)?)/', $image, $im)) {
+        // Also check for java21-1.21.4 pattern
+        if (preg_match('/:(?:java\d+-)?(\d+\.\d+(?:\.\d+)?)/', $image, $im)) {
             $mcVersion = $im[1];
         }
     }
 
-    if (!$loader) {
-        $envType = strtolower($env['TYPE'] ?? $env['GAME_TYPE'] ?? $env['MODRINTH_LOADER'] ?? '');
-        if (strpos($envType, 'neoforge') !== false) {
-            $loader = 'neoforge';
-        } elseif (strpos($envType, 'forge') !== false) {
-            $loader = 'forge';
-        } elseif (strpos($envType, 'fabric') !== false) {
-            $loader = 'fabric';
-        } elseif (strpos($envType, 'quilt') !== false) {
-            $loader = 'quilt';
+    // 2c. Check VANILLA or TYPE env for version hints
+    if (!$mcVersion) {
+        $typeEnv = $env['TYPE'] ?? '';
+        // Sometimes TYPE contains version like "VANILLA:1.21.4"
+        if (preg_match('/(\d+\.\d+(?:\.\d+)?)/', $typeEnv, $tm)) {
+            $mcVersion = $tm[1];
         }
     }
 
+
     $debug['envCheck'] = ['mcVersion' => $mcVersion, 'loader' => $loader];
 
-    // 3. API Backfill
+    // 3. API Backfill (PRIORITIZED for accurate loader detection)
     $platform = $srvCfg['platform'] ?? ($env['MODRINTH_ID'] ? 'modrinth' : ($env['CF_MODPACK_ID'] ? 'curseforge' : ''));
     $slug = $srvCfg['slug'] ?? '';
 
@@ -1845,7 +1886,7 @@ function getServerMetadata(array $env, array $config, string $containerName, str
                         }
                     }
                 }
-                if (!$loader && !empty($versions[0]['loaders'])) {
+                if (!empty($versions[0]['loaders'])) {
                     $loader = strtolower($versions[0]['loaders'][0]);
                 }
                 $debug['cfBackfillLatest'] = ['fileId' => $targetFile, 'mcVersion' => $mcVersion, 'loader' => $loader];
@@ -1875,7 +1916,7 @@ function getServerMetadata(array $env, array $config, string $containerName, str
                 if (!$mcVersion && !empty($versions[0]['game_versions'])) {
                     $mcVersion = $versions[0]['game_versions'][0];
                 }
-                if (!$loader && !empty($versions[0]['loaders'])) {
+                if (!empty($versions[0]['loaders'])) {
                     $loader = strtolower($versions[0]['loaders'][0]);
                 }
             }
@@ -1893,7 +1934,23 @@ function getServerMetadata(array $env, array $config, string $containerName, str
         }
     }
 
-    // 4. Live Ping Fallback (Absolute last resort for running servers)
+    // 4. Environment Variable Fallback (AFTER API to avoid incorrect forge/neoforge detection)
+    if (!$loader) {
+        $envType = strtolower($env['TYPE'] ?? $env['GAME_TYPE'] ?? $env['MODRINTH_LOADER'] ?? '');
+        if (strpos($envType, 'neoforge') !== false) {
+            $loader = 'neoforge';
+        } elseif (strpos($envType, 'forge') !== false) {
+            $loader = 'forge';
+        } elseif (strpos($envType, 'fabric') !== false) {
+            $loader = 'fabric';
+        } elseif (strpos($envType, 'quilt') !== false) {
+            $loader = 'quilt';
+        }
+    }
+
+    $debug['envFallback'] = ['loader' => $loader];
+
+    // 5. Live Ping Fallback (Check running servers for version)
     if (!$mcVersion && $port > 0) {
         $status = getMinecraftStatus('127.0.0.1', $port, 1);
         if ($status && !empty($status['version'])) {
@@ -1903,6 +1960,12 @@ function getServerMetadata(array $env, array $config, string $containerName, str
                 $debug['livePing'] = ['version' => $status['version'], 'detected' => $mcVersion];
             }
         }
+    }
+
+    // 6. LAST RESORT: Default to "Latest" for truly unknown servers
+    if (!$mcVersion) {
+        $mcVersion = 'Latest';
+        $debug['fallback'] = 'defaulted to Latest';
     }
 
     return ['mcVersion' => $mcVersion, 'loader' => $loader, '_debug' => $debug];
