@@ -1,0 +1,28 @@
+{
+  "name": "mcmm-1",
+  "version": "1.0.0",
+  "description": "Minecraft Modpack Manager for Unraid.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zexylz/MCMM.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Zexylz/MCMM/issues"
+  },
+  "homepage": "https://github.com/Zexylz/MCMM#readme",
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "globals": "^17.0.0",
+    "htmlhint": "^1.8.0",
+    "stylelint": "^16.26.1",
+    "stylelint-config-standard": "^39.0.1"
+  }
+}
