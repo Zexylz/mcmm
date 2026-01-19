@@ -162,15 +162,15 @@ window.addEventListener('error', function (event) {
     console.error("%c MCMM Runtime Error: ", "background:rgb(239  68  68 / 100%);color:rgb(255 255 255 / 100%);font-weight:700;padding:2px 6px;border-radius:4px;", event.message, "at", event.filename, ":", event.lineno);
 });
 
-let modpackState = { items: [], loading: false, error: '' };
-let modpackSearchTimer;
-let selectedModpack = null;
-let modpacksLoaded = false;
-let settingsCache = null;
+var modpackState = { items: [], loading: false, error: '' };
+var modpackSearchTimer;
+var selectedModpack = null;
+var modpacksLoaded = false;
+var settingsCache = null;
 
 // Mod Manager State
-let currentServerId = null;
-let modState = {
+var currentServerId = null;
+var modState = {
     curseforge: [],
     modrinth: [],
     installed: [],
@@ -189,11 +189,11 @@ let modState = {
     serverEnv: {},
     serverInfo: null
 };
-let modSearchTimer;
-let serverRefreshInterval = null;
+var modSearchTimer;
+var serverRefreshInterval = null;
 
 // Deploy progress state
-let deployLogInterval = null;
+var deployLogInterval = null;
 // let deployLogContainerId = null;
 
 // Tab Switching
@@ -1004,7 +1004,7 @@ function changeModsPage(page) {
 }
 
 // --- Version Selection State ---
-let versionState = {
+var versionState = {
     modId: null,
     files: [],
     selectedFileId: null,
@@ -2315,9 +2315,9 @@ async function submitDeploy() {
 }
 
 // --- Console ---
-let consoleInterval;
-let currentConsoleId = null;
-let currentConsoleName = null;
+var consoleInterval;
+var currentConsoleId = null;
+var currentConsoleName = null;
 
 function openConsole(serverId, serverName) {
     const modal = document.getElementById('consoleModal');
@@ -2368,9 +2368,9 @@ function closeConsole() {
 }
 
 // --- Players Modal ---
-let localCurrentPlayers = [];
-let localCurrentServerId = null;
-let currentPlayersTab = 'active';
+var localCurrentPlayers = [];
+var localCurrentServerId = null;
+var currentPlayersTab = 'active';
 
 async function openPlayersModal(serverId, serverName, port) {
     const modal = document.getElementById('playersModal');
@@ -2625,25 +2625,34 @@ function saveSettings(e) {
     e.preventDefault();
 
     const statusEl = document.getElementById('settingsStatus');
+    const getVal = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value : '';
+    };
+    const getChecked = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.checked : false;
+    };
+
     const data = {
-        curseforge_api_key: document.getElementById('curseforge_api_key').value,
-        default_server_name: document.getElementById('default_server_name').value,
-        default_port: parseInt(document.getElementById('default_port').value),
-        default_memory: document.getElementById('default_memory').value,
-        default_max_players: parseInt(document.getElementById('default_max_players').value),
-        default_whitelist: document.getElementById('default_whitelist').value,
-        default_icon_url: document.getElementById('default_icon_url').value,
-        default_pvp: document.getElementById('default_pvp').checked,
-        default_hardcore: document.getElementById('default_hardcore').checked,
-        default_allow_flight: document.getElementById('default_allow_flight').checked,
-        default_command_blocks: document.getElementById('default_command_blocks').checked,
-        default_rolling_logs: document.getElementById('default_rolling_logs').checked,
-        default_log_timestamp: document.getElementById('default_log_timestamp').checked,
-        default_direct_console: document.getElementById('default_direct_console').checked,
-        default_aikar_flags: document.getElementById('default_aikar_flags').checked,
-        default_meowice_flags: document.getElementById('default_meowice_flags').checked,
-        default_graalvm_flags: document.getElementById('default_graalvm_flags').checked,
-        jvm_flags: document.getElementById('jvm_flags').value,
+        curseforge_api_key: getVal('curseforge_api_key'),
+        default_server_name: getVal('default_server_name'),
+        default_port: parseInt(getVal('default_port')) || 25565,
+        default_memory: getVal('default_memory'),
+        default_max_players: parseInt(getVal('default_max_players')) || 20,
+        default_whitelist: getVal('default_whitelist'),
+        default_icon_url: getVal('default_icon_url'),
+        default_pvp: getChecked('default_pvp'),
+        default_hardcore: getChecked('default_hardcore'),
+        default_allow_flight: getChecked('default_allow_flight'),
+        default_command_blocks: getChecked('default_command_blocks'),
+        default_rolling_logs: getChecked('default_rolling_logs'),
+        default_log_timestamp: getChecked('default_log_timestamp'),
+        default_direct_console: getChecked('default_direct_console'),
+        default_aikar_flags: getChecked('default_aikar_flags'),
+        default_meowice_flags: getChecked('default_meowice_flags'),
+        default_graalvm_flags: getChecked('default_graalvm_flags'),
+        jvm_flags: getVal('jvm_flags'),
         csrf_token: typeof csrfToken !== 'undefined' ? csrfToken : ''
     };
 
