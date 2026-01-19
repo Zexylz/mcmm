@@ -103,7 +103,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
         <div class="mcmm-brand">
             <span class="material-symbols-outlined">bolt</span> Modpack Manager
         </div>
-        <div class="mcmm-version">v1.0.0</div>
+        <div class="mcmm-version">v1.0.1</div>
     </header>
 
     <!-- Tabs -->
@@ -381,6 +381,16 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                                 <span class="mcmm-slider"></span>
                                             </label>
                                         </div>
+                                        <div class="mcmm-toggle-item" style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+                                            <div class="mcmm-toggle-label">
+                                                <span class="mcmm-toggle-name">GraalVM Flags</span>
+                                                <span class="mcmm-toggle-desc">Optimize for GraalVM/Quarkus</span>
+                                            </div>
+                                            <label class="mcmm-switch">
+                                                <input type="checkbox" id="default_graalvm_flags" <?php echo $config['default_graalvm_flags'] ? 'checked' : ''; ?> />
+                                                <span class="mcmm-slider"></span>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -428,6 +438,36 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                         </div>
                                         <label class="mcmm-switch">
                                             <input type="checkbox" id="default_rolling_logs" <?php echo $config['default_rolling_logs'] ? 'checked' : ''; ?> />
+                                            <span class="mcmm-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="mcmm-toggle-item">
+                                        <div class="mcmm-toggle-label">
+                                            <span class="mcmm-toggle-name">Log Timestamp</span>
+                                            <span class="mcmm-toggle-desc">Add timestamps to server logs</span>
+                                        </div>
+                                        <label class="mcmm-switch">
+                                            <input type="checkbox" id="default_log_timestamp" <?php echo $config['default_log_timestamp'] ? 'checked' : ''; ?> />
+                                            <span class="mcmm-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="mcmm-toggle-item">
+                                        <div class="mcmm-toggle-label">
+                                            <span class="mcmm-toggle-name">Allow Flight</span>
+                                            <span class="mcmm-toggle-desc">Allow players to fly in survival</span>
+                                        </div>
+                                        <label class="mcmm-switch">
+                                            <input type="checkbox" id="default_allow_flight" <?php echo $config['default_allow_flight'] ? 'checked' : ''; ?> />
+                                            <span class="mcmm-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="mcmm-toggle-item">
+                                        <div class="mcmm-toggle-label">
+                                            <span class="mcmm-toggle-name">Direct Console</span>
+                                            <span class="mcmm-toggle-desc">Enable direct TTY attach</span>
+                                        </div>
+                                        <label class="mcmm-switch">
+                                            <input type="checkbox" id="default_direct_console" <?php echo $config['default_direct_console'] ? 'checked' : ''; ?> />
                                             <span class="mcmm-slider"></span>
                                         </label>
                                     </div>
