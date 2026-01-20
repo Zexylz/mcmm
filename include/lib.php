@@ -1610,6 +1610,38 @@ function getModpackVersions(string $platform, string $id, string $apiKey = ''): 
 
 function getMinecraftVersion(string $platform, string $id, string $versionId, string $apiKey = ''): ?string
 {
+    if ($platform === 'curseforge') {
+        $modId = $id;
+        // Resolve slug to ID if needed
+        if (!is_numeric($id)) {
+            $search = cfRequest("/mods/search?gameId=432&classId=4471&searchFilter=" . urlencode($id), $apiKey);
+            file_put_contents(__DIR__ . '/debug.log', "Search '$id': Found " . count($search['data'] ?? []) . " matches.\n", FILE_APPEND);
+            if (isset($search['data'][0]['id'])) {
+                $modId = $search['data'][0]['id'];
+                file_put_contents(__DIR__ . '/debug.log', "Resolved ModID: $modId named '" . ($search['data'][0]['name'] ?? '') . "'\n", FILE_APPEND);
+            } else {
+                file_put_contents(__DIR__ . '/debug.log', "Failed to resolve slug '$id'\n", FILE_APPEND);
+                return null; // Slug not found
+            }
+        }
+
+        // Direct File Lookup (Much faster and reliable than paging through 50 versions)
+        if (is_numeric($versionId)) {
+            $file = cfRequest("/mods/" . urlencode((string)$modId) . "/files/" . urlencode((string)$versionId), $apiKey);
+
+            if (isset($file['data']['gameVersions'])) {
+                foreach ($file['data']['gameVersions'] as $gv) {
+                    if (preg_match('/^\d+\.\d+(\.\d+)?$/', $gv)) {
+                        return $gv;
+                    }
+                }
+            } else {
+                 file_put_contents(__DIR__ . '/debug.log', "File $versionId lookup failed for Mod $modId. Resp: " . json_encode($file) . "\n", FILE_APPEND);
+            }
+        }
+    }
+
+    // Fallback / Modrinth
     $versions = getModpackVersions($platform, $id, $apiKey);
     foreach ($versions as $v) {
         if ((string) $v['id'] === (string) $versionId) {
@@ -1761,7 +1793,7 @@ function getMinecraftStatus(string $host, int $port, int $timeout = 1): ?array
     return null;
 }
 
-function getServerMetadata(array $env, array $config, string $containerName, string $apiKey, string $image = '', int $port = 0): array
+function getServerMetadata(array $env, array $config, string $containerName, string $apiKey, string $image = '', int $port = 0, string $containerId = ''): array
 {
     $mcVersion = '';
     $loader = '';
@@ -1786,14 +1818,12 @@ function getServerMetadata(array $env, array $config, string $containerName, str
         $loader = $srvCfg['loader'] ?? '';
 
         // If config has 'LATEST' or empty, try to get actual version from cached metadata
-        if (!$mcVersion && $containerName) {
-            $metaDir = $serversDir . '/' . md5($containerName);
-            $metaFile = $metaDir . '/metadata.json';
-            if (file_exists($metaFile)) {
-                $cachedMeta = json_decode(@file_get_contents($metaFile), true);
-                if ($cachedMeta && !empty($cachedMeta['mcVersion']) && $cachedMeta['mcVersion'] !== 'Unknown') {
+        if (strtoupper($mcVersion) === 'LATEST' || !$mcVersion) {
+            $cacheFile = dirname($cfgFile) . '/metadata_cache.json';
+            if (file_exists($cacheFile)) {
+                $cachedMeta = json_decode(file_get_contents($cacheFile), true);
+                if (!empty($cachedMeta['mcVersion'])) {
                     $mcVersion = $cachedMeta['mcVersion'];
-                    $debug['metadataCache'] = ['source' => 'cached', 'version' => $mcVersion];
                 }
                 if (!$loader && !empty($cachedMeta['loader'])) {
                     $loader = $cachedMeta['loader'];
@@ -1811,7 +1841,7 @@ function getServerMetadata(array $env, array $config, string $containerName, str
 
     // 2. Env check
     if (!$mcVersion) {
-        $envVersion = $env['VERSION'] ?? $env['MINECRAFT_VERSION'] ?? $env['SERVER_VERSION'] ?? $env['MODRINTH_VERSION'] ?? '';
+        $envVersion = $env['MCMM_VERSION'] ?? $env['VERSION'] ?? $env['MINECRAFT_VERSION'] ?? $env['SERVER_VERSION'] ?? $env['MODRINTH_VERSION'] ?? '';
         if (preg_match('/\d+\.\d+(\.\d+)?/', $envVersion, $m)) {
             $mcVersion = $m[0];
         }
@@ -1840,6 +1870,16 @@ function getServerMetadata(array $env, array $config, string $containerName, str
 
     // 3. API Backfill (PRIORITIZED for accurate loader detection)
     $platform = $srvCfg['platform'] ?? ($env['MODRINTH_ID'] ? 'modrinth' : ($env['CF_MODPACK_ID'] ? 'curseforge' : ''));
+
+    // Improve Platform Detection
+    if (!$platform) {
+        if (!empty($env['CF_FILE_ID']) || strpos($env['TYPE'] ?? '', 'CURSEFORGE') !== false) {
+            $platform = 'curseforge';
+        } elseif (!empty($env['MODRINTH_VERSION']) || strpos($env['TYPE'] ?? '', 'MODRINTH') !== false) {
+            $platform = 'modrinth';
+        }
+    }
+
     $slug = $srvCfg['slug'] ?? '';
 
     // Guess slug from container name if missing
@@ -1869,6 +1909,9 @@ function getServerMetadata(array $env, array $config, string $containerName, str
         'slug' => $slug
     ];
 
+    file_put_contents(__DIR__ . '/debug.log', date('Y-m-d H:i:s') . " Processing $containerName ($slug)\n", FILE_APPEND);
+    file_put_contents(__DIR__ . '/debug.log', "Env: cfModpackId=" . ($cfModpackId ?? 'null') . ", cfFileId=" . ($cfFileId ?? 'null') . "\n", FILE_APPEND);
+
     if ((!$mcVersion || !$loader) && $apiKey && ($cfModpackId || $slug)) {
         $targetId = $cfModpackId ?: $slug;
         $targetFile = $cfFileId;
@@ -1895,7 +1938,53 @@ function getServerMetadata(array $env, array $config, string $containerName, str
 
         if ($targetId && $targetFile) {
             if (!$mcVersion) {
-                $mcVersion = getMinecraftVersion('curseforge', (string) $targetId, (string) $targetFile, $apiKey);
+                // Inline Direct Lookup Fix
+                if (!is_numeric($targetId)) {
+                    // Hotfix for ATM 10
+                    if (trim($targetId) === 'all-the-mods-10') {
+                        $modId = 925200;
+                    } else {
+                        $s = cfRequest("/mods/search?gameId=432&classId=4471&searchFilter=" . urlencode($targetId), $apiKey);
+                        // Iterate to find exact slug match
+                        foreach ($s['data'] ?? [] as $mod) {
+                            if (isset($mod['slug']) && $mod['slug'] === $targetId) {
+                                $modId = $mod['id'];
+                                break;
+                            }
+                        }
+                    }
+
+                    // Fallback: Try replacing hyphens with spaces if not found
+                    if (empty($modId)) {
+                        $s = cfRequest("/mods/search?gameId=432&classId=4471&searchFilter=" . urlencode(str_replace('-', ' ', $targetId)), $apiKey);
+                        foreach ($s['data'] ?? [] as $mod) {
+                            if (isset($mod['slug']) && $mod['slug'] === $targetId) {
+                                $modId = $mod['id'];
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    $modId = $targetId;
+                }
+
+                if (!empty($modId) && is_numeric($targetFile)) {
+                     $f = cfRequest("/mods/" . $modId . "/files/" . $targetFile, $apiKey);
+                    if (isset($f['data']['gameVersions'])) {
+                        foreach ($f['data']['gameVersions'] as $gv) {
+                            if (preg_match('/^\d+\.\d+(\.\d+)?$/', $gv)) {
+                                $mcVersion = $gv;
+                            } elseif (preg_match('/^(Forge|Fabric|Quilt|NeoForge)$/i', $gv)) {
+                                $loader = $gv;
+                            }
+                        }
+                    }
+                }
+
+                if (!$mcVersion) {
+                    $mcVersion = getMinecraftVersion('curseforge', (string) $targetId, (string) $targetFile, $apiKey);
+                }
+                file_put_contents(__DIR__ . '/debug.log', "Backfill Result: " . ($mcVersion ?? 'null') . "\n", FILE_APPEND);
             }
             if (!$loader) {
                 $loaders = getModpackLoaders('curseforge', (string) ($slug ?: $targetId), $apiKey, (string) $targetId);
@@ -1962,13 +2051,75 @@ function getServerMetadata(array $env, array $config, string $containerName, str
         }
     }
 
-    // 6. LAST RESORT: Default to "Latest" for truly unknown servers
+    // 6. File System Scan (Ultimate Truth for Vanilla/Existing)
+    if ((!$mcVersion || $mcVersion === 'Latest') || (!$loader && $mcVersion) || ($loader === 'Forge' && preg_match('/vanilla/i', $containerName))) {
+        $dataDir = getContainerDataDir($containerName, $containerId);
+        // Debug Logging
+        $debug['dataDirResolved'] = $dataDir;
+        if ($dataDir && is_dir($dataDir)) {
+             $scanFiles = scandir($dataDir);
+             $debug['dirListing'] = array_slice($scanFiles, 0, 10); // Log first 10 files
+
+             $fileMeta = detectVersionFromFiles($dataDir);
+            if (!empty($fileMeta['mcVersion'])) {
+                $mcVersion = $fileMeta['mcVersion'];
+                $debug['fileScan'] = $fileMeta;
+
+                // If we found the version via files, TRUST the loader state from files too.
+                // This clears "Forge" if files indicate Vanilla (empty).
+                $loader = $fileMeta['loader'];
+                $debug['fileScanLoader'] = $loader;
+            }
+        } else {
+             $debug['dataDirError'] = "Directory not found or invalid: " . json_encode($dataDir);
+        }
+        file_put_contents(__DIR__ . '/debug.log', "Debug Meta for $containerName: " . json_encode($debug) . "\n", FILE_APPEND);
+    }
+
+    // 7. LAST RESORT: Default to "Latest" for truly unknown servers
     if (!$mcVersion) {
         $mcVersion = 'Latest';
         $debug['fallback'] = 'defaulted to Latest';
     }
 
     return ['mcVersion' => $mcVersion, 'loader' => $loader, '_debug' => $debug];
+}
+
+/**
+ * Scans a server directory for clues about the Minecraft Version and Loader.
+ */
+function detectVersionFromFiles(string $dir): array
+{
+    $ver = '';
+    $loader = '';
+
+    // Vanilla JARs: minecraft_server.1.21.1.jar
+    $jars = glob("$dir/minecraft_server.*.jar");
+    if ($jars) {
+        // Sort by modification time descending to get the most likely active one
+        usort($jars, function ($a, $b) {
+            return filemtime($b) - filemtime($a);
+        });
+        foreach ($jars as $jar) {
+            if (preg_match('/minecraft_server\.(\d+\.\d+(\.\d+)?)\.jar/', basename($jar), $m)) {
+                $ver = $m[1];
+                break;
+            }
+        }
+    }
+
+    // Mod Loaders
+    if (file_exists("$dir/fabric-server-launch.jar") || is_dir("$dir/libraries/net/fabricmc")) {
+        $loader = 'fabric';
+    } elseif (is_dir("$dir/libraries/net/neoforged")) {
+        $loader = 'neoforge';
+    } elseif (is_dir("$dir/libraries/net/minecraftforge") || count(glob("$dir/forge-*.jar")) > 0) {
+        $loader = 'forge';
+    } elseif (file_exists("$dir/quilt-server-launch.jar") || is_dir("$dir/libraries/org/quiltmc")) {
+        $loader = 'quilt';
+    }
+
+    return ['mcVersion' => $ver, 'loader' => $loader];
 }
 
 /**
@@ -2053,6 +2204,14 @@ function handleDeploy(array $config, array $defaults): void
                 'output' => []
             ], 502);
         }
+
+        // AUTO-RESOLVE VERSION: If user selected "Latest" or empty, try to resolve the actual MC version from the file ID for metadata
+        if (!$mcVerSelected && $modId !== -1 && $resolvedFileId) {
+             $mcVerSelected = getMinecraftVersion('curseforge', (string) $modId, (string) $resolvedFileId, $config['curseforge_api_key'] ?? '');
+            if ($mcVerSelected) {
+                dbg("Resolved MC Version for Modpack $modId / File $resolvedFileId: $mcVerSelected");
+            }
+        }
     } else {
         // Vanilla path: keep $downloadUrl as null
         $resolvedFileId = $fileId ?: 'LATEST';
@@ -2089,6 +2248,7 @@ function handleDeploy(array $config, array $defaults): void
     }
 
     $env += [
+        'MCMM_VERSION' => $mcVerSelected ?: ($modId === -1 ? $resolvedFileId : ''),
         'MEMORY' => $memory,
         'SERVER_NAME' => $serverName,
         'SERVER_IP' => $serverIp,

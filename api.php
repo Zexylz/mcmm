@@ -5,6 +5,7 @@
  * Handles all API requests for the Minecraft Modpack Manager
  */
 
+// MCMM API Handler - Force Reload
 require_once __DIR__ . '/include/lib.php';
 
 
@@ -561,7 +562,8 @@ try {
                                 $containerName,
                                 $config['curseforge_api_key'] ?? '',
                                 $image,
-                                (int)$port
+                                (int)$port,
+                                $containerId
                             );
                             $mcVer = $metadata['mcVersion'];
                             $loaderVer = $metadata['loader'];

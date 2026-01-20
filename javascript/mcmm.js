@@ -220,14 +220,12 @@ function switchTab(tabId, element) {
 
     if (tabId === 'servers') {
         loadServers();
-        if (!serverRefreshInterval) {
-            serverRefreshInterval = setInterval(loadServers, 1000);
-        }
+        startGlobalPolling();
     } else {
-        if (serverRefreshInterval) {
-            clearInterval(serverRefreshInterval);
-            serverRefreshInterval = null;
-        }
+        // We still want basic server status updates even if not on main tab, mostly for toasts/background tasks
+        // But for per-second updates, we might throttle.
+        // For now, let's keep the global polling running but it will handle throttling.
+        startGlobalPolling();
     }
 
     if (tabId === 'backups') {
@@ -2331,7 +2329,8 @@ function openConsole(serverId, serverName) {
     output.innerHTML = '<div style="color: rgb(102 102 102 / 100%); padding: 1rem;">Loading logs...</div>';
 
     fetchLogs();
-    consoleInterval = setInterval(fetchLogs, 2000);
+    fetchLogs();
+    // consoleInterval = setInterval(fetchLogs, 2000); // Removed in favor of global polling
 
     document.getElementById('consoleInput').focus();
 }
@@ -2363,7 +2362,8 @@ async function fetchLogs() {
 
 function closeConsole() {
     document.getElementById('consoleModal').classList.remove('open');
-    if (consoleInterval) clearInterval(consoleInterval);
+    document.getElementById('consoleModal').classList.remove('open');
+    // if (consoleInterval) clearInterval(consoleInterval); // Handled by global polling check
     currentConsoleId = null;
 }
 
@@ -2422,17 +2422,20 @@ async function switchPlayerTab(tab) {
     fetchTabPlayers();
 }
 
-async function fetchTabPlayers() {
+async function fetchTabPlayers(quiet = false) {
     const body = document.getElementById('playersBody');
     const serverId = localCurrentServerId;
     if (!body || !serverId) return;
 
-    body.innerHTML = `
-        <div style="text-align:center; padding: 4rem 2rem; color: var(--text-secondary);">
-            <div class="mcmm-spinner" style="width: 24px; height: 24px;"></div>
-            <div style="margin-top: 1rem; font-weight: 500; font-size: 0.85rem; opacity: 0.8;">FETCHING DATA...</div>
-        </div>
-    `;
+    // Only show spinner if not quiet update
+    if (!quiet) {
+        body.innerHTML = `
+            <div style="text-align:center; padding: 4rem 2rem; color: var(--text-secondary);">
+                <div class="mcmm-spinner" style="width: 24px; height: 24px;"></div>
+                <div style="margin-top: 1rem; font-weight: 500; font-size: 0.85rem; opacity: 0.8;">FETCHING DATA...</div>
+            </div>
+        `;
+    }
 
     try {
         const action = currentPlayersTab === 'active' ? 'server_players' : 'server_banned_players';
@@ -2458,6 +2461,7 @@ async function fetchTabPlayers() {
 function refreshPlayers() {
     if (localCurrentServerId) {
         openPlayersModal(localCurrentServerId, null);
+        fetchTabPlayers(false); // Force reload with spinner
     }
 }
 
