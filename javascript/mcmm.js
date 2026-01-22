@@ -685,27 +685,127 @@ async function loadInstalledMods() {
         if (data.success) {
             modState.installed = data.data || [];
 
-            // Trigger identification for unknown mods in BATCH
+            // Trigger identification for unknown mods in CHUNKS
             const unknownMods = modState.installed.filter(m => m.needsIdentification).map(m => m.file);
             if (unknownMods.length > 0) {
-                console.log(`[MCMM] Identifying ${unknownMods.length} mods in batch...`);
-                await identifyModsBatch(unknownMods);
+                console.log(`[MCMM] Identifying ${unknownMods.length} mods...`);
+                // Batch in chunks of 20 with minimal delay for speed
+                // Parallel batch processing for maximum speed
+                const chunkSize = 25;
+                const chunks = [];
+                for (let i = 0; i < unknownMods.length; i += chunkSize) {
+                    chunks.push(unknownMods.slice(i, i + chunkSize));
+                }
+
+                // Process k chunks at a time (Concurrency)
+                const concurrency = 4;
+
+                // Show floating progress badge
+                renderScanningBadge(0, unknownMods.length);
+
+                for (let i = 0; i < chunks.length; i += concurrency) {
+                    const batch = chunks.slice(i, i + concurrency);
+                    // Fire requests in parallel
+                    await Promise.all(batch.map(chunk => identifyModsBatch(chunk)));
+
+                    const processedCount = Math.min((i + concurrency) * chunkSize, unknownMods.length);
+                    console.log(`[MCMM] Progress: ${processedCount} / ${unknownMods.length}`);
+                    updateScanningBadge(processedCount, unknownMods.length);
+
+                    // Tiny yield to let UI breathe, but essentially zero delay
+                    await new Promise(r => setTimeout(r, 10));
+                }
+                removeScanningBadge();
             }
 
             if (modState.view === 'installed') renderMods();
         }
     } catch (e) {
         console.error(e);
+        removeScanningBadge();
+    }
+}
+
+function renderScanningBadge(current, total) {
+    let badge = document.getElementById('mcmm-scan-badge');
+    if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'mcmm-scan-badge';
+        Object.assign(badge.style, {
+            position: 'fixed',
+            bottom: '2rem',
+            right: '2rem',
+            padding: '1rem 1.5rem',
+            background: 'rgba(23, 23, 23, 0.8)',
+            backdropFilter: 'blur(12px)',
+            '-webkit-backdrop-filter': 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '16px',
+            color: 'white',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+            zIndex: '9999',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem',
+            fontFamily: "'Inter', sans-serif",
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            opacity: '0',
+            transform: 'translateY(20px)'
+        });
+
+        badge.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div class="mcmm-scan-spinner" style="width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.1); border-top-color: #a855f7; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <div style="font-weight: 600; font-size: 0.95rem;">Identifying Mods</div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; color: rgba(255,255,255,0.7);">
+                <span id="mcmm-scan-text">Initializing...</span>
+                <span id="mcmm-scan-percent">0%</span>
+            </div>
+            <div style="width: 200px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-top: 0.2rem;">
+                <div id="mcmm-scan-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #a855f7, #ec4899); transition: width 0.3s ease;"></div>
+            </div>
+        `;
+        document.body.appendChild(badge);
+
+        // Trigger animation
+        requestAnimationFrame(() => {
+            badge.style.opacity = '1';
+            badge.style.transform = 'translateY(0)';
+        });
+    }
+    updateScanningBadge(current, total);
+}
+
+function updateScanningBadge(current, total) {
+    const badge = document.getElementById('mcmm-scan-badge');
+    if (!badge) return;
+
+    const percent = Math.round((current / total) * 100);
+    const textEl = document.getElementById('mcmm-scan-text');
+    const percentEl = document.getElementById('mcmm-scan-percent');
+    const barEl = document.getElementById('mcmm-scan-bar');
+
+    if (textEl) textEl.textContent = `${current} / ${total} scanned`;
+    if (percentEl) percentEl.textContent = `${percent}%`;
+    if (barEl) barEl.style.width = `${percent}%`;
+}
+
+function removeScanningBadge() {
+    const badge = document.getElementById('mcmm-scan-badge');
+    if (badge) {
+        badge.style.opacity = '0';
+        badge.style.transform = 'translateY(20px)';
+        setTimeout(() => badge.remove(), 350);
     }
 }
 
 async function identifyModsBatch(filenames) {
     if (!currentServerId || !filenames.length) return;
     try {
-        const res = await fetch(`/plugins/mcmm/api.php?action=mod_identify_batch&id=${currentServerId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(filenames)
+        const queries = `&files=${encodeURIComponent(JSON.stringify(filenames))}`;
+        const res = await fetch(`/plugins/mcmm/api.php?action=mod_identify_batch&id=${currentServerId}${queries}`, {
+            method: 'GET'
         });
         const data = await res.json();
         if (data.success && data.data) {
@@ -1957,6 +2057,7 @@ function renderServerRow(server) {
                     ${server.name}
                     <span class="mcmm-badge">${mcVersion}</span>
                     <span class="mcmm-badge secondary">${loader}</span>
+                    ${server.containerUpdate ? `<span class="mcmm-badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);" title="New container image available"><span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 2px; vertical-align: text-bottom;">download</span> Update</span>` : ''}
                 </div>
                 <div class="mcmm-server-subtitle">
                     <span class="mcmm-status-dot"></span>

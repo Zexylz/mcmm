@@ -44,6 +44,87 @@ function getContainerDataDir(string $containerName, string $containerId = '')
 }
 
 /**
+ * Resolve host data directory by ID only.
+ */
+function getContainerDataDirById(string $id): ?string
+{
+    // First try standard inspection for /data mount
+    $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
+    $cmd = "$dockerBin inspect -f '{{range .Mounts}}{{if eq .Destination \"/data\"}}{{.Source}}{{end}}{{end}}' " . escapeshellarg($id);
+    $path = trim((string) shell_exec($cmd));
+    if ($path && is_dir($path)) {
+        return $path;
+    }
+
+    // If not found, try to get name and infer path
+    $nameCmd = "$dockerBin inspect -f '{{.Name}}' " . escapeshellarg($id);
+    $name = trim((string) shell_exec($nameCmd), '/');
+    if ($name) {
+        $path = "/mnt/user/appdata/" . $name;
+        if (is_dir($path)) {
+            return $path;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Load mod metadata from modpack manifest (minecraftinstance.json or manifest.json)
+ */
+function loadModsFromManifest(string $dataDir): array
+{
+    $mods = [];
+
+    // 1. Try CurseForge/FTB App minecraftinstance.json (Best Source)
+    $instFile = rtrim($dataDir, '/') . '/minecraftinstance.json';
+    if (file_exists($instFile)) {
+        $data = json_decode(file_get_contents($instFile), true);
+        if ($data && !empty($data['installedAddons'])) {
+            $mcVersion = $data['baseModLoader']['minecraftVersion'] ?? 'Unknown';
+            foreach ($data['installedAddons'] as $addon) {
+                if (!empty($addon['installedFile'])) {
+                    $f = $addon['installedFile'];
+                    $modId = $addon['addonID'];
+                    $fileName = $f['fileName'] ?? '';
+                    $mods[$modId] = [
+                        'projectID' => $modId,
+                        'fileID' => $f['id'] ?? null,
+                        'name' => $addon['name'] ?? '',
+                        'fileName' => $fileName,
+                        'mcVersion' => $mcVersion
+                    ];
+                }
+            }
+            return $mods;
+        }
+    }
+
+    // 2. Try CurseForge manifest.json (Export format, less likely in running server but possible)
+    $manFile = rtrim($dataDir, '/') . '/manifest.json';
+    if (file_exists($manFile)) {
+         $data = json_decode(file_get_contents($manFile), true);
+        if ($data && !empty($data['files'])) {
+            $mcVersion = $data['minecraft']['version'] ?? 'Unknown';
+            foreach ($data['files'] as $file) {
+                // Manifest only has projectID and fileID, no filenames usually.
+                // We can only use this to confirm IDs if we fetch details later.
+                $modId = $file['projectID'];
+                $mods[$modId] = [
+                    'projectID' => $modId,
+                    'fileID' => $file['fileID'],
+                    'fileName' => '', // Unknown in this format
+                    'name' => '', // Unknown
+                    'mcVersion' => $mcVersion
+                ];
+            }
+        }
+    }
+
+    return $mods;
+}
+
+/**
  * Get the full 64-character container ID from a short ID or name.
  */
 function getContainerLongId(string $idOrName): ?string
@@ -1016,6 +1097,7 @@ function fetchCurseForgeMods(string $search, string $version, string $loader, in
         $mods[] = [
             'id' => $mod['id'],
             'name' => $mod['name'],
+            'slug' => $mod['slug'] ?? '',
             'author' => $mod['authors'][0]['name'] ?? 'Unknown',
             'downloads' => formatDownloads($mod['downloadCount'] ?? 0),
             'downloadsRaw' => intval($mod['downloadCount'] ?? 0),

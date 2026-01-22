@@ -14,7 +14,7 @@
    ========================================================================== */
 
 /* ===== CSS RESET FOR UNRAID ===== */
- div.title {
+div.title {
     display: none;
 }
 
@@ -25,689 +25,718 @@
     max-width: 100%;
 }
 
- .mcmm-app,
- .mcmm-app * {
-     all: revert;
-     box-sizing: border-box;
- }
+.mcmm-app,
+.mcmm-app * {
+    all: revert;
+    box-sizing: border-box;
+}
 
- /* ===== THEME VARIABLES ===== */
- :root {
-     /* =========================================================
+/* ===== THEME VARIABLES ===== */
+:root {
+    /* =========================================================
       UI SCALE (single knob)
       - 1   = default
       - 0.9 = slightly smaller
       - 1.1 = slightly larger
       This scales typography + key sizing variables without using transform (safe for Unraid/Chromium scrolling).
       ========================================================= */
-     --ui-scale: 1;
-     --bg-body: rgb(11 12 22 / 100%);
-     --bg-surface: rgb(22 24 35 / 70%);
-     --bg-surface-hover: rgb(30 32 45 / 80%);
-     --bg-input: rgb(10 11 16 / 60%);
-     --primary: rgb(157 78 221 / 100%);
-     --primary-hover: rgb(199 125 255 / 100%);
-     --secondary: rgb(123 44 191 / 100%);
-     --primary-dim: rgb(157 78 221 / 15%);
-     --text-main: rgb(255 255 255 / 100%);
-     --text-secondary: rgb(148 163 184 / 100%);
-     --text-muted: rgb(100 116 139 / 100%);
-     --border: rgb(255 255 255 / 8%);
-     --success: rgb(52 211 153 / 100%);
-     --danger: rgb(248 113 113 / 100%);
-     --warning: rgb(251 191 36 / 100%);
-     --radius-sm: calc(clamp(8px, 0.6vw, 10px) * var(--ui-scale));  /* small border radius */
-     --radius-md: calc(clamp(14px, 1.0vw, 18px) * var(--ui-scale));     /* medium border radius */
-     --blur-strength-base: 12px;    /* base backdrop blur strength */
-     --blur-strength: calc(var(--blur-strength-base) * var(--ui-scale));   /* backdrop blur strength */
-     --content-max-width: calc(clamp(1100px, 92vw, 1600px) * var(--ui-scale));  /* max width for main content container */
-     --mcmm-icon-60: calc(60px * var(--ui-scale)); /* server row icon size */
-     --mcmm-icon-56: calc(56px * var(--ui-scale));  /* mod icon size */
-     --mcmm-icon-80: calc(80px * var(--ui-scale));  /* large mod icon size */
-     --mcmm-thumb-180: calc(180px * var(--ui-scale));   /* modpack thumb size */
-     --mcmm-btn-icon: calc(46px * var(--ui-scale));    /* server action button size */
-     --mcmm-btn-icon-sm: calc(44px * var(--ui-scale));  /* server action button size (small screens) */
-     --mcmm-page-btn-h: calc(34px * var(--ui-scale));   /* pagination button height */
-     --mcmm-page-btn-w: calc(36px * var(--ui-scale));   /* pagination button width */
-     --mcmm-pagination-btn-h: calc(32px * var(--ui-scale));   /* pagination button height */
-     --gutter: calc(clamp(14px, 2.2vw, 36px) * var(--ui-scale)); /* responsive side padding: min 16px, ideal 2vw, max 32px */
- }
+    --ui-scale: 1;
+    --bg-body: rgb(11 12 22 / 100%);
+    --bg-surface: rgb(22 24 35 / 70%);
+    --bg-surface-hover: rgb(30 32 45 / 80%);
+    --bg-input: rgb(10 11 16 / 60%);
+    --primary: rgb(157 78 221 / 100%);
+    --primary-hover: rgb(199 125 255 / 100%);
+    --secondary: rgb(123 44 191 / 100%);
+    --primary-dim: rgb(157 78 221 / 15%);
+    --text-main: rgb(255 255 255 / 100%);
+    --text-secondary: rgb(148 163 184 / 100%);
+    --text-muted: rgb(100 116 139 / 100%);
+    --border: rgb(255 255 255 / 8%);
+    --success: rgb(52 211 153 / 100%);
+    --danger: rgb(248 113 113 / 100%);
+    --warning: rgb(251 191 36 / 100%);
+    --radius-sm: calc(clamp(8px, 0.6vw, 10px) * var(--ui-scale));
+    /* small border radius */
+    --radius-md: calc(clamp(14px, 1.0vw, 18px) * var(--ui-scale));
+    /* medium border radius */
+    --blur-strength-base: 12px;
+    /* base backdrop blur strength */
+    --blur-strength: calc(var(--blur-strength-base) * var(--ui-scale));
+    /* backdrop blur strength */
+    --content-max-width: calc(clamp(1100px, 92vw, 1600px) * var(--ui-scale));
+    /* max width for main content container */
+    --mcmm-icon-60: calc(60px * var(--ui-scale));
+    /* server row icon size */
+    --mcmm-icon-56: calc(56px * var(--ui-scale));
+    /* mod icon size */
+    --mcmm-icon-80: calc(80px * var(--ui-scale));
+    /* large mod icon size */
+    --mcmm-thumb-180: calc(180px * var(--ui-scale));
+    /* modpack thumb size */
+    --mcmm-btn-icon: calc(46px * var(--ui-scale));
+    /* server action button size */
+    --mcmm-btn-icon-sm: calc(44px * var(--ui-scale));
+    /* server action button size (small screens) */
+    --mcmm-page-btn-h: calc(34px * var(--ui-scale));
+    /* pagination button height */
+    --mcmm-page-btn-w: calc(36px * var(--ui-scale));
+    /* pagination button width */
+    --mcmm-pagination-btn-h: calc(32px * var(--ui-scale));
+    /* pagination button height */
+    --gutter: calc(clamp(14px, 2.2vw, 36px) * var(--ui-scale));
+    /* responsive side padding: min 16px, ideal 2vw, max 32px */
+}
 
- /* =========================================================
+/* =========================================================
    DEBUG: element label overlay;
    =========================================================
 
 .mcmm-app * { outline: 1px solid rgba(255,0,0,0.15); } */
 
- /* ===== BASE STYLES =====
+/* ===== BASE STYLES =====
    Re-apply inheritance baseline after revert */
- .mcmm-app {
-     box-sizing: border-box;
-     color: var(--text-main);
-     font-family: Outfit, Inter, -apple-system, BlinkMacSystemFont, sans-serif;
-     font-size: calc(clamp(15px, 0.9vw + 10px, 18px) * var(--ui-scale));
-     line-height: 1.6;
-     margin: 0;
-     min-height: 100vh;
-     padding: 0;
-     overflow-x: clip;
- }
-
- @supports not (overflow-x: clip) {
-     .mcmm-app {
-         overflow-x: hidden;
-     }
- }
-
- .mcmm-app .mcmm-header {
-     padding-top: clamp(18px, 2.2vw, 36px);
-     padding-bottom: 0;
- }
-
- .mcmm-app .mcmm-tabs {
-     display: flex;
-     gap: 0.5rem;
-     margin-bottom: clamp(18px, 2.4vw, 36px);
-     padding-top: clamp(10px, 1.4vw, 18px);
-     position: relative;
- }
-
- .mcmm-app .mcmm-main {
-     padding-top: 0;
-     padding-bottom: clamp(48px, 5vw, 80px);
- }
-
- .mcmm-scale-wrapper {
-     width: 100%;
-     margin-bottom: 50px;
-     transform: none;   /* IMPORTANT: No transform scaling (prevents scroll stalls on Chromium/Unraid) */
-     transform-origin: initial;
- }
-
- /* Make common elements inherit baseline */
- .mcmm-app :where(h1, h2, h3, h4, p, a, button, input, select, textarea) {
-     font: inherit;
-     color: inherit;
- }
-
- .mcmm-app a {
-     text-decoration: none;
- }
-
- .material-symbols-outlined {
-     font-family: 'Material Symbols Outlined', sans-serif;
-     display: inline-flex;
-     vertical-align: middle;
-     font-size: 1.25em;
-     line-height: 1;
-     font-weight: normal;
-     font-style: normal;
-     text-transform: none;
-     letter-spacing: normal;
-     overflow-wrap: normal;
-     white-space: nowrap;
-     direction: ltr;
- }
-
- /* ===== UNRAID COMPAT (only where needed) ===== */
- html,
- body {
-     background:
-         radial-gradient(circle at 15% 50%, rgb(76 29 149 / 15%) 0%, transparent 50%),
-         radial-gradient(circle at 85% 30%, rgb(124 58 237 / 10%) 0%, transparent 50%),
-         linear-gradient(to bottom, rgb(11 12 22 / 100%) 0%, rgb(17 18 31 / 100%) 100%);
-     background-attachment: scroll;
-     background-repeat: no-repeat;
-     background-size: cover;
-     margin: 0;
- }
-
- /* ===== LAYOUT: CANONICAL CONTAINER (no end-overrides needed) ===== */
- .mcmm-app :is(.mcmm-header, .mcmm-tabs, .mcmm-main) {
-     width: 100%;
-     max-width: var(--content-max-width);
-     margin-left: auto;
-     margin-right: auto;
-     padding-left: var(--gutter); /* dynamic side padding */
-     padding-right: var(--gutter);
- }
-
- /* ===== LAYOUT: HEADER ===== */
- .mcmm-header {
-     align-items: center;
-     background: transparent;
-     display: flex;
-     justify-content: space-between;     
-     padding-top: 2rem; /* vertical spacing kept explicit */
-     padding-bottom: 0;
- }
-
- .mcmm-brand {
-     align-items: center;
-     color: rgb(255 255 255 / 100%);
-     display: flex;
-     font-size: clamp(1.35rem, 1.2vw + 1rem, 2.05rem);
-     font-weight: 800;
-     gap: 0.8rem;
-     letter-spacing: -0.5px;
-     text-shadow: 0 0 20px rgb(157 78 221 / 40%);
- }
-
- .mcmm-brand span {
-     color: var(--primary);
- }
-
- .mcmm-version {
-     background: rgb(255 255 255 / 5%);
-     border-radius: 6px;
-     color: var(--text-secondary);
-     font-size: clamp(0.78rem, 0.35vw + 0.7rem, 0.95rem);
-     padding: 0.4rem 0.8rem;
- }
-
- /* Tabs underline respects gutter automatically */
- .mcmm-app .mcmm-tabs::before {
-     content: "";
-     position: absolute;
-     left: var(--gutter);
-     right: var(--gutter);
-     bottom: 0;
-     height: 1px;
-     background: rgb(157 78 221 / 100%);
-     pointer-events: none;
- }
-
- .mcmm-tab {
-     background: transparent;
-     border: 1px solid transparent;
-     border-bottom: none;
-     border-radius: 8px 8px 0 0;
-     color: var(--text-secondary);
-     cursor: pointer;
-     font-size: clamp(0.92rem, 0.35vw + 0.85rem, 1.05rem);
-     font-weight: 600;
-     padding: clamp(10px, 0.9vw + 6px, 14px) clamp(14px, 1.6vw + 8px, 22px);
-     position: relative;
-     transition: all 0.2s;
- }
-
- .mcmm-tab:hover {
-     background: rgb(255 255 255 / 3%);
-     color: var(--text-main);
- }
-
- .mcmm-tab.active {
-     background: linear-gradient(to top, rgb(157 78 221 / 50%), transparent);
-     border-color: rgb(157 78 221 / 100%);
-     box-shadow: 0 -4px 10px rgb(157 78 221 / 5%);
- }
-
- /* ===== LAYOUT: MAIN CONTENT =====  fluid + zentriert + max */
- .mcmm-main {
-     padding-top: 0;
-     padding-bottom: 4rem;
- }
-
- .mcmm-tab-content {
-     display: none;
- }
-
- .mcmm-tab-content.active {
-     display: block;
- }
-
- /* ===== COMPONENTS: BUTTONS ===== */
- .mcmm-app .mcmm-btn {
-     align-items: center;
-     background: rgb(255 255 255 / 5%);
-     border: 1px solid rgb(255 255 255 / 10%);
-     border-radius: var(--radius-sm);
-     box-shadow: none;
-     color: var(--text-secondary);
-     cursor: pointer;
-     display: inline-flex;
-     font-size: 0.95rem;
-     font-weight: 600;
-     gap: 0.5rem;
-     justify-content: center;
-     line-height: normal;
-     padding: 0.7rem 1.4rem;
-     text-shadow: none;
-     text-transform: none;
-     transition: all 0.2s;
- }
-
- /* ===== PAGINATION (moved here to satisfy no-descending-specificity) ===== */
- .mcmm-pagination .mcmm-btn {
-     font-size: 0.9rem;
-     height: 34px;
-     padding: 0 0.65rem;
- }
-
- .mcmm-pagination-bar {
-     align-items: center;
-     background: linear-gradient(145deg, rgb(255 255 255 / 5%), rgb(0 0 0 / 25%));
-     border: 1px solid rgb(255 255 255 / 6%);
-     border-radius: 12px;
-     bottom: 1rem;
-     box-shadow: 0 14px 36px rgb(0 0 0 / 28%);
-     display: inline-flex;
-     gap: 0.55rem;
-     left: 50%;
-     padding: 0.5rem 0.8rem;
-     position: fixed;
-     transform: translateX(-50%);
-     z-index: 5;
- }
-
- .mcmm-pagination-bar .mcmm-btn {
-     align-items: center;
-     border-radius: 8px;
-     display: inline-flex;
-     font-weight: 800;
-     height: var(--mcmm-pagination-btn-h);
-     justify-content: center;
-     padding: 0;
-     width: var(--mcmm-page-btn-w);
- }
-
- .mcmm-pagination-bar .mcmm-btn.subtle {
-     background: rgb(255 255 255 / 6%);
-     border: 1px solid var(--border);
-     color: var(--text-main);
- }
-
- .mcmm-pagination-bar .mcmm-btn:disabled {
-     cursor: not-allowed;
-     opacity: 0.4;
- }
-
- .mcmm-pagination-bar span {
-     color: var(--text-secondary);
-     font-size: 0.95rem;
-     font-weight: 700;
- }
-
- .mcmm-page-btn {
-     background: linear-gradient(180deg, rgb(255 255 255 / 7%), rgb(0 0 0 / 25%));
-     border: 1px solid rgb(255 255 255 / 8%);
-     border-radius: 9px;
-     box-shadow: 0 10px 24px rgb(0 0 0 / 22%);
-     color: var(--text-main);
-     cursor: pointer;
-     font-size: 0.9rem;
-     font-weight: 700;
-     height: var(--mcmm-page-btn-h);
-     min-width: var(--mcmm-page-btn-w);
-     padding: 0 0.65rem;
-     transition: all 0.18s ease;
- }
-
- /* disabled BEFORE hover to satisfy no-descending-specificity */
- .mcmm-page-btn:disabled {
-     cursor: not-allowed;
-     opacity: 0.45;
- }
-
- .mcmm-page-btn:hover:not(:disabled, .active) {
-     background: linear-gradient(135deg, rgb(157 78 221 / 28%), rgb(157 78 221 / 18%));
-     border-color: rgb(157 78 221 / 70%);
-     box-shadow: 0 12px 26px rgb(157 78 221 / 35%);
-     color: rgb(255 255 255 / 100%);
-     transform: translateY(-1px);
- }
-
- .mcmm-page-btn.active {
-     background: linear-gradient(135deg, rgb(157 78 221 / 100%), rgb(123 44 191 / 100%));
-     border-color: rgb(157 78 221 / 95%);
-     box-shadow: 0 14px 30px rgb(157 78 221 / 45%);
-     color: rgb(255 255 255 / 100%);
-     transform: translateY(-1px);
- }
-
- /* ===== BUTTON HOVER (after pagination-specific button rules) ===== */
- .mcmm-app .mcmm-btn:hover {
-     background: rgb(255 255 255 / 10%);
-     border-color: rgb(255 255 255 / 20%);
-     box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
-     color: rgb(255 255 255 / 100%);
- }
-
- .mcmm-app .mcmm-btn-primary {
-     background: linear-gradient(135deg, rgb(123 44 191 / 100%) 0%, rgb(157 78 221 / 100%) 100%);
-     border: 1px solid transparent;
-     box-shadow: 0 4px 15px rgb(123 44 191 / 40%);
-     color: rgb(255 255 255 / 100%);
- }
-
- .mcmm-app .mcmm-btn-primary:hover {
-     box-shadow: 0 8px 25px rgb(123 44 191 / 60%);
-     transform: translateY(-2px);
- }
-
- /* Contextual button variants (used in console/player actions) */
- .mcmm-btn.warning {
-     background: rgb(255 200 87 / 18%);
-     border: 1px solid rgb(255 200 87 / 60%);
-     color: rgb(255 230 167 / 100%);
- }
-
- .mcmm-btn.warning:hover {
-     background: rgb(255 200 87 / 28%);
-     color: rgb(255 255 255 / 100%);
- }
-
- .mcmm-btn.danger {
-     background: rgb(239 68 68 / 18%);
-     border: 1px solid rgb(239 68 68 / 60%);
-     color: rgb(254 205 211 / 100%);
- }
-
- .mcmm-btn.danger:hover {
-     background: rgb(239 68 68 / 28%);
-     color: rgb(255 255 255 / 100%);
- }
-
- /* ===== COMPONENTS: SERVER LIST ===== */
- .mcmm-server-list {
-     display: flex;
-     flex-direction: column;
-     gap: 1rem;
- }
-
- /* Core row (UNRAID-SAFE BORDER + layout polish + perf) */
- .mcmm-server-row {
-     align-items: center;
-     background: var(--bg-surface);
-     border: none;  /* Perf: make this cheap by default */;
-     box-shadow: inset 0 0 0 2px var(--primary);  /* IMPORTANT: Unraid/Chromium backdrop-filter can break borders. Use inset shadow as the border source (reliable). */;
-     border-radius: var(--radius-md);
-     display: flex;
-     gap: 1.25rem;
-     min-height: 92px; /* Layout: consistent spacing */;
-     overflow: hidden;
-     padding: 1.2rem 1.5rem;
-     position: relative;
- }
-
- /* Apply blur only when supported (and keep background alpha consistent) */
- @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-     .mcmm-server-row {
-         background: rgb(22 24 35 / 60%);
-         /* stylelint-disable-next-line property-no-vendor-prefix */
-         -webkit-backdrop-filter: blur(var(--blur-strength));
-         backdrop-filter: blur(var(--blur-strength));
-     }
- }
-
- /* Hover styles */
- .mcmm-server-row:hover {
-     background: var(--bg-surface-hover);
- }
-
- /* Status-aware border tint (matches left strip) */
- .mcmm-server-row.running {
-     box-shadow:
-         inset 0 0 0 1px rgb(52 211 153 / 55%),
-         0 0 18px rgb(52 211 153 / 12%);
- }
-
- .mcmm-server-row.stopped {
-     box-shadow:
-         inset 0 0 0 1px rgb(248 113 113 / 55%),
-         0 0 14px rgb(248 113 113 / 10%);
- }
-
- .mcmm-server-row::before {
-     content: "";
-     position: absolute;
-     left: 0;
-     top: 0;
-     bottom: 0;
-     width: 14px;
-     border-radius: var(--radius-md) 0 0 var(--radius-md);  /* ≈ Icon + Abstand, ggf. feinjustieren */;
-     pointer-events: none;
-     z-index: 1;
- }
-
- .mcmm-server-row.running::before {
-     background: linear-gradient(90deg,
-             rgb(52 211 153 / 90%) 0%,
-             rgb(52 211 153 / 65%) 35%,
-             rgb(52 211 153 / 30%) 60%,
-             rgb(52 211 153 / 0%) 100%);
- }
-
-
- .mcmm-server-row.stopped::before {
-     background: linear-gradient(90deg,
-             rgb(248 113 113 / 90%) 0%,
-             rgb(248 113 113 / 65%) 35%,
-             rgb(248 113 113 / 30%) 60%,
-             rgb(248 113 113 / 0%) 100%);
- }
-
-
- /* Icon */
- .mcmm-server-icon {
-     background-color: rgb(51 51 51 / 100%);
-     background-position: center;
-     background-repeat: no-repeat;
-     background-size: cover;
-     border: 1px solid rgb(255 255 255 / 10%);
-     border-radius: 14px;
-     flex-shrink: 0;
-     height: var(--mcmm-icon-60);
-     width: var(--mcmm-icon-60);
-     margin-left: 1rem;
-
-     /* slight lift */
-     box-shadow: 0 10px 24px rgb(0 0 0 / 18%);
- }
-
- /* Info block (keeps titles aligned across rows) */
- .mcmm-server-info {
-     display: flex;
-     flex-direction: column;
-     flex: 0 0 clamp(240px, 26vw, 340px); /* consistent width so metrics align vertically */
-     min-width: 220px;
- }
-
- .mcmm-server-title {
-     display: flex;
-     align-items: center;
-     color: rgb(255 255 255 / 100%);
-     font-size: 1.12rem;
-     font-weight: 750;
- }
-
- .mcmm-server-subtitle {
-     align-items: center;
-     color: var(--text-secondary);
-     display: flex;
-     flex-wrap: wrap;
-     font-size: 0.9rem;
-     gap: 0.65rem;
- }
-
- .mcmm-badge {
-     background: rgb(255 255 255 / 6%);
-     border: 1px solid rgb(255 255 255 / 10%);
-     border-radius: 999px;
-     color: var(--text-secondary);
-     display: inline-flex;
-     align-items: center;
-     font-family: "Fira Code", monospace;
-     font-size: 0.75rem;
-     font-weight: 600;
-     padding: 0.15rem 0.6rem;
-     vertical-align: middle;
-     margin-left: 0.5rem;
- }
-
- .mcmm-badge.secondary {
-     background: rgb(157 78 221 / 10%);
-     border-color: rgb(157 78 221 / 30%);
-     color: var(--primary-hover);
-     margin-right: 0.5rem;
- }
-
- .mcmm-status-dot {
-     background: rgb(100 116 139 / 100%);
-     border-radius: 50%;
-     box-shadow: 0 0 0 0 rgb(100 116 139 / 40%);
-     display: inline-block;
-     height: 8px;
-     width: 8px;
- }
-
- .mcmm-server-row.running .mcmm-status-dot {
-     animation: mcmm-dot-pulse 2s infinite;
-     background: var(--success);
-     box-shadow: 0 0 10px var(--success);
- }
-
- .mcmm-server-row.stopped .mcmm-status-dot {
-     background: var(--danger);
- }
-
- @keyframes mcmm-dot-pulse {
-     0% {
-         box-shadow: 0 0 0 0 rgb(52 211 153 / 70%);
-     }
-
-     70% {
-         box-shadow: 0 0 0 6px rgb(52 211 153 / 0%);
-     }
-
-     100% {
-         box-shadow: 0 0 0 0 rgb(52 211 153 / 0%);
-     }
- }
-
- /* Metrics: cleaner alignment + responsive */
- .mcmm-server-metrics {
-     display: flex;
-     flex: 1 1 auto;
-     gap: 1.4rem;
-     padding: 0 0.5rem;
-     min-width: 280px; /* less aggressive than 0 2rem; keeps spacing consistent */;
- }
-
- .mcmm-metric {
-     display: flex;
-     flex: 1;
-     flex-direction: column;
-     gap: 0.35rem;
-     min-width: 160px;
- }
-
- .mcmm-metric-label {
-     color: var(--text-secondary);
-     display: flex;
-     font-size: 0.72rem;
-     font-weight: 800;
-     justify-content: space-between;
-     letter-spacing: 0.08em;
-     text-transform: uppercase;
-     opacity: 0.9;
- }
-
- .mcmm-metric-bar {
-     background: rgb(255 255 255 / 4%);
-     border: 1px solid rgb(255 255 255 / 6%);
-     border-radius: 999px;
-     height: 8px;
-     overflow: hidden;
-     position: relative;
-     width: 100%;
- }
-
- .mcmm-metric-fill {
-     border-radius: 999px;
-     height: 100%;
-     position: relative;
-     transition: width 0.9s cubic-bezier(0.4, 0, 0.2, 1);
- }
-
- .mcmm-metric-fill::after {
-     animation: mcmm-pulse 2s infinite linear;
-     background: linear-gradient(90deg, transparent, rgb(255 255 255 / 18%), transparent);
-     content: "";
-     height: 100%;
-     left: -100%;
-     position: absolute;
-     top: 0;
-     width: 100%;
- }
-
- @keyframes mcmm-pulse {
-     from {
-         left: -100%;
-     }
-
-     to {
-         left: 100%;
-     }
- }
-
- /* Actions: consistent right alignment + tighter grouping */
- .mcmm-server-actions {
-     display: flex;
-     gap: 0.55rem;
-     margin-left: auto;
-     align-items: center;
- }
-
- /* Icon buttons (server actions) */
- .mcmm-btn-icon {
-     align-items: center;
-     background: rgb(255 255 255 / 5%);
-     border: 1px solid var(--border);
-     border-radius: 12px;
-     color: var(--text-main);
-     cursor: pointer;
-     display: flex;
-     font-family: "Fira Code", monospace;
-     font-size: 1.05rem;
-     height: var(--mcmm-btn-icon);
-     justify-content: center;
-     width: var(--mcmm-btn-icon);
-     box-shadow: 0 10px 24px rgb(0 0 0 / 14%);
- }
-
- .mcmm-btn-icon:hover {
-     background: var(--primary);
-     border-color: var(--primary);
-     box-shadow: 0 0 18px rgb(157 78 221 / 35%), 0 14px 28px rgb(0 0 0 / 18%);
- }
-
- .mcmm-btn-icon.danger {
-     border-color: rgb(248 113 113 / 30%);
-     color: var(--danger);
- }
-
- .mcmm-btn-icon.danger:hover {
-     background: var(--danger);
-     border-color: var(--danger);
-     box-shadow: 0 0 16px rgb(248 113 113 / 35%), 0 14px 28px rgb(0 0 0 / 18%);
-     color: rgb(255 255 255 / 100%);
- }
-
- .mcmm-btn-icon.success {
-     border-color: rgb(52 211 153 / 30%);
-     color: var(--success);
- }
-
- .mcmm-btn-icon.success:hover {
-     background: var(--success);
-     border-color: var(--success);
-     box-shadow: 0 0 16px rgb(52 211 153 / 30%), 0 14px 28px rgb(0 0 0 / 18%);
-     color: rgb(255 255 255 / 100%);
- }
+.mcmm-app {
+    box-sizing: border-box;
+    color: var(--text-main);
+    font-family: Outfit, Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: calc(clamp(15px, 0.9vw + 10px, 18px) * var(--ui-scale));
+    line-height: 1.6;
+    margin: 0;
+    min-height: 100vh;
+    padding: 0;
+    overflow-x: clip;
+}
+
+@supports not (overflow-x: clip) {
+    .mcmm-app {
+        overflow-x: hidden;
+    }
+}
+
+.mcmm-app .mcmm-header {
+    padding-top: clamp(18px, 2.2vw, 36px);
+    padding-bottom: 0;
+}
+
+.mcmm-app .mcmm-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: clamp(18px, 2.4vw, 36px);
+    padding-top: clamp(10px, 1.4vw, 18px);
+    position: relative;
+}
+
+.mcmm-app .mcmm-main {
+    padding-top: 0;
+    padding-bottom: clamp(48px, 5vw, 80px);
+}
+
+.mcmm-scale-wrapper {
+    width: 100%;
+    margin-bottom: 50px;
+    transform: none;
+    /* IMPORTANT: No transform scaling (prevents scroll stalls on Chromium/Unraid) */
+    transform-origin: initial;
+}
+
+/* Make common elements inherit baseline */
+.mcmm-app :where(h1, h2, h3, h4, p, a, button, input, select, textarea) {
+    font: inherit;
+    color: inherit;
+}
+
+.mcmm-app a {
+    text-decoration: none;
+}
+
+.material-symbols-outlined {
+    font-family: 'Material Symbols Outlined', sans-serif;
+    display: inline-flex;
+    vertical-align: middle;
+    font-size: 1.25em;
+    line-height: 1;
+    font-weight: normal;
+    font-style: normal;
+    text-transform: none;
+    letter-spacing: normal;
+    overflow-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+}
+
+/* ===== UNRAID COMPAT (only where needed) ===== */
+html,
+body {
+    background:
+        radial-gradient(circle at 15% 50%, rgb(76 29 149 / 15%) 0%, transparent 50%),
+        radial-gradient(circle at 85% 30%, rgb(124 58 237 / 10%) 0%, transparent 50%),
+        linear-gradient(to bottom, rgb(11 12 22 / 100%) 0%, rgb(17 18 31 / 100%) 100%);
+    background-attachment: scroll;
+    background-repeat: no-repeat;
+    background-size: cover;
+    margin: 0;
+}
+
+/* ===== LAYOUT: CANONICAL CONTAINER (no end-overrides needed) ===== */
+.mcmm-app :is(.mcmm-header, .mcmm-tabs, .mcmm-main) {
+    width: 100%;
+    max-width: var(--content-max-width);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--gutter);
+    /* dynamic side padding */
+    padding-right: var(--gutter);
+}
+
+/* ===== LAYOUT: HEADER ===== */
+.mcmm-header {
+    align-items: center;
+    background: transparent;
+    display: flex;
+    justify-content: space-between;
+    padding-top: 2rem;
+    /* vertical spacing kept explicit */
+    padding-bottom: 0;
+}
+
+.mcmm-brand {
+    align-items: center;
+    color: rgb(255 255 255 / 100%);
+    display: flex;
+    font-size: clamp(1.35rem, 1.2vw + 1rem, 2.05rem);
+    font-weight: 800;
+    gap: 0.8rem;
+    letter-spacing: -0.5px;
+    text-shadow: 0 0 20px rgb(157 78 221 / 40%);
+}
+
+.mcmm-brand span {
+    color: var(--primary);
+}
+
+.mcmm-version {
+    background: rgb(255 255 255 / 5%);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: clamp(0.78rem, 0.35vw + 0.7rem, 0.95rem);
+    padding: 0.4rem 0.8rem;
+}
+
+/* Tabs underline respects gutter automatically */
+.mcmm-app .mcmm-tabs::before {
+    content: "";
+    position: absolute;
+    left: var(--gutter);
+    right: var(--gutter);
+    bottom: 0;
+    height: 1px;
+    background: rgb(157 78 221 / 100%);
+    pointer-events: none;
+}
+
+.mcmm-tab {
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: clamp(0.92rem, 0.35vw + 0.85rem, 1.05rem);
+    font-weight: 600;
+    padding: clamp(10px, 0.9vw + 6px, 14px) clamp(14px, 1.6vw + 8px, 22px);
+    position: relative;
+    transition: all 0.2s;
+}
+
+.mcmm-tab:hover {
+    background: rgb(255 255 255 / 3%);
+    color: var(--text-main);
+}
+
+.mcmm-tab.active {
+    background: linear-gradient(to top, rgb(157 78 221 / 50%), transparent);
+    border-color: rgb(157 78 221 / 100%);
+    box-shadow: 0 -4px 10px rgb(157 78 221 / 5%);
+}
+
+/* ===== LAYOUT: MAIN CONTENT =====  fluid + zentriert + max */
+.mcmm-main {
+    padding-top: 0;
+    padding-bottom: 4rem;
+}
+
+.mcmm-tab-content {
+    display: none;
+}
+
+.mcmm-tab-content.active {
+    display: block;
+}
+
+/* ===== COMPONENTS: BUTTONS ===== */
+.mcmm-app .mcmm-btn {
+    align-items: center;
+    background: rgb(255 255 255 / 5%);
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 0.95rem;
+    font-weight: 600;
+    gap: 0.5rem;
+    justify-content: center;
+    line-height: normal;
+    padding: 0.7rem 1.4rem;
+    text-shadow: none;
+    text-transform: none;
+    transition: all 0.2s;
+}
+
+/* ===== PAGINATION (moved here to satisfy no-descending-specificity) ===== */
+.mcmm-pagination .mcmm-btn {
+    font-size: 0.9rem;
+    height: 34px;
+    padding: 0 0.65rem;
+}
+
+.mcmm-pagination-bar {
+    align-items: center;
+    background: linear-gradient(145deg, rgb(255 255 255 / 5%), rgb(0 0 0 / 25%));
+    border: 1px solid rgb(255 255 255 / 6%);
+    border-radius: 12px;
+    bottom: 1rem;
+    box-shadow: 0 14px 36px rgb(0 0 0 / 28%);
+    display: inline-flex;
+    gap: 0.55rem;
+    left: 50%;
+    padding: 0.5rem 0.8rem;
+    position: fixed;
+    transform: translateX(-50%);
+    z-index: 5;
+}
+
+.mcmm-pagination-bar .mcmm-btn {
+    align-items: center;
+    border-radius: 8px;
+    display: inline-flex;
+    font-weight: 800;
+    height: var(--mcmm-pagination-btn-h);
+    justify-content: center;
+    padding: 0;
+    width: var(--mcmm-page-btn-w);
+}
+
+.mcmm-pagination-bar .mcmm-btn.subtle {
+    background: rgb(255 255 255 / 6%);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+}
+
+.mcmm-pagination-bar .mcmm-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.mcmm-pagination-bar span {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.mcmm-page-btn {
+    background: linear-gradient(180deg, rgb(255 255 255 / 7%), rgb(0 0 0 / 25%));
+    border: 1px solid rgb(255 255 255 / 8%);
+    border-radius: 9px;
+    box-shadow: 0 10px 24px rgb(0 0 0 / 22%);
+    color: var(--text-main);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 700;
+    height: var(--mcmm-page-btn-h);
+    min-width: var(--mcmm-page-btn-w);
+    padding: 0 0.65rem;
+    transition: all 0.18s ease;
+}
+
+/* disabled BEFORE hover to satisfy no-descending-specificity */
+.mcmm-page-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.mcmm-page-btn:hover:not(:disabled, .active) {
+    background: linear-gradient(135deg, rgb(157 78 221 / 28%), rgb(157 78 221 / 18%));
+    border-color: rgb(157 78 221 / 70%);
+    box-shadow: 0 12px 26px rgb(157 78 221 / 35%);
+    color: rgb(255 255 255 / 100%);
+    transform: translateY(-1px);
+}
+
+.mcmm-page-btn.active {
+    background: linear-gradient(135deg, rgb(157 78 221 / 100%), rgb(123 44 191 / 100%));
+    border-color: rgb(157 78 221 / 95%);
+    box-shadow: 0 14px 30px rgb(157 78 221 / 45%);
+    color: rgb(255 255 255 / 100%);
+    transform: translateY(-1px);
+}
+
+/* ===== BUTTON HOVER (after pagination-specific button rules) ===== */
+.mcmm-app .mcmm-btn:hover {
+    background: rgb(255 255 255 / 10%);
+    border-color: rgb(255 255 255 / 20%);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
+    color: rgb(255 255 255 / 100%);
+}
+
+.mcmm-app .mcmm-btn-primary {
+    background: linear-gradient(135deg, rgb(123 44 191 / 100%) 0%, rgb(157 78 221 / 100%) 100%);
+    border: 1px solid transparent;
+    box-shadow: 0 4px 15px rgb(123 44 191 / 40%);
+    color: rgb(255 255 255 / 100%);
+}
+
+.mcmm-app .mcmm-btn-primary:hover {
+    box-shadow: 0 8px 25px rgb(123 44 191 / 60%);
+    transform: translateY(-2px);
+}
+
+/* Contextual button variants (used in console/player actions) */
+.mcmm-btn.warning {
+    background: rgb(255 200 87 / 18%);
+    border: 1px solid rgb(255 200 87 / 60%);
+    color: rgb(255 230 167 / 100%);
+}
+
+.mcmm-btn.warning:hover {
+    background: rgb(255 200 87 / 28%);
+    color: rgb(255 255 255 / 100%);
+}
+
+.mcmm-btn.danger {
+    background: rgb(239 68 68 / 18%);
+    border: 1px solid rgb(239 68 68 / 60%);
+    color: rgb(254 205 211 / 100%);
+}
+
+.mcmm-btn.danger:hover {
+    background: rgb(239 68 68 / 28%);
+    color: rgb(255 255 255 / 100%);
+}
+
+/* ===== COMPONENTS: SERVER LIST ===== */
+.mcmm-server-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Core row (UNRAID-SAFE BORDER + layout polish + perf) */
+.mcmm-server-row {
+    align-items: center;
+    background: var(--bg-surface);
+    border: none;
+    /* Perf: make this cheap by default */
+    ;
+    box-shadow: inset 0 0 0 2px var(--primary);
+    /* IMPORTANT: Unraid/Chromium backdrop-filter can break borders. Use inset shadow as the border source (reliable). */
+    ;
+    border-radius: var(--radius-md);
+    display: flex;
+    gap: 1.25rem;
+    min-height: 92px;
+    /* Layout: consistent spacing */
+    ;
+    overflow: hidden;
+    padding: 1.2rem 1.5rem;
+    position: relative;
+}
+
+/* Apply blur only when supported (and keep background alpha consistent) */
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    .mcmm-server-row {
+        background: rgb(22 24 35 / 60%);
+        /* stylelint-disable-next-line property-no-vendor-prefix */
+        -webkit-backdrop-filter: blur(var(--blur-strength));
+        backdrop-filter: blur(var(--blur-strength));
+    }
+}
+
+/* Hover styles */
+.mcmm-server-row:hover {
+    background: var(--bg-surface-hover);
+}
+
+/* Status-aware border tint (matches left strip) */
+.mcmm-server-row.running {
+    box-shadow:
+        inset 0 0 0 1px rgb(52 211 153 / 55%),
+        0 0 18px rgb(52 211 153 / 12%);
+}
+
+.mcmm-server-row.stopped {
+    box-shadow:
+        inset 0 0 0 1px rgb(248 113 113 / 55%),
+        0 0 14px rgb(248 113 113 / 10%);
+}
+
+.mcmm-server-row::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 14px;
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    /* ≈ Icon + Abstand, ggf. feinjustieren */
+    ;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.mcmm-server-row.running::before {
+    background: linear-gradient(90deg,
+            rgb(52 211 153 / 90%) 0%,
+            rgb(52 211 153 / 65%) 35%,
+            rgb(52 211 153 / 30%) 60%,
+            rgb(52 211 153 / 0%) 100%);
+}
+
+
+.mcmm-server-row.stopped::before {
+    background: linear-gradient(90deg,
+            rgb(248 113 113 / 90%) 0%,
+            rgb(248 113 113 / 65%) 35%,
+            rgb(248 113 113 / 30%) 60%,
+            rgb(248 113 113 / 0%) 100%);
+}
+
+
+/* Icon */
+.mcmm-server-icon {
+    background-color: rgb(51 51 51 / 100%);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 14px;
+    flex-shrink: 0;
+    height: var(--mcmm-icon-60);
+    width: var(--mcmm-icon-60);
+    margin-left: 1rem;
+
+    /* slight lift */
+    box-shadow: 0 10px 24px rgb(0 0 0 / 18%);
+}
+
+/* Info block (keeps titles aligned across rows) */
+.mcmm-server-info {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 clamp(240px, 26vw, 340px);
+    /* consistent width so metrics align vertically */
+    min-width: 220px;
+}
+
+.mcmm-server-title {
+    display: flex;
+    align-items: center;
+    color: rgb(255 255 255 / 100%);
+    font-size: 1.12rem;
+    font-weight: 750;
+}
+
+.mcmm-server-subtitle {
+    align-items: center;
+    color: var(--text-secondary);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 0.9rem;
+    gap: 0.65rem;
+}
+
+.mcmm-badge {
+    background: rgb(255 255 255 / 6%);
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 999px;
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    font-family: "Fira Code", monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.15rem 0.6rem;
+    vertical-align: middle;
+    margin-left: 0.5rem;
+}
+
+.mcmm-badge.secondary {
+    background: rgb(157 78 221 / 10%);
+    border-color: rgb(157 78 221 / 30%);
+    color: var(--primary-hover);
+    margin-right: 0.5rem;
+}
+
+.mcmm-status-dot {
+    background: rgb(100 116 139 / 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 rgb(100 116 139 / 40%);
+    display: inline-block;
+    height: 8px;
+    width: 8px;
+}
+
+.mcmm-server-row.running .mcmm-status-dot {
+    animation: mcmm-dot-pulse 2s infinite;
+    background: var(--success);
+    box-shadow: 0 0 10px var(--success);
+}
+
+.mcmm-server-row.stopped .mcmm-status-dot {
+    background: var(--danger);
+}
+
+@keyframes mcmm-dot-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgb(52 211 153 / 70%);
+    }
+
+    70% {
+        box-shadow: 0 0 0 6px rgb(52 211 153 / 0%);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgb(52 211 153 / 0%);
+    }
+}
+
+/* Metrics: cleaner alignment + responsive */
+.mcmm-server-metrics {
+    display: flex;
+    flex: 1 1 auto;
+    gap: 1.4rem;
+    padding: 0 0.5rem;
+    min-width: 280px;
+    /* less aggressive than 0 2rem; keeps spacing consistent */
+    ;
+}
+
+.mcmm-metric {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 160px;
+}
+
+.mcmm-metric-label {
+    color: var(--text-secondary);
+    display: flex;
+    font-size: 0.72rem;
+    font-weight: 800;
+    justify-content: space-between;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.9;
+}
+
+.mcmm-metric-bar {
+    background: rgb(255 255 255 / 4%);
+    border: 1px solid rgb(255 255 255 / 6%);
+    border-radius: 999px;
+    height: 8px;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+}
+
+.mcmm-metric-fill {
+    border-radius: 999px;
+    height: 100%;
+    position: relative;
+    transition: width 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mcmm-metric-fill::after {
+    animation: mcmm-pulse 2s infinite linear;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 18%), transparent);
+    content: "";
+    height: 100%;
+    left: -100%;
+    position: absolute;
+    top: 0;
+    width: 100%;
+}
+
+@keyframes mcmm-pulse {
+    from {
+        left: -100%;
+    }
+
+    to {
+        left: 100%;
+    }
+}
+
+/* Actions: consistent right alignment + tighter grouping */
+.mcmm-server-actions {
+    display: flex;
+    gap: 0.55rem;
+    margin-left: auto;
+    align-items: center;
+}
+
+/* Icon buttons (server actions) */
+.mcmm-btn-icon {
+    align-items: center;
+    background: rgb(255 255 255 / 5%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text-main);
+    cursor: pointer;
+    display: flex;
+    font-family: "Fira Code", monospace;
+    font-size: 1.05rem;
+    height: var(--mcmm-btn-icon);
+    justify-content: center;
+    width: var(--mcmm-btn-icon);
+    box-shadow: 0 10px 24px rgb(0 0 0 / 14%);
+}
+
+.mcmm-btn-icon:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    box-shadow: 0 0 18px rgb(157 78 221 / 35%), 0 14px 28px rgb(0 0 0 / 18%);
+}
+
+.mcmm-btn-icon.danger {
+    border-color: rgb(248 113 113 / 30%);
+    color: var(--danger);
+}
+
+.mcmm-btn-icon.danger:hover {
+    background: var(--danger);
+    border-color: var(--danger);
+    box-shadow: 0 0 16px rgb(248 113 113 / 35%), 0 14px 28px rgb(0 0 0 / 18%);
+    color: rgb(255 255 255 / 100%);
+}
+
+.mcmm-btn-icon.success {
+    border-color: rgb(52 211 153 / 30%);
+    color: var(--success);
+}
+
+.mcmm-btn-icon.success:hover {
+    background: var(--success);
+    border-color: var(--success);
+    box-shadow: 0 0 16px rgb(52 211 153 / 30%), 0 14px 28px rgb(0 0 0 / 18%);
+    color: rgb(255 255 255 / 100%);
+}
 
 /* Extra-small screens: prevent tab overflow + improve stacking */
-@media (width <= 600px) {
+@media (width <=600px) {
     .mcmm-tabs {
         overflow-x: auto;
         padding-bottom: 6px;
@@ -743,7 +772,7 @@
 }
 
 /* Responsive: stack metrics and keep actions usable */
-@media (width <= 1200px) {
+@media (width <=1200px) {
     .mcmm-server-row {
         flex-wrap: wrap;
         row-gap: 1rem;
@@ -766,7 +795,7 @@
     }
 }
 
-@media (width <= 900px) {
+@media (width <=900px) {
     .mcmm-server-metrics {
         flex-direction: column;
         gap: 0.9rem;
@@ -782,97 +811,105 @@
     }
 }
 
- /* ===== COMPONENTS: EMPTY STATE ===== */
- .mcmm-empty {
-     background: var(--bg-surface);
-     border: 1px solid var(--border);
-     border-radius: var(--radius-md);
-     padding: 4rem 2rem;
-     text-align: center;
- }
+/* ===== COMPONENTS: EMPTY STATE ===== */
+.mcmm-empty {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 4rem 2rem;
+    text-align: center;
+}
 
- .mcmm-empty h3 {
-     font-size: 1.25rem;
-     margin-bottom: 0.5rem;
- }
+.mcmm-empty h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+}
 
- .mcmm-empty p {
-     color: var(--text-secondary);
-     margin-bottom: 1.5rem;
- }
+.mcmm-empty p {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
 
- /* ===== CATALOG: HEADER + SEARCH ===== */
- .mcmm-catalog-header {
-     align-items: center;
-     display: flex;
-     flex-wrap: wrap;
-     gap: 1rem;
-     justify-content: space-between;
-     margin-bottom: 1.5rem;
- }
+/* ===== CATALOG: HEADER + SEARCH ===== */
+.mcmm-catalog-header {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
 
- .mcmm-search {
-     flex: 1;
-     max-width: 400px;
-     position: relative;
- }
+.mcmm-search {
+    flex: 1;
+    max-width: 400px;
+    position: relative;
+}
 
- /* Override max-width in modal to fix size issue */
- .mcmm-modal .mcmm-search {
-     max-width: none;
- }
+/* Override max-width in modal to fix size issue */
+.mcmm-modal .mcmm-search {
+    max-width: none;
+}
 
- .mcmm-app .mcmm-input,
- .mcmm-app .mcmm-search-input {
-     background: rgb(0 0 0 / 40%);
-     border: 1px solid rgb(157 78 221 / 30%);
-     border-radius: 10px;
-     color: var(--text-main);
-     padding: 0.85rem 3.25rem;
-     transition: all 0.3s;
-     width: 100%;
- }
+.mcmm-app .mcmm-input,
+.mcmm-app .mcmm-search-input {
+    background: rgb(0 0 0 / 40%);
+    border: 1px solid rgb(157 78 221 / 30%);
+    border-radius: 10px;
+    color: var(--text-main);
+    padding: 0.85rem 3.25rem;
+    transition: all 0.3s;
+    width: 100%;
+}
 
- .mcmm-app .mcmm-input:focus,
- .mcmm-app .mcmm-search-input:focus {
-     background: rgb(157 78 221 / 10%);
-     border-color: var(--primary);
-     outline: none;
- }
+.mcmm-app .mcmm-input:focus,
+.mcmm-app .mcmm-search-input:focus {
+    background: rgb(157 78 221 / 10%);
+    border-color: var(--primary);
+    outline: none;
+}
 
- .mcmm-search-icon {
-     color: var(--text-muted);
-     font-size: 2rem;
-     left: 1rem;
-     pointer-events: none;
-     position: absolute;
-     top: 50%;
-     transform: translateY(-50%);
- }
+.mcmm-search-icon {
+    color: var(--text-muted);
+    font-size: 2rem;
+    left: 1rem;
+    pointer-events: none;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
 
- /* ===== CATALOG: GRID + CARDS ===== */
+/* ===== CATALOG: GRID + CARDS ===== */
 
 
 /* ===== MOD MANAGER ICONS (restored) ===== */
+/* ===== PREMIUM MOD ICONS (Redesigned) ===== */
 .mcmm-mod-icon {
     align-items: center;
-    background-color: var(--bg-surface-hover);
+    background-color: rgb(30 32 45 / 80%);
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 14px;
+    box-shadow: 0 4px 10px rgb(0 0 0 / 20%);
     display: flex;
     flex-shrink: 0;
     height: var(--mcmm-icon-56);
     justify-content: center;
     width: var(--mcmm-icon-56);
+    overflow: hidden;
+    transition: transform 0.2s ease;
+}
+
+.mcmm-modpack-card:hover .mcmm-mod-icon {
+    transform: scale(1.05);
+    border-color: rgb(157 78 221 / 40%);
 }
 
 .mcmm-mod-icon.large {
-    background-color: var(--bg-surface-hover);
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgb(0 0 0 / 20%);
+    border-radius: 18px;
+    box-shadow: 0 8px 20px rgb(0 0 0 / 30%);
     height: var(--mcmm-icon-80);
     width: var(--mcmm-icon-80);
 }
@@ -889,7 +926,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: inherit;
+    object-position: center;
 }
 
 
@@ -941,916 +978,944 @@
 }
 
 
- .mcmm-modpack-grid {
-     display: grid;
-     gap: 1.5rem;
- }
-
- .mcmm-app .mcmm-modpack-grid {
-     grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
- }
-
- .mcmm-modpack-card {
-     background: var(--bg-surface);
-     border: 1px solid var(--border);
-     border-radius: var(--radius-md);
-     cursor: pointer;
-     overflow: visible;
-     position: relative;
-     transition: all 0.3s;
-     z-index: 1;
- }
-
- .mcmm-modpack-card:hover {
-     z-index: 100;
-     border-color: rgb(157 78 221 / 60%);
-     box-shadow: 0 20px 40px rgb(0 0 0 / 40%), 0 0 25px rgb(157 78 221 / 20%);
-     transform: translateY(-8px) scale(1.02);
- }
-
- .mcmm-modpack-card.vanilla-card {
-     border: 1px solid transparent;
-     background: linear-gradient(135deg, var(--bg-surface), rgb(157 78 221 / 5%));
-     outline: 1px dashed var(--primary);
-     outline-offset: -1px;
- }
-
- .mcmm-modpack-card.vanilla-card:hover {
-     border-style: solid;
-     border-color: transparent;
-     outline: none;
-     background: linear-gradient(135deg, var(--bg-surface), rgb(157 78 221 / 10%));
-     box-shadow: 0 20px 40px rgb(0 0 0 / 40%), 0 0 25px rgb(157 78 221 / 20%);
-     transform: translateY(-8px) scale(1.02);
- }
-
- .mcmm-modpack-thumb {
-     background-color: rgb(0 0 0 / 20%);
-     background-position: center;
-     background-repeat: no-repeat;
-     background-size: cover;
-     height: var(--mcmm-thumb-180);
-     position: relative;
-     transition: all 0.3s ease;
-     border-radius: var(--radius-md) var(--radius-md) 0 0;
-     overflow: hidden;
- }
-
- .mcmm-modpack-thumb::after {
-     background: linear-gradient(to top, rgb(11 12 22 / 90%) 0%, transparent 100%);
-     bottom: -1px;
-     content: "";
-     height: 60%;
-     left: 0;
-     position: absolute;
-     right: 0;
- }
-
- .mcmm-modpack-info {
-     padding: 1.25rem;
- }
-
- .mcmm-modpack-name {
-     color: var(--text-main);
-     font-size: 1.1rem;
-     font-weight: 700;
-     margin-bottom: 0.3rem;
-     overflow: hidden;
-     text-overflow: ellipsis;
-     white-space: nowrap;
- }
-
- .mcmm-modpack-meta {
-     color: var(--text-secondary);
-     display: flex;
-     font-size: 0.85rem;
-     justify-content: space-between;
- }
-
- .mcmm-modpack-tags {
-     display: flex;
-     flex-wrap: wrap;
-     gap: 0.4rem;
-     margin-top: 0.8rem;
- }
-
- .mcmm-tag {
-     background: rgb(255 255 255 / 5%);
-     border: 1px solid rgb(255 255 255 / 10%);
-     border-radius: 100px;
-     color: var(--text-muted);
-     font-size: 0.7rem;
-     padding: 0.2rem 0.6rem;
- }
-
- /* Selected Card State */
- .mcmm-modpack-card.selected {
-     background: rgb(157 78 221 / 5%);
-     border: 2px solid var(--primary);
-     box-shadow: 0 10px 30px rgb(157 78 221 / 15%);
- }
-
- /* Checkbox (top-right) */
- .mcmm-checkbox {
-     align-items: center;
-     background: rgb(0 0 0 / 50%);
-     border: 2px solid var(--text-muted);
-     border-radius: 6px;
-     cursor: pointer;
-     display: flex;
-     height: 20px;
-     justify-content: center;
-     position: absolute;
-     right: 1rem;
-     top: 1rem;
-     transition: all 0.2s;
-     width: 20px;
-     z-index: 5;
- }
-
- .mcmm-modpack-card:hover .mcmm-checkbox {
-     background: rgb(0 0 0 / 80%);
-     border-color: var(--text-secondary);
- }
-
- .mcmm-modpack-card.selected .mcmm-checkbox {
-     background: var(--primary);
-     border-color: var(--primary);
-     color: rgb(255 255 255 / 100%);
- }
-
- .mcmm-checkbox::after {
-     content: "✓";
-     display: none;
-     font-size: 0.8rem;
-     font-weight: bold;
- }
-
- .mcmm-modpack-card.selected .mcmm-checkbox::after {
-     display: block;
- }
-
- /* ===== PREMIUM VERSION SELECTION (DAZZLE) ===== */
- .mcmm-version-card {
-     align-items: center;
-     backdrop-filter: blur(10px);
-     background: linear-gradient(145deg, rgb(255 255 255 / 1%), rgb(255 255 255 / 4%));
-     border: 1px solid rgb(255 255 255 / 5%);
-     border-radius: 14px;
-     cursor: pointer;
-     display: flex;
-     gap: 1.1rem;
-     min-height: 80px;
-     overflow: hidden;
-     padding: 0.85rem 1rem;
-     position: relative;
-     text-decoration: none;
-     transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
-     width: 100%;
- }
-
- .mcmm-version-card::before {
-     background: radial-gradient(circle at center, var(--primary), transparent 70%);
-     content: "";
-     height: 100%;
-     left: 0;
-     opacity: 0;
-     position: absolute;
-     top: 0;
-     transition: opacity 0.3s ease;
-     width: 100%;
-     z-index: 0;
- }
-
- .mcmm-version-card:hover {
-     background: rgb(255 255 255 / 6%);
-     border-color: rgb(157 78 221 / 40%);
-     box-shadow: 0 10px 30px rgb(0 0 0 / 30%);
-     transform: translateY(-2px) scale(1.005);
- }
-
- /* Pulse animation for selected card */
- @keyframes neon-pulse {
-     0% {
-         box-shadow: 0 0 20px rgb(157 78 221 / 20%);
-     }
-
-     50% {
-         box-shadow: 0 0 45px rgb(157 78 221 / 45%);
-     }
-
-     100% {
-         box-shadow: 0 0 20px rgb(157 78 221 / 20%);
-     }
- }
-
- /* FIX: merged duplicate .mcmm-version-card.selected */
- .mcmm-version-card.selected {
-     background: linear-gradient(135deg, rgb(157 78 221 / 12%), rgb(26 26 31 / 95%));
-     border: 2px solid var(--primary);
-     box-shadow: 0 0 40px rgb(157 78 221 / 25%), inset 0 0 20px rgb(157 78 221 / 10%);
-     transform: scale(1.02);
-     animation: neon-pulse 2s infinite ease-in-out;
- }
-
- .mcmm-version-card.selected::before {
-     opacity: 0.05;
- }
-
- .mcmm-version-thumb {
-     background-position: center;
-     background-size: cover;
-     border: 2px solid rgb(255 255 255 / 10%);
-     border-radius: 10px;
-     box-shadow: 0 5px 15px rgb(0 0 0 / 30%);
-     flex-shrink: 0;
-     height: 52px;
-     overflow: hidden;
-     position: relative;
-     width: 52px;
-     z-index: 1;
- }
-
- .mcmm-version-thumb::after {
-     background: linear-gradient(to top, rgb(0 0 0 / 40%), transparent);
-     content: "";
-     inset: 0;
-     position: absolute;
- }
-
- .mcmm-version-main {
-     display: flex;
-     flex: 1;
-     flex-direction: column;
-     min-width: 0;
-     position: relative;
-     text-align: left;
-     z-index: 1;
- }
-
- /* FIX: merged duplicate .mcmm-version-name */
- .mcmm-version-name {
-     color: var(--text-main);
-     font-family: inherit;
-     font-size: 1.05rem;
-     font-weight: 800;
-     letter-spacing: -0.3px;
-     margin-bottom: 0.2rem;
-     overflow: hidden;
-     text-overflow: ellipsis;
-     white-space: nowrap;
- }
-
- /* FIX: merged duplicate .mcmm-version-meta */
- .mcmm-version-meta {
-     align-items: center;
-     display: flex;
-     flex-wrap: wrap;
-     gap: 0.6rem;
-     margin-top: 0.45rem;
- }
-
- .mcmm-version-select {
-     align-items: center;
-     display: flex;
-     gap: 1rem;
-     margin-left: auto;
-     position: relative;
-     z-index: 1;
- }
-
- .mcmm-version-status-indicator {
-     align-items: center;
-     background: rgb(255 255 255 / 3%);
-     border: 2px solid rgb(255 255 255 / 8%);
-     border-radius: 50%;
-     display: flex;
-     height: 24px;
-     justify-content: center;
-     position: relative;
-     transition: all 0.3s ease;
-     width: 24px;
- }
-
- .mcmm-version-card.selected .mcmm-version-status-indicator {
-     background: var(--primary);
-     border-color: var(--primary);
-     box-shadow: 0 0 15px var(--primary-dim);
- }
-
- .mcmm-version-status-indicator::after {
-     background: rgb(255 255 255 / 100%);
-     border-radius: 50%;
-     content: "";
-     height: 8px;
-     opacity: 0.2;
-     transition: all 0.3s ease;
-     width: 8px;
- }
-
- .mcmm-version-card.selected .mcmm-version-status-indicator::after {
-     background: rgb(255 255 255 / 100%);
-     opacity: 1;
-     transform: scale(1.2);
- }
-
- .mcmm-version-action-text {
-     display: flex;
-     flex-direction: column;
-     text-align: right;
- }
-
- .mcmm-version-action-text .action-title {
-     color: var(--text-main);
-     font-size: 0.7rem;
-     font-weight: 900;
-     letter-spacing: 1.5px;
-     opacity: 0.5;
-     text-transform: uppercase;
-     transition: all 0.3s ease;
- }
-
- .mcmm-version-card.selected .mcmm-version-action-text .action-title {
-     color: var(--primary-hover);
-     opacity: 1;
-     text-shadow: 0 0 10px rgb(157 78 221 / 60%);
- }
-
- .mcmm-version-top {
-     display: flex;
-     gap: 0.6rem;
-     justify-content: space-between;
- }
-
- .mcmm-version-radio {
-     align-items: center;
-     border: 2px solid var(--text-muted);
-     border-radius: 50%;
-     display: flex;
-     flex-shrink: 0;
-     height: 22px;
-     justify-content: center;
-     width: 22px;
- }
-
- .mcmm-version-radio .dot {
-     background: var(--primary);
-     border-radius: 50%;
-     height: 10px;
-     width: 10px;
- }
-
- .mcmm-version-pill {
-     background: rgb(255 255 255 / 8%);
-     border: 1px solid transparent;
-     border-radius: 999px;
-     color: var(--text-secondary);
-     font-size: 0.75rem;
-     font-weight: 700;
-     padding: 0.25rem 0.55rem;
-     white-space: nowrap;
- }
-
- .mcmm-version-pill.success {
-     background: rgb(34 197 94 / 18%);
-     border-color: rgb(34 197 94 / 50%);
-     color: rgb(187 247 208 / 100%);
- }
-
- .mcmm-version-pill.warning {
-     background: rgb(234 179 8 / 16%);
-     border-color: rgb(234 179 8 / 50%);
-     color: rgb(254 240 138 / 100%);
- }
-
- .mcmm-version-pill.danger {
-     background: rgb(239 68 68 / 14%);
-     border-color: rgb(239 68 68 / 50%);
-     color: rgb(254 205 211 / 100%);
- }
-
- .mcmm-version-pill.muted {
-     background: rgb(255 255 255 / 8%);
-     border-color: rgb(255 255 255 / 15%);
-     color: var(--text-muted);
- }
-
- /* Chips (kept as single canonical definition) */
- .mcmm-chip {
-     align-items: center;
-     background: rgb(255 255 255 / 7%);
-     border: 1px solid var(--border);
-     border-radius: 999px;
-     color: var(--text-secondary);
-     display: inline-flex;
-     font-size: 0.78rem;
-     font-weight: 800;
-     letter-spacing: 0.03em;
-     padding: 0.22rem 0.65rem;
-     text-transform: uppercase;
- }
-
- .mcmm-chip.subtle {
-     background: rgb(255 255 255 / 6%);
-     border-color: rgb(255 255 255 / 12%);
-     color: var(--text-secondary);
- }
-
- .mcmm-chip.release {
-     background: rgb(52 211 153 / 18%);
-     border-color: rgb(52 211 153 / 45%);
-     color: rgb(210 255 238 / 100%);
- }
-
- .mcmm-chip.beta {
-     background: rgb(255 200 87 / 22%);
-     border-color: rgb(255 200 87 / 50%);
-     color: rgb(255 242 206 / 100%);
- }
-
- .mcmm-chip.alpha {
-     background: rgb(255 107 107 / 24%);
-     border-color: rgb(255 107 107 / 55%);
-     color: rgb(255 226 222 / 100%);
- }
-
- /* Version Selection Rows */
- .mcmm-version-row:hover {
-     background: rgb(255 255 255 / 5%);
- }
-
- .mcmm-version-row.selected {
-     background: rgb(157 78 221 / 15%);
-     border-color: var(--primary);
- }
-
- /* ===== SETTINGS ===== */
- .mcmm-settings-container {
-     width: min(100% - (var(--gutter) * 2), 1200px);
-     margin: 0 auto;
- }
-
- .mcmm-panel {
-     background: linear-gradient(145deg, rgb(255 255 255 / 2%), rgb(255 255 255 / 5%));
-     backdrop-filter: blur(12px);
-     border: 1px solid rgb(255 255 255 / 8%);
-     border-radius: 16px;
-     box-shadow: 0 8px 32px 0 rgb(0 0 0 / 37%);
-     margin-bottom: 2.5rem;
-     padding: 2.5rem;
-     position: relative;
-     overflow: hidden;
- }
-
- .mcmm-panel::after {
-     background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgb(157 78 221 / 10%), transparent 40%);
-     content: "";
-     height: 100%;
-     left: 0;
-     position: absolute;
-     top: 0;
-     width: 100%;
-     z-index: 1;
-     pointer-events: none;
- }
-
- .mcmm-panel-title {
-     align-items: center;
-     border-bottom: 2px solid rgb(157 78 221 / 20%);
-     color: rgb(255 255 255 / 100%);
-     display: flex;
-     font-size: 1.15rem;
-     font-weight: 800;
-     gap: 0.75rem;
-     letter-spacing: -0.5px;
-     margin-bottom: 2rem;
-     padding-bottom: 1rem;
-     position: relative;
-     z-index: 2;
- }
-
- .mcmm-panel-title::after {
-     background: var(--primary);
-     bottom: -2px;
-     box-shadow: 0 0 15px var(--primary);
-     content: "";
-     height: 2px;
-     left: 0;
-     position: absolute;
-     width: 60px;
- }
-
- .mcmm-form-grid {
-     display: grid;
-     gap: 0.75rem;
-     grid-template-columns: 1fr 1fr;
- }
-
- .mcmm-form-group {
-     display: flex;
-     flex-direction: column;
-     gap: 0.5rem;
-     position: relative;
- }
-
- .mcmm-label {
-     color: rgb(255 255 255 / 50%);
-     font-size: 0.7rem;
-     font-weight: 900;
-     letter-spacing: 1.5px;
-     margin-bottom: 0.25rem;
-     text-transform: uppercase;
- }
-
- .mcmm-input {
-     background: rgb(0 0 0 / 25%);
-     border: 1px solid rgb(255 255 255 / 10%);
-     border-radius: 10px;
-     color: rgb(255 255 255 / 100%);
-     font-family: inherit;
-     font-size: 0.95rem;
-     padding: 0.85rem 1rem;
-     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-     width: 100%;
- }
-
- .mcmm-input:focus {
-     background: rgb(157 78 221 / 5%);
-     border-color: var(--primary);
-     box-shadow: 0 0 15px rgb(157 78 221 / 15%);
-     outline: none;
- }
-
- .mcmm-input-hint {
-     color: var(--text-muted);
-     font-size: 0.8rem;
- }
-
- .mcmm-password-toggle {
-     align-items: center;
-     background: none;
-     border: none;
-     color: rgb(255 255 255 / 30%);
-     cursor: pointer;
-     display: flex;
-     font-size: 1.1rem;
-     height: 32px;
-     justify-content: center;
-     margin: 0;
-     padding: 0;
-     position: absolute;
-     right: 12px;
-     top: 50%;
-     transform: translateY(-50%);
-     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-     width: 32px;
-     z-index: 5;
- }
-
- .mcmm-password-toggle:hover {
-     color: var(--primary);
-     transform: translateY(-50%) scale(1.15);
- }
-
- /* Toggle Grid */
- .mcmm-toggle-grid {
-     display: grid;
-     gap: 0.5rem;
-     grid-template-columns: repeat(3, 1fr);
- }
-
- .mcmm-toggle-item {
-     align-items: center;
-     background: rgb(255 255 255 / 3%);
-     border: 1px solid rgb(255 255 255 / 5%);
-     border-radius: 12px;
-     display: flex;
-     justify-content: space-between;
-     padding: 0.85rem 1.15rem;
-     position: relative;
-     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-     z-index: 2;
- }
-
- .mcmm-toggle-item:hover {
-     background: rgb(255 255 255 / 6%);
-     border-color: rgb(157 78 221 / 40%);
-     box-shadow: 0 4px 20px rgb(0 0 0 / 20%);
-     transform: translateY(-2px);
- }
-
- .mcmm-toggle-label {
-     display: flex;
-     flex-direction: column;
- }
-
- /* Section Dividers */
- .mcmm-section-divider {
-     align-items: center;
-     color: var(--primary);
-     display: flex;
-     font-size: 0.75rem;
-     font-weight: 900;
-     gap: 1.25rem;
-     letter-spacing: 2px;
-     margin: 1.5rem 0 1rem;
-     opacity: 0.9;
-     text-transform: uppercase;
-     position: relative;
-     z-index: 2;
- }
-
- .mcmm-section-divider::after {
-     background: linear-gradient(to right, rgb(157 78 221 / 40%), transparent);
-     content: "";
-     flex: 1;
-     height: 1px;
- }
-
- .mcmm-toggle-name {
-     color: rgb(255 255 255 / 100%);
-     font-size: 0.95rem;
-     font-weight: 700;
-     letter-spacing: -0.2px;
- }
-
- .mcmm-toggle-desc {
-     color: rgb(255 255 255 / 45%);
-     font-size: 0.75rem;
-     font-weight: 500;
-     margin-top: 2px;
- }
-
- /* Switch */
- .mcmm-switch {
-     display: inline-block;
-     height: 24px;
-     position: relative;
-     width: 44px;
- }
-
- .mcmm-switch input {
-     height: 0;
-     opacity: 0;
-     width: 0;
- }
-
- .mcmm-slider {
-     background-color: rgb(255 255 255 / 10%);
-     border: 1px solid rgb(255 255 255 / 5%);
-     border-radius: 24px;
-     cursor: pointer;
-     inset: 0;
-     position: absolute;
-     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
- }
-
- .mcmm-slider::before {
-     background-color: rgb(255 255 255 / 100%);
-     border-radius: 50%;
-     bottom: 3px;
-     box-shadow: 0 2px 5px rgb(0 0 0 / 30%);
-     content: "";
-     height: 16px;
-     left: 4px;
-     position: absolute;
-     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-     width: 16px;
- }
-
- .mcmm-switch input:checked+.mcmm-slider {
-     background: var(--primary);
-     border-color: rgb(157 78 221 / 50%);
-     box-shadow: 0 0 15px rgb(157 78 221 / 30%);
- }
-
- .mcmm-switch input:checked+.mcmm-slider::before {
-     transform: translateX(18px);
- }
-
- /* RAM Pills */
- .mcmm-ram-presets {
-     display: flex;
-     flex-wrap: wrap;
-     gap: 0.5rem;
-     margin-top: 0.5rem;
- }
-
- .mcmm-ram-pill {
-     background: rgb(255 255 255 / 3%);
-     border: 1px solid rgb(255 255 255 / 8%);
-     border-radius: 10px;
-     color: rgb(255 255 255 / 40%);
-     cursor: pointer;
-     font-size: 0.85rem;
-     font-weight: 700;
-     padding: 0.6rem 1.25rem;
-     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
- }
-
- .mcmm-ram-pill:hover {
-     background: rgb(255 255 255 / 8%);
-     border-color: rgb(157 78 221 / 20%);
-     color: rgb(255 255 255 / 100%);
- }
-
- .mcmm-ram-pill.active {
-     background: rgb(157 78 221 / 20%);
-     border-color: var(--primary);
-     box-shadow: 0 0 15px rgb(157 78 221 / 25%);
-     color: rgb(255 255 255 / 100%);
- }
-
- /* Custom Select */
- .mcmm-select {
-     position: relative;
-     width: 100%;
- }
-
- .mcmm-select-trigger {
-     align-items: center;
-     background: rgb(0 0 0 / 25%);
-     border: 1px solid rgb(255 255 255 / 10%);
-     border-radius: 10px;
-     color: rgb(255 255 255 / 100%);
-     cursor: pointer;
-     display: flex;
-     font-size: 0.95rem;
-     font-weight: 500;
-     justify-content: space-between;
-     padding: 0.85rem 1rem;
-     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
- }
-
- .mcmm-select-trigger:hover {
-     border-color: rgb(157 78 221 / 40%);
-     box-shadow: 0 0 15px rgb(157 78 221 / 10%);
- }
-
- .mcmm-select-trigger::after {
-     color: var(--text-muted);
-     content: "▼";
-     font-size: 0.7rem;
- }
-
- .mcmm-select.open .mcmm-select-trigger {
-     border-color: var(--primary);
-     border-radius: 8px 8px 0 0;
- }
-
- .mcmm-select-options {
-     background: rgb(15 16 20 / 100%);
-     border: 1px solid var(--primary);
-     border-radius: 0 0 8px 8px;
-     border-top: none;
-     display: none;
-     left: 0;
-     max-height: 200px;
-     overflow-y: auto;
-     position: absolute;
-     right: 0;
-     top: 100%;
-     z-index: 100;
- }
-
- .mcmm-select.open .mcmm-select-options {
-     display: block;
- }
-
- .mcmm-option {
-     color: var(--text-secondary);
-     cursor: pointer;
-     padding: 0.8rem 1rem;
-     transition: all 0.2s;
- }
-
- .mcmm-option:hover {
-     background: rgb(157 78 221 / 10%);
-     color: rgb(255 255 255 / 100%);
- }
-
- .mcmm-option.selected {
-     background: rgb(157 78 221 / 15%);
-     color: rgb(255 255 255 / 100%);
- }
-
- /* Section Title */
- .mcmm-section-title {
-     align-items: center;
-     color: rgb(255 255 255 / 60%);
-     display: flex;
-     font-size: 0.8rem;
-     font-weight: 900;
-     gap: 0.75rem;
-     letter-spacing: 1.5px;
-     margin-bottom: 1.25rem;
-     padding-bottom: 0.5rem;
-     text-transform: uppercase;
-     border-bottom: 1px solid rgb(255 255 255 / 5%);
- }
-
- /* Status Message */
- .mcmm-status {
-     border-radius: 8px;
-     display: none;
-     font-weight: 500;
-     margin-bottom: 1rem;
-     padding: 1rem;
- }
-
- .mcmm-status.success {
-     background: rgb(16 185 129 / 10%);
-     border: 1px solid rgb(16 185 129 / 30%);
-     color: var(--success);
- }
-
- .mcmm-status.error {
-     background: rgb(239 68 68 / 10%);
-     border: 1px solid rgb(239 68 68 / 30%);
-     color: var(--danger);
- }
-
- /* Footer */
- .mcmm-settings-footer {
-     display: flex;
-     justify-content: flex-end;
-     padding-top: 1rem;
- }
-
- /* ===== MODAL ===== */
- .mcmm-modal-overlay {
-     align-items: center;
-     backdrop-filter: blur(8px);
-     background: rgb(0 0 0 / 85%);
-     display: none;
-     inset: 0;
-     justify-content: center;
-     position: fixed;
-     z-index: 1000;
- }
-
- .mcmm-modal-overlay.open {
-     display: flex;
- }
-
- .mcmm-modal {
-     background: var(--bg-surface);
-     border: 1px solid rgb(157 78 221 / 30%);
-     border-radius: 16px;
-     display: flex;
-     flex-direction: column;
-     max-height: 90vh;
-     max-width: 95vw;
-     overflow: hidden;
-     width: 95%;
- }
-
- .mcmm-modal-header {
-     align-items: center;
-     border-bottom: 1px solid var(--border);
-     display: flex;
-     justify-content: space-between;
-     padding: 1.5rem;
- }
-
- .mcmm-modal-title {
-     font-size: 1.25rem;
-     font-weight: 700;
- }
-
- .mcmm-modal-close {
-     background: none;
-     border: none;
-     color: var(--text-muted);
-     cursor: pointer;
-     font-size: 1.5rem;
-     padding: 0;
-     transition: color 0.2s;
- }
-
- .mcmm-modal-close:hover {
-     color: var(--danger);
- }
-
- .mcmm-modal-body {
-     flex: 1;
-     overflow-y: auto;
-     padding: 1.25rem;
- }
-
- /* Tabs-Leiste soll im Mod Manager nur so breit sein wie die Tabs */
- .mcmm-modal .mcmm-tabs {
-     display: inline-flex;
-     width: fit-content; /* statt flex */;
- }
-
- /* Unterstrich nur über die Breite der Tabs */
- .mcmm-modal .mcmm-tabs::before {
-     left: 0;
-     right: 0;
- }
-
- 
+.mcmm-modpack-grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.mcmm-app .mcmm-modpack-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+}
+
+/* ===== PREMIUM MOD CARDS (Redesigned) ===== */
+.mcmm-modpack-card {
+    background: linear-gradient(135deg, rgb(30 32 45 / 60%), rgb(22 24 35 / 80%));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgb(255 255 255 / 8%);
+    border-radius: 12px;
+    /* Smooth rounded corners */
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgb(0 0 0 / 10%);
+}
+
+.mcmm-modpack-card:hover {
+    z-index: 10;
+    background: linear-gradient(135deg, rgb(35 37 50 / 80%), rgb(25 27 40 / 90%));
+    border-color: rgb(157 78 221 / 50%);
+    box-shadow: 0 10px 25px rgb(0 0 0 / 30%), 0 0 0 1px rgb(157 78 221 / 50%);
+    transform: translateY(-4px);
+}
+
+/* Vanilla Card Special Styling */
+.mcmm-modpack-card.vanilla-card {
+    background: radial-gradient(circle at center, rgb(157 78 221 / 10%), transparent 80%), var(--bg-surface);
+    border: 1px dashed rgb(157 78 221 / 40%);
+}
+
+.mcmm-modpack-card.vanilla-card:hover {
+    border-style: solid;
+    border-color: var(--primary);
+    box-shadow: 0 0 25px rgb(157 78 221 / 20%);
+    transform: translateY(-4px);
+}
+
+.mcmm-modpack-thumb {
+    background-color: rgb(0 0 0 / 30%);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    height: 140px;
+    /* Slightly shorter for better proportions */
+    position: relative;
+    transition: transform 0.5s ease;
+}
+
+.mcmm-modpack-card:hover .mcmm-modpack-thumb {
+    transform: scale(1.05);
+    /* Subtle zoom on hover */
+}
+
+.mcmm-modpack-thumb::after {
+    background: linear-gradient(to top, rgb(22 24 35 / 100%) 0%, transparent 100%);
+    bottom: 0;
+    content: "";
+    height: 100%;
+    /* Full fade for better text readability */
+    left: 0;
+    position: absolute;
+    right: 0;
+    opacity: 0.8;
+}
+
+.mcmm-modpack-info {
+    padding: 1.25rem;
+    position: relative;
+    z-index: 2;
+}
+
+.mcmm-modpack-name {
+    color: var(--text-main);
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-shadow: 0 2px 4px rgb(0 0 0 / 50%);
+}
+
+.mcmm-modpack-meta {
+    color: var(--text-secondary);
+    display: flex;
+    font-size: 0.85rem;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.mcmm-modpack-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.8rem;
+}
+
+.mcmm-tag {
+    background: rgb(255 255 255 / 8%);
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.25rem 0.6rem;
+    transition: all 0.2s;
+}
+
+.mcmm-modpack-card:hover .mcmm-tag {
+    background: rgb(255 255 255 / 12%);
+    color: var(--text-main);
+}
+
+/* Selected Card State (Green/Primary Border) */
+.mcmm-modpack-card.selected {
+    background: linear-gradient(135deg, rgb(157 78 221 / 15%), rgb(157 78 221 / 5%));
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary), 0 10px 30px rgb(157 78 221 / 20%);
+}
+
+/* Checkbox Styles */
+.mcmm-checkbox {
+    align-items: center;
+    background: rgb(0 0 0 / 60%);
+    backdrop-filter: blur(4px);
+    border: 2px solid rgb(255 255 255 / 30%);
+    border-radius: 50%;
+    /* Circle checkbox */
+    cursor: pointer;
+    display: flex;
+    height: 24px;
+    justify-content: center;
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 24px;
+    z-index: 20;
+}
+
+.mcmm-modpack-card:hover .mcmm-checkbox {
+    background: rgb(0 0 0 / 80%);
+    border-color: var(--text-main);
+    transform: scale(1.1);
+}
+
+.mcmm-modpack-card.selected .mcmm-checkbox {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+    transform: scale(1.1);
+}
+
+.mcmm-checkbox::after {
+    content: "✓";
+    display: none;
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.mcmm-modpack-card.selected .mcmm-checkbox::after {
+    display: block;
+}
+
+/* ===== PREMIUM VERSION SELECTION (DAZZLE) ===== */
+.mcmm-version-card {
+    align-items: center;
+    backdrop-filter: blur(10px);
+    background: linear-gradient(145deg, rgb(255 255 255 / 1%), rgb(255 255 255 / 4%));
+    border: 1px solid rgb(255 255 255 / 5%);
+    border-radius: 14px;
+    cursor: pointer;
+    display: flex;
+    gap: 1.1rem;
+    min-height: 80px;
+    overflow: hidden;
+    padding: 0.85rem 1rem;
+    position: relative;
+    text-decoration: none;
+    transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+    width: 100%;
+}
+
+.mcmm-version-card::before {
+    background: radial-gradient(circle at center, var(--primary), transparent 70%);
+    content: "";
+    height: 100%;
+    left: 0;
+    opacity: 0;
+    position: absolute;
+    top: 0;
+    transition: opacity 0.3s ease;
+    width: 100%;
+    z-index: 0;
+}
+
+.mcmm-version-card:hover {
+    background: rgb(255 255 255 / 6%);
+    border-color: rgb(157 78 221 / 40%);
+    box-shadow: 0 10px 30px rgb(0 0 0 / 30%);
+    transform: translateY(-2px) scale(1.005);
+}
+
+/* Pulse animation for selected card */
+@keyframes neon-pulse {
+    0% {
+        box-shadow: 0 0 20px rgb(157 78 221 / 20%);
+    }
+
+    50% {
+        box-shadow: 0 0 45px rgb(157 78 221 / 45%);
+    }
+
+    100% {
+        box-shadow: 0 0 20px rgb(157 78 221 / 20%);
+    }
+}
+
+/* FIX: merged duplicate .mcmm-version-card.selected */
+.mcmm-version-card.selected {
+    background: linear-gradient(135deg, rgb(157 78 221 / 12%), rgb(26 26 31 / 95%));
+    border: 2px solid var(--primary);
+    box-shadow: 0 0 40px rgb(157 78 221 / 25%), inset 0 0 20px rgb(157 78 221 / 10%);
+    transform: scale(1.02);
+    animation: neon-pulse 2s infinite ease-in-out;
+}
+
+.mcmm-version-card.selected::before {
+    opacity: 0.05;
+}
+
+.mcmm-version-thumb {
+    background-position: center;
+    background-size: cover;
+    border: 2px solid rgb(255 255 255 / 10%);
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgb(0 0 0 / 30%);
+    flex-shrink: 0;
+    height: 52px;
+    overflow: hidden;
+    position: relative;
+    width: 52px;
+    z-index: 1;
+}
+
+.mcmm-version-thumb::after {
+    background: linear-gradient(to top, rgb(0 0 0 / 40%), transparent);
+    content: "";
+    inset: 0;
+    position: absolute;
+}
+
+.mcmm-version-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    position: relative;
+    text-align: left;
+    z-index: 1;
+}
+
+/* FIX: merged duplicate .mcmm-version-name */
+.mcmm-version-name {
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    margin-bottom: 0.2rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* FIX: merged duplicate .mcmm-version-meta */
+.mcmm-version-meta {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.45rem;
+}
+
+.mcmm-version-select {
+    align-items: center;
+    display: flex;
+    gap: 1rem;
+    margin-left: auto;
+    position: relative;
+    z-index: 1;
+}
+
+.mcmm-version-status-indicator {
+    align-items: center;
+    background: rgb(255 255 255 / 3%);
+    border: 2px solid rgb(255 255 255 / 8%);
+    border-radius: 50%;
+    display: flex;
+    height: 24px;
+    justify-content: center;
+    position: relative;
+    transition: all 0.3s ease;
+    width: 24px;
+}
+
+.mcmm-version-card.selected .mcmm-version-status-indicator {
+    background: var(--primary);
+    border-color: var(--primary);
+    box-shadow: 0 0 15px var(--primary-dim);
+}
+
+.mcmm-version-status-indicator::after {
+    background: rgb(255 255 255 / 100%);
+    border-radius: 50%;
+    content: "";
+    height: 8px;
+    opacity: 0.2;
+    transition: all 0.3s ease;
+    width: 8px;
+}
+
+.mcmm-version-card.selected .mcmm-version-status-indicator::after {
+    background: rgb(255 255 255 / 100%);
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+.mcmm-version-action-text {
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+}
+
+.mcmm-version-action-text .action-title {
+    color: var(--text-main);
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    opacity: 0.5;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+}
+
+.mcmm-version-card.selected .mcmm-version-action-text .action-title {
+    color: var(--primary-hover);
+    opacity: 1;
+    text-shadow: 0 0 10px rgb(157 78 221 / 60%);
+}
+
+.mcmm-version-top {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: space-between;
+}
+
+.mcmm-version-radio {
+    align-items: center;
+    border: 2px solid var(--text-muted);
+    border-radius: 50%;
+    display: flex;
+    flex-shrink: 0;
+    height: 22px;
+    justify-content: center;
+    width: 22px;
+}
+
+.mcmm-version-radio .dot {
+    background: var(--primary);
+    border-radius: 50%;
+    height: 10px;
+    width: 10px;
+}
+
+.mcmm-version-pill {
+    background: rgb(255 255 255 / 8%);
+    border: 1px solid transparent;
+    border-radius: 999px;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.25rem 0.55rem;
+    white-space: nowrap;
+}
+
+.mcmm-version-pill.success {
+    background: rgb(34 197 94 / 18%);
+    border-color: rgb(34 197 94 / 50%);
+    color: rgb(187 247 208 / 100%);
+}
+
+.mcmm-version-pill.warning {
+    background: rgb(234 179 8 / 16%);
+    border-color: rgb(234 179 8 / 50%);
+    color: rgb(254 240 138 / 100%);
+}
+
+.mcmm-version-pill.danger {
+    background: rgb(239 68 68 / 14%);
+    border-color: rgb(239 68 68 / 50%);
+    color: rgb(254 205 211 / 100%);
+}
+
+.mcmm-version-pill.muted {
+    background: rgb(255 255 255 / 8%);
+    border-color: rgb(255 255 255 / 15%);
+    color: var(--text-muted);
+}
+
+/* Chips (kept as single canonical definition) */
+.mcmm-chip {
+    align-items: center;
+    background: rgb(255 255 255 / 7%);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-secondary);
+    display: inline-flex;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    padding: 0.22rem 0.65rem;
+    text-transform: uppercase;
+}
+
+.mcmm-chip.subtle {
+    background: rgb(255 255 255 / 6%);
+    border-color: rgb(255 255 255 / 12%);
+    color: var(--text-secondary);
+}
+
+.mcmm-chip.release {
+    background: rgb(52 211 153 / 18%);
+    border-color: rgb(52 211 153 / 45%);
+    color: rgb(210 255 238 / 100%);
+}
+
+.mcmm-chip.beta {
+    background: rgb(255 200 87 / 22%);
+    border-color: rgb(255 200 87 / 50%);
+    color: rgb(255 242 206 / 100%);
+}
+
+.mcmm-chip.alpha {
+    background: rgb(255 107 107 / 24%);
+    border-color: rgb(255 107 107 / 55%);
+    color: rgb(255 226 222 / 100%);
+}
+
+/* Version Selection Rows */
+.mcmm-version-row:hover {
+    background: rgb(255 255 255 / 5%);
+}
+
+.mcmm-version-row.selected {
+    background: rgb(157 78 221 / 15%);
+    border-color: var(--primary);
+}
+
+/* ===== SETTINGS ===== */
+.mcmm-settings-container {
+    width: min(100% - (var(--gutter) * 2), 1200px);
+    margin: 0 auto;
+}
+
+.mcmm-panel {
+    background: linear-gradient(145deg, rgb(255 255 255 / 2%), rgb(255 255 255 / 5%));
+    backdrop-filter: blur(12px);
+    border: 1px solid rgb(255 255 255 / 8%);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px 0 rgb(0 0 0 / 37%);
+    margin-bottom: 2.5rem;
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.mcmm-panel::after {
+    background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgb(157 78 221 / 10%), transparent 40%);
+    content: "";
+    height: 100%;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.mcmm-panel-title {
+    align-items: center;
+    border-bottom: 2px solid rgb(157 78 221 / 20%);
+    color: rgb(255 255 255 / 100%);
+    display: flex;
+    font-size: 1.15rem;
+    font-weight: 800;
+    gap: 0.75rem;
+    letter-spacing: -0.5px;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    position: relative;
+    z-index: 2;
+}
+
+.mcmm-panel-title::after {
+    background: var(--primary);
+    bottom: -2px;
+    box-shadow: 0 0 15px var(--primary);
+    content: "";
+    height: 2px;
+    left: 0;
+    position: absolute;
+    width: 60px;
+}
+
+.mcmm-form-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: 1fr 1fr;
+}
+
+.mcmm-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    position: relative;
+}
+
+.mcmm-label {
+    color: rgb(255 255 255 / 50%);
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+}
+
+.mcmm-input {
+    background: rgb(0 0 0 / 25%);
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 10px;
+    color: rgb(255 255 255 / 100%);
+    font-family: inherit;
+    font-size: 0.95rem;
+    padding: 0.85rem 1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+}
+
+.mcmm-input:focus {
+    background: rgb(157 78 221 / 5%);
+    border-color: var(--primary);
+    box-shadow: 0 0 15px rgb(157 78 221 / 15%);
+    outline: none;
+}
+
+.mcmm-input-hint {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.mcmm-password-toggle {
+    align-items: center;
+    background: none;
+    border: none;
+    color: rgb(255 255 255 / 30%);
+    cursor: pointer;
+    display: flex;
+    font-size: 1.1rem;
+    height: 32px;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 32px;
+    z-index: 5;
+}
+
+.mcmm-password-toggle:hover {
+    color: var(--primary);
+    transform: translateY(-50%) scale(1.15);
+}
+
+/* Toggle Grid */
+.mcmm-toggle-grid {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.mcmm-toggle-item {
+    align-items: center;
+    background: rgb(255 255 255 / 3%);
+    border: 1px solid rgb(255 255 255 / 5%);
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    padding: 0.85rem 1.15rem;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2;
+}
+
+.mcmm-toggle-item:hover {
+    background: rgb(255 255 255 / 6%);
+    border-color: rgb(157 78 221 / 40%);
+    box-shadow: 0 4px 20px rgb(0 0 0 / 20%);
+    transform: translateY(-2px);
+}
+
+.mcmm-toggle-label {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Section Dividers */
+.mcmm-section-divider {
+    align-items: center;
+    color: var(--primary);
+    display: flex;
+    font-size: 0.75rem;
+    font-weight: 900;
+    gap: 1.25rem;
+    letter-spacing: 2px;
+    margin: 1.5rem 0 1rem;
+    opacity: 0.9;
+    text-transform: uppercase;
+    position: relative;
+    z-index: 2;
+}
+
+.mcmm-section-divider::after {
+    background: linear-gradient(to right, rgb(157 78 221 / 40%), transparent);
+    content: "";
+    flex: 1;
+    height: 1px;
+}
+
+.mcmm-toggle-name {
+    color: rgb(255 255 255 / 100%);
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+}
+
+.mcmm-toggle-desc {
+    color: rgb(255 255 255 / 45%);
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+/* Switch */
+.mcmm-switch {
+    display: inline-block;
+    height: 24px;
+    position: relative;
+    width: 44px;
+}
+
+.mcmm-switch input {
+    height: 0;
+    opacity: 0;
+    width: 0;
+}
+
+.mcmm-slider {
+    background-color: rgb(255 255 255 / 10%);
+    border: 1px solid rgb(255 255 255 / 5%);
+    border-radius: 24px;
+    cursor: pointer;
+    inset: 0;
+    position: absolute;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mcmm-slider::before {
+    background-color: rgb(255 255 255 / 100%);
+    border-radius: 50%;
+    bottom: 3px;
+    box-shadow: 0 2px 5px rgb(0 0 0 / 30%);
+    content: "";
+    height: 16px;
+    left: 4px;
+    position: absolute;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 16px;
+}
+
+.mcmm-switch input:checked+.mcmm-slider {
+    background: var(--primary);
+    border-color: rgb(157 78 221 / 50%);
+    box-shadow: 0 0 15px rgb(157 78 221 / 30%);
+}
+
+.mcmm-switch input:checked+.mcmm-slider::before {
+    transform: translateX(18px);
+}
+
+/* RAM Pills */
+.mcmm-ram-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.mcmm-ram-pill {
+    background: rgb(255 255 255 / 3%);
+    border: 1px solid rgb(255 255 255 / 8%);
+    border-radius: 10px;
+    color: rgb(255 255 255 / 40%);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.6rem 1.25rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mcmm-ram-pill:hover {
+    background: rgb(255 255 255 / 8%);
+    border-color: rgb(157 78 221 / 20%);
+    color: rgb(255 255 255 / 100%);
+}
+
+.mcmm-ram-pill.active {
+    background: rgb(157 78 221 / 20%);
+    border-color: var(--primary);
+    box-shadow: 0 0 15px rgb(157 78 221 / 25%);
+    color: rgb(255 255 255 / 100%);
+}
+
+/* Custom Select */
+.mcmm-select {
+    position: relative;
+    width: 100%;
+}
+
+.mcmm-select-trigger {
+    align-items: center;
+    background: rgb(0 0 0 / 25%);
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 10px;
+    color: rgb(255 255 255 / 100%);
+    cursor: pointer;
+    display: flex;
+    font-size: 0.95rem;
+    font-weight: 500;
+    justify-content: space-between;
+    padding: 0.85rem 1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mcmm-select-trigger:hover {
+    border-color: rgb(157 78 221 / 40%);
+    box-shadow: 0 0 15px rgb(157 78 221 / 10%);
+}
+
+.mcmm-select-trigger::after {
+    color: var(--text-muted);
+    content: "▼";
+    font-size: 0.7rem;
+}
+
+.mcmm-select.open .mcmm-select-trigger {
+    border-color: var(--primary);
+    border-radius: 8px 8px 0 0;
+}
+
+.mcmm-select-options {
+    background: rgb(15 16 20 / 100%);
+    border: 1px solid var(--primary);
+    border-radius: 0 0 8px 8px;
+    border-top: none;
+    display: none;
+    left: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    z-index: 100;
+}
+
+.mcmm-select.open .mcmm-select-options {
+    display: block;
+}
+
+.mcmm-option {
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.8rem 1rem;
+    transition: all 0.2s;
+}
+
+.mcmm-option:hover {
+    background: rgb(157 78 221 / 10%);
+    color: rgb(255 255 255 / 100%);
+}
+
+.mcmm-option.selected {
+    background: rgb(157 78 221 / 15%);
+    color: rgb(255 255 255 / 100%);
+}
+
+/* Section Title */
+.mcmm-section-title {
+    align-items: center;
+    color: rgb(255 255 255 / 60%);
+    display: flex;
+    font-size: 0.8rem;
+    font-weight: 900;
+    gap: 0.75rem;
+    letter-spacing: 1.5px;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.5rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgb(255 255 255 / 5%);
+}
+
+/* Status Message */
+.mcmm-status {
+    border-radius: 8px;
+    display: none;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    padding: 1rem;
+}
+
+.mcmm-status.success {
+    background: rgb(16 185 129 / 10%);
+    border: 1px solid rgb(16 185 129 / 30%);
+    color: var(--success);
+}
+
+.mcmm-status.error {
+    background: rgb(239 68 68 / 10%);
+    border: 1px solid rgb(239 68 68 / 30%);
+    color: var(--danger);
+}
+
+/* Footer */
+.mcmm-settings-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 1rem;
+}
+
+/* ===== MODAL ===== */
+.mcmm-modal-overlay {
+    align-items: center;
+    backdrop-filter: blur(8px);
+    background: rgb(0 0 0 / 85%);
+    display: none;
+    inset: 0;
+    justify-content: center;
+    position: fixed;
+    z-index: 1000;
+}
+
+.mcmm-modal-overlay.open {
+    display: flex;
+}
+
+.mcmm-modal {
+    background: var(--bg-surface);
+    border: 1px solid rgb(157 78 221 / 30%);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    max-width: 95vw;
+    overflow: hidden;
+    width: 95%;
+}
+
+.mcmm-modal-header {
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    padding: 1.5rem;
+}
+
+.mcmm-modal-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.mcmm-modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1.5rem;
+    padding: 0;
+    transition: color 0.2s;
+}
+
+.mcmm-modal-close:hover {
+    color: var(--danger);
+}
+
+.mcmm-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem;
+}
+
+/* Tabs-Leiste soll im Mod Manager nur so breit sein wie die Tabs */
+.mcmm-modal .mcmm-tabs {
+    display: inline-flex;
+    width: fit-content;
+    /* statt flex */
+    ;
+}
+
+/* Unterstrich nur über die Breite der Tabs */
+.mcmm-modal .mcmm-tabs::before {
+    left: 0;
+    right: 0;
+}
+
+
 /* ==========================================================================
    FIX: Console modal command input focus styling
    --------------------------------------------------------------------------
@@ -1900,638 +1965,647 @@
 
 
 /* ===== PREMIUM CONSOLE 2.0 ===== */
- .mcmm-console-window {
-     background: rgb(12 13 18 / 100%);
-     border: 1px solid rgb(255 255 255 / 5%);
-     border-radius: 8px;
-     display: flex;
-     flex: 1;
-     flex-direction: column;
-     margin: 1.1rem;
-     overflow: hidden;
-     position: relative;
- }
-
- .mcmm-console-tab-bar {
-     background: rgb(26 28 36 / 100%);
-     border-bottom: 2px solid rgb(12 13 18 / 100%);
-     display: flex;
-     gap: 2px;
-     padding: 0 10px;
- }
-
- .mcmm-console-output-container {
-     display: flex;
-     flex: 1;
-     flex-direction: column;
-     overflow: hidden;
-     padding: 0;
- }
-
- .mcmm-console-header-info {
-     color: rgb(139 233 253 / 100%);
-     font-family: "Fira Code", monospace;
-     font-size: 0.9rem;
-     font-weight: 700;
-     margin-bottom: 0.85rem;
-     text-shadow: 0 0 12px rgb(139 233 253 / 80%);
- }
-
- .mcmm-console-output {
-     background: transparent;
-     color: rgb(248 248 242 / 100%);
-     flex: 1;
-     font-family: "Fira Code", monospace;
-     font-size: 0.95rem;
-     letter-spacing: 0.2px;
-     line-height: 1.7;
-     overflow-y: auto;
-     padding-right: 0.5rem;
-     white-space: pre-wrap;
- }
-
- .mcmm-console-input-row {
-     align-items: center;
-     background: rgb(15 17 24 / 100%);
-     border-top: 2px solid rgb(12 13 18 / 100%);
-     display: flex;
-     padding: 0.85rem 1.25rem;
- }
-
- .mcmm-console-prompt {
-     color: rgb(80 250 123 / 100%);
-     font-family: "Fira Code", monospace;
-     font-size: 0.95rem;
-     font-weight: 700;
-     margin-right: 0.85rem;
-     text-shadow: 0 0 5px rgb(80 250 123 / 30%);
- }
-
- .mcmm-console-input {
-     background: transparent;
-     border: none;
-     color: rgb(248 248 242 / 100%);
-     flex: 1;
-     font-family: "Fira Code", monospace;
-     font-size: 0.9rem;
-     outline: none;
- }
-
- /* DRACULA LOG COLORS - Industrial Palette */
- .log-timestamp {
-     color: rgb(255 184 108 / 100%);
-     margin-right: 4px;
- }
-
- .log-system,
- .log-info {
-     color: rgb(139 233 153 / 100%);
- }
-
- .log-error {
-     color: rgb(255 85 85 / 100%);
-     font-weight: 700;
- }
-
- .log-warn {
-     color: rgb(255 184 108 / 100%);
-     font-weight: 700;
- }
-
- .log-success {
-     background: rgb(80 250 123 / 15%);
-     border-radius: 4px;
-     box-shadow: 0 0 15px rgb(80 250 123 / 25%);
-     color: rgb(80 250 123 / 100%);
-     display: inline-block;
-     font-weight: 700;
-     margin: 2px 0;
-     padding: 2px 8px;
-     text-shadow: 0 0 8px rgb(80 250 123 / 40%);
- }
-
- .log-chat,
- .log-advancement {
-     color: rgb(139 233 253 / 100%);
- }
-
- .log-join {
-     color: rgb(255 125 210 / 100%);
- }
-
- .log-array {
-     color: rgb(80 250 123 / 100%);
- }
-
- .log-login {
-     color: rgb(189 147 249 / 100%);
- }
-
- /* Consolidated duplicate console input selector */
-
- /* Player list (modal) FIX: removed duplicate selector by keeping a single canonical .mcmm-player-list below */
- .mcmm-player-row {
-     align-items: center;
-     background: rgb(255 255 255 / 3%);
-     border: 1px solid var(--border);
-     border-radius: 10px;
-     display: flex;
-     gap: 0.75rem;
-     padding: 0.75rem;
- }
-
- .mcmm-player-row.compact {
-     padding: 0.6rem 0.75rem;
- }
-
- /* FIX: merged duplicate .mcmm-player-list */
- .mcmm-player-list {
-     display: flex;
-     flex-direction: column;
-     gap: 2px;
-     padding: 0.5rem;
- }
-
- .mcmm-player-head {
-     background-position: center;
-     background-size: cover;
-     border: 1px solid var(--border);
-     border-radius: 6px;
-     flex-shrink: 0;
-     height: 40px;
-     width: 40px;
- }
-
- .mcmm-player-item {
-     align-items: center;
-     background: transparent;
-     border-radius: 8px;
-     display: flex;
-     padding: 0.6rem 0.75rem;
-     transition: background 0.15s ease;
- }
-
- .mcmm-player-item:hover {
-     background: var(--bg-surface-hover);
- }
-
- .mcmm-player-avatar {
-     border-radius: 6px;
-     height: 36px;
-     margin-right: 0.75rem;
-     width: 36px;
- }
-
- .mcmm-player-details {
-     display: flex;
-     flex: 1;
-     flex-direction: column;
- }
-
- .mcmm-player-name-text {
-     color: var(--text-main);
-     font-size: 0.95rem;
-     font-weight: 600;
- }
-
- .mcmm-player-status-row {
-     align-items: center;
-     display: flex;
-     gap: 0.5rem;
-     margin-top: 1px;
- }
-
- .mcmm-player-role-label {
-     color: var(--text-muted);
-     font-size: 0.7rem;
-     font-weight: 500;
-     text-transform: uppercase;
- }
-
- .mcmm-player-role-label.is-op {
-     color: var(--accent-primary);
-     font-weight: 700;
- }
-
- .mcmm-player-actions-minimal {
-     display: flex;
-     gap: 0.5rem;
-     opacity: 0.4;
-     transition: opacity 0.2s;
- }
-
- .mcmm-player-item:hover .mcmm-player-actions-minimal {
-     opacity: 1;
- }
-
- .mcmm-btn-minimal {
-     align-items: center;
-     background: transparent;
-     border: 1px solid transparent;
-     border-radius: 6px;
-     color: var(--text-muted);
-     cursor: pointer;
-     display: flex;
-     font-size: 0.8rem;
-     font-weight: 500;
-     justify-content: center;
-     padding: 0.35rem 0.6rem;
-     transition: all 0.15s;
- }
-
- .mcmm-btn-minimal:hover {
-     background: var(--bg-surface-hover);
-     border-color: var(--border);
-     color: var(--text-main);
- }
-
- .mcmm-btn-minimal.danger:hover {
-     background: rgb(255 85 85 / 10%);
-     border-color: rgb(255 85 85 / 20%);
-     color: rgb(255 85 85 / 100%);
- }
-
- .mcmm-player-stats-minimal {
-     align-items: center;
-     background: rgb(255 255 255 / 2%);
-     border-bottom: 1px solid var(--border);
-     color: var(--text-muted);
-     display: flex;
-     font-size: 0.75rem;
-     font-weight: 600;
-     gap: 0.5rem;
-     padding: 0.6rem 1.25rem;
- }
-
- .mcmm-dot-static {
-     background: rgb(80 250 123 / 100%);
-     border-radius: 50%;
-     height: 6px;
-     width: 6px;
- }
-
- .mcmm-player-search-box {
-     background: var(--bg-surface);
-     border: none;
-     border-bottom: 1px solid var(--border);
-     color: var(--text-main);
-     font-size: 0.9rem;
-     outline: none;
-     padding: 0.9rem 1.25rem;
-     width: 100%;
- }
-
- .mcmm-player-search-box::placeholder {
-     color: var(--text-muted);
-     opacity: 0.5;
- }
-
- .mcmm-btn-pill {
-     background: var(--bg-surface-hover);
-     border: 1px solid var(--border);
-     border-radius: 20px;
-     color: var(--text-main);
-     cursor: pointer;
-     font-size: 0.8rem;
-     font-weight: 600;
-     padding: 0.35rem 0.8rem;
-     transition: all 0.2s;
- }
-
- .mcmm-btn-pill:hover {
-     filter: brightness(1.2);
-     transform: translateY(-1px);
- }
-
- .mcmm-btn-pill.warning:hover {
-     background: var(--warning);
-     border-color: var(--warning);
-     color: rgb(0 0 0 / 100%);
- }
-
- .mcmm-player-badge.neon {
-     background: linear-gradient(135deg, rgb(255 0 255 / 100%) 0%, rgb(123 44 191 / 100%) 100%);
-     box-shadow: 0 0 10px rgb(255 0 255 / 40%);
-     color: rgb(255 255 255 / 100%);
-     font-size: 0.6rem;
-     font-weight: 900;
-     padding: 2px 6px;
-     border-radius: 4px;
-     letter-spacing: 0.5px;
- }
-
- .mcmm-player-role {
-     color: var(--text-muted);
-     font-size: 0.65rem;
-     font-weight: 700;
-     letter-spacing: 0.5px;
- }
-
- .mcmm-btn-pill-icon {
-     background: rgb(255 255 255 / 5%);
-     border: 1px solid var(--border);
-     border-radius: 50%;
-     color: var(--text-main);
-     cursor: pointer;
-     display: flex;
-     align-items: center;
-     justify-content: center;
-     height: 32px;
-     width: 32px;
-     padding: 0;
-     transition: all 0.2s;
-     font-size: 0.9rem;
- }
-
- .mcmm-btn-pill-icon:hover {
-     background: var(--warning);
-     border-color: var(--warning);
-     color: rgb(0 0 0 / 100%);
-     transform: scale(1.1) rotate(5deg);
- }
-
- .mcmm-btn-pill.danger:hover {
-     background: var(--danger);
-     border-color: var(--danger);
-     color: rgb(255 255 255 / 100%);
- }
-
- .mcmm-btn-pill.success:hover {
-     background: var(--success);
-     border-color: var(--success);
-     color: rgb(255 255 255 / 100%);
- }
-
- .mcmm-player-name {
-     color: rgb(255 255 255 / 100%);
-     font-size: 1rem;
-     font-weight: 700;
-     letter-spacing: -0.2px;
- }
-
- /* ===== LOADING / SPINNERS ===== */
- .mcmm-loading {
-     align-items: center;
-     color: var(--text-secondary);
-     display: flex;
-     justify-content: center;
-     padding: 4rem;
- }
-
- @keyframes spin {
-     to {
-         transform: rotate(360deg);
-     }
- }
-
- .mcmm-spinner {
-     animation: spin 1s linear infinite;
-     border: 3px solid var(--border);
-     border-radius: 50%;
-     border-top-color: var(--primary);
-     height: 32px;
-     width: 32px;
- }
-
- /* Spinner Animation (second loader) */
- @keyframes mcmm-spin {
-     to {
-         transform: rotate(360deg);
-     }
- }
-
- .mcmm-loader {
-     animation: mcmm-spin 0.8s linear infinite;
-     border: 3px solid rgb(157 78 221 / 20%);
-     border-radius: 50%;
-     border-top-color: var(--primary);
-     height: 40px;
-     margin: 0 auto 1.5rem;
-     width: 40px;
- }
-
- .mcmm-ver-chip {
-     align-items: center;
-     background: rgb(157 78 221 / 15%);
-     border: 1px solid rgb(157 78 221 / 20%);
-     border-radius: 6px;
-     color: var(--primary-hover);
-     display: inline-flex;
-     font-size: 0.75rem;
-     font-weight: 700;
-     padding: 2px 8px;
-     white-space: nowrap;
- }
-
- /* ===== SOURCE TOGGLE (PILL) ===== */
- .mcmm-source-toggle {
-     background: rgb(0 0 0 / 30%);
-     border: 1px solid var(--border);
-     border-radius: 8px;
-     display: flex;
-     padding: 4px;
- }
-
- .mcmm-source-btn {
-     background: transparent;
-     border: none;
-     border-radius: 6px;
-     color: var(--text-secondary);
-     cursor: pointer;
-     font-size: 0.85rem;
-     font-weight: 600;
-     padding: 6px 12px;
-     transition: all 0.2s;
- }
-
- .mcmm-source-btn.active {
-     background: var(--primary);
-     color: rgb(255 255 255 / 100%);
- }
-
- .mcmm-source-btn:hover:not(.active) {
-     color: rgb(255 255 255 / 100%);
- }
-
- /* ===== QUEUE PANEL ===== */
- .mcmm-queue-panel {
-     background: rgb(15 16 20 / 100%);
-     border-left: 0 solid var(--border);
-     box-shadow: -5px 0 25px rgb(0 0 0 / 50%);
-     display: flex;
-     flex-direction: column;
-     flex-shrink: 0;
-     overflow: hidden;
-     position: relative;
-     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-left-width 0.3s;
-     width: 0;
-     z-index: 20;
- }
-
- .mcmm-queue-panel.open {
-     border-left-width: 1px;
-     width: 350px;
- }
-
- .mcmm-queue-header {
-     align-items: center;
-     background: rgb(255 255 255 / 2%);
-     border-bottom: 1px solid var(--border);
-     display: flex;
-     justify-content: space-between;
-     padding: 1.25rem;
- }
-
- .mcmm-queue-list {
-     display: flex;
-     flex: 1;
-     flex-direction: column;
-     gap: 0.75rem;
-     overflow-y: auto;
-     padding: 1rem;
- }
-
- .mcmm-queue-footer {
-     background: rgb(255 255 255 / 2%);
-     border-top: 1px solid var(--border);
-     padding: 1.25rem;
- }
-
- /* Queue Item */
- .mcmm-queue-item {
-     align-items: center;
-     background: rgb(255 255 255 / 3%);
-     border: 1px solid var(--border);
-     border-radius: 8px;
-     display: flex;
-     gap: 0.75rem;
-     padding: 0.75rem;
-     transition: all 0.2s;
- }
-
- .mcmm-queue-item:hover {
-     background: rgb(255 255 255 / 5%);
-     border-color: rgb(255 255 255 / 20%);
- }
-
- .mcmm-queue-thumb {
-     background-color: rgb(51 51 51 / 100%);
-     background-size: cover;
-     border-radius: 6px;
-     flex-shrink: 0;
-     height: 32px;
-     width: 32px;
- }
-
- .mcmm-queue-info {
-     flex: 1;
-     min-width: 0;
- }
-
- .mcmm-queue-name {
-     font-size: 0.9rem;
-     font-weight: 600;
-     margin-bottom: 0.1rem;
-     overflow: hidden;
-     text-overflow: ellipsis;
-     white-space: nowrap;
- }
-
- .mcmm-queue-remove {
-     align-items: center;
-     background: transparent;
-     border: none;
-     border-radius: 4px;
-     color: var(--text-muted);
-     cursor: pointer;
-     display: flex;
-     height: 24px;
-     justify-content: center;
-     transition: all 0.2s;
-     width: 24px;
- }
-
- .mcmm-queue-remove:hover {
-     background: rgb(248 113 113 / 10%);
-     color: var(--danger);
- }
-
- /* ===== MISC: ACTIVE FILTER CONTAINER ===== */
- [id="activeFilterContainer"] {
-     transition: all 0.2s ease;
- }
-
- [id="activeFilterContainer"]:hover {
-     background: rgb(157 78 221 / 20%);
-     border-color: var(--primary-hover);
-     transform: translateY(-1px);
- }
-
- [id="activeFilterContainer"]:active {
-     transform: translateY(0);
- }
-
- /* ===== BACKUP CARD: INFO + OVERLAY (kept, but removed duplicate grid/card/thumb/info/name overrides) ===== */
-
- /* Info Trigger (i) */
- .mcmm-backup-info-trigger {
-     align-items: center;
-     backdrop-filter: blur(12px);
-     background: rgb(255 255 255 / 10%);
-     border: 1px solid rgb(255 255 255 / 10%);
-     border-radius: 50%;
-     box-shadow: 0 4px 10px rgb(0 0 0 / 30%);
-     color: rgb(255 255 255 / 100%);
-     cursor: help;
-     display: flex;
-     font-family: Outfit, sans-serif;
-     font-size: 14px;
-     font-style: italic;
-     font-weight: 900;
-     height: 30px;
-     justify-content: center;
-     position: absolute;
-     right: 12px;
-     top: 12px;
-     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-     width: 30px;
-     z-index: 25;
- }
-
- .mcmm-backup-info-trigger::before {
-     content: "i";
-     margin-right: 1px;
- }
-
- .mcmm-backup-info-trigger .material-symbols-outlined {
-     display: none;
- }
-
- .mcmm-backup-info-trigger:hover {
-     background: var(--primary);
-     border-color: var(--primary-hover);
-     box-shadow: 0 0 15px var(--primary-dim);
-     transform: scale(1.1);
- }
-
- .mcmm-backup-panel-item .material-symbols-outlined {
-     color: var(--primary-hover); /* Fallback color so icons never disappear */
-     background: linear-gradient(135deg, var(--primary), var(--primary-hover)); /* Gradient only when supported */
-     background-clip: text;
-     /* stylelint-disable-next-line property-no-vendor-prefix */
-     -webkit-background-clip: text;
-     /* stylelint-disable-next-line property-no-vendor-prefix */
-     -webkit-text-fill-color: transparent;
-     font-size: 1.15rem;
-     margin-top: 2px;
- }
+.mcmm-console-window {
+    background: rgb(12 13 18 / 100%);
+    border: 1px solid rgb(255 255 255 / 5%);
+    border-radius: 8px;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    margin: 1.1rem;
+    overflow: hidden;
+    position: relative;
+}
+
+.mcmm-console-tab-bar {
+    background: rgb(26 28 36 / 100%);
+    border-bottom: 2px solid rgb(12 13 18 / 100%);
+    display: flex;
+    gap: 2px;
+    padding: 0 10px;
+}
+
+.mcmm-console-output-container {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+}
+
+.mcmm-console-header-info {
+    color: rgb(139 233 253 / 100%);
+    font-family: "Fira Code", monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 0.85rem;
+    text-shadow: 0 0 12px rgb(139 233 253 / 80%);
+}
+
+.mcmm-console-output {
+    background: transparent;
+    color: rgb(248 248 242 / 100%);
+    flex: 1;
+    font-family: "Fira Code", monospace;
+    font-size: 0.95rem;
+    letter-spacing: 0.2px;
+    line-height: 1.7;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    white-space: pre-wrap;
+}
+
+.mcmm-console-input-row {
+    align-items: center;
+    background: rgb(15 17 24 / 100%);
+    border-top: 2px solid rgb(12 13 18 / 100%);
+    display: flex;
+    padding: 0.85rem 1.25rem;
+}
+
+.mcmm-console-prompt {
+    color: rgb(80 250 123 / 100%);
+    font-family: "Fira Code", monospace;
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-right: 0.85rem;
+    text-shadow: 0 0 5px rgb(80 250 123 / 30%);
+}
+
+.mcmm-console-input {
+    background: transparent;
+    border: none;
+    color: rgb(248 248 242 / 100%);
+    flex: 1;
+    font-family: "Fira Code", monospace;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+/* DRACULA LOG COLORS - Industrial Palette */
+.log-timestamp {
+    color: rgb(255 184 108 / 100%);
+    margin-right: 4px;
+}
+
+.log-system,
+.log-info {
+    color: rgb(139 233 153 / 100%);
+}
+
+.log-error {
+    color: rgb(255 85 85 / 100%);
+    font-weight: 700;
+}
+
+.log-warn {
+    color: rgb(255 184 108 / 100%);
+    font-weight: 700;
+}
+
+.log-success {
+    background: rgb(80 250 123 / 15%);
+    border-radius: 4px;
+    box-shadow: 0 0 15px rgb(80 250 123 / 25%);
+    color: rgb(80 250 123 / 100%);
+    display: inline-block;
+    font-weight: 700;
+    margin: 2px 0;
+    padding: 2px 8px;
+    text-shadow: 0 0 8px rgb(80 250 123 / 40%);
+}
+
+.log-chat,
+.log-advancement {
+    color: rgb(139 233 253 / 100%);
+}
+
+.log-join {
+    color: rgb(255 125 210 / 100%);
+}
+
+.log-array {
+    color: rgb(80 250 123 / 100%);
+}
+
+.log-login {
+    color: rgb(189 147 249 / 100%);
+}
+
+/* Consolidated duplicate console input selector */
+
+/* Player list (modal) FIX: removed duplicate selector by keeping a single canonical .mcmm-player-list below */
+.mcmm-player-row {
+    align-items: center;
+    background: rgb(255 255 255 / 3%);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem;
+}
+
+.mcmm-player-row.compact {
+    padding: 0.6rem 0.75rem;
+}
+
+/* FIX: merged duplicate .mcmm-player-list */
+.mcmm-player-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0.5rem;
+}
+
+.mcmm-player-head {
+    background-position: center;
+    background-size: cover;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    flex-shrink: 0;
+    height: 40px;
+    width: 40px;
+}
+
+.mcmm-player-item {
+    align-items: center;
+    background: transparent;
+    border-radius: 8px;
+    display: flex;
+    padding: 0.6rem 0.75rem;
+    transition: background 0.15s ease;
+}
+
+.mcmm-player-item:hover {
+    background: var(--bg-surface-hover);
+}
+
+.mcmm-player-avatar {
+    border-radius: 6px;
+    height: 36px;
+    margin-right: 0.75rem;
+    width: 36px;
+}
+
+.mcmm-player-details {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+}
+
+.mcmm-player-name-text {
+    color: var(--text-main);
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.mcmm-player-status-row {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1px;
+}
+
+.mcmm-player-role-label {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.mcmm-player-role-label.is-op {
+    color: var(--accent-primary);
+    font-weight: 700;
+}
+
+.mcmm-player-actions-minimal {
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+}
+
+.mcmm-player-item:hover .mcmm-player-actions-minimal {
+    opacity: 1;
+}
+
+.mcmm-btn-minimal {
+    align-items: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    font-size: 0.8rem;
+    font-weight: 500;
+    justify-content: center;
+    padding: 0.35rem 0.6rem;
+    transition: all 0.15s;
+}
+
+.mcmm-btn-minimal:hover {
+    background: var(--bg-surface-hover);
+    border-color: var(--border);
+    color: var(--text-main);
+}
+
+.mcmm-btn-minimal.danger:hover {
+    background: rgb(255 85 85 / 10%);
+    border-color: rgb(255 85 85 / 20%);
+    color: rgb(255 85 85 / 100%);
+}
+
+.mcmm-player-stats-minimal {
+    align-items: center;
+    background: rgb(255 255 255 / 2%);
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+    display: flex;
+    font-size: 0.75rem;
+    font-weight: 600;
+    gap: 0.5rem;
+    padding: 0.6rem 1.25rem;
+}
+
+.mcmm-dot-static {
+    background: rgb(80 250 123 / 100%);
+    border-radius: 50%;
+    height: 6px;
+    width: 6px;
+}
+
+.mcmm-player-search-box {
+    background: var(--bg-surface);
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-main);
+    font-size: 0.9rem;
+    outline: none;
+    padding: 0.9rem 1.25rem;
+    width: 100%;
+}
+
+.mcmm-player-search-box::placeholder {
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+.mcmm-btn-pill {
+    background: var(--bg-surface-hover);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-main);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.35rem 0.8rem;
+    transition: all 0.2s;
+}
+
+.mcmm-btn-pill:hover {
+    filter: brightness(1.2);
+    transform: translateY(-1px);
+}
+
+.mcmm-btn-pill.warning:hover {
+    background: var(--warning);
+    border-color: var(--warning);
+    color: rgb(0 0 0 / 100%);
+}
+
+.mcmm-player-badge.neon {
+    background: linear-gradient(135deg, rgb(255 0 255 / 100%) 0%, rgb(123 44 191 / 100%) 100%);
+    box-shadow: 0 0 10px rgb(255 0 255 / 40%);
+    color: rgb(255 255 255 / 100%);
+    font-size: 0.6rem;
+    font-weight: 900;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.mcmm-player-role {
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.mcmm-btn-pill-icon {
+    background: rgb(255 255 255 / 5%);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    color: var(--text-main);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    width: 32px;
+    padding: 0;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.mcmm-btn-pill-icon:hover {
+    background: var(--warning);
+    border-color: var(--warning);
+    color: rgb(0 0 0 / 100%);
+    transform: scale(1.1) rotate(5deg);
+}
+
+.mcmm-btn-pill.danger:hover {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: rgb(255 255 255 / 100%);
+}
+
+.mcmm-btn-pill.success:hover {
+    background: var(--success);
+    border-color: var(--success);
+    color: rgb(255 255 255 / 100%);
+}
+
+.mcmm-player-name {
+    color: rgb(255 255 255 / 100%);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+}
+
+/* ===== LOADING / SPINNERS ===== */
+.mcmm-loading {
+    align-items: center;
+    color: var(--text-secondary);
+    display: flex;
+    justify-content: center;
+    padding: 4rem;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.mcmm-spinner {
+    animation: spin 1s linear infinite;
+    border: 3px solid var(--border);
+    border-radius: 50%;
+    border-top-color: var(--primary);
+    height: 32px;
+    width: 32px;
+}
+
+/* Spinner Animation (second loader) */
+@keyframes mcmm-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.mcmm-loader {
+    animation: mcmm-spin 0.8s linear infinite;
+    border: 3px solid rgb(157 78 221 / 20%);
+    border-radius: 50%;
+    border-top-color: var(--primary);
+    height: 40px;
+    margin: 0 auto 1.5rem;
+    width: 40px;
+}
+
+.mcmm-ver-chip {
+    align-items: center;
+    background: rgb(157 78 221 / 15%);
+    border: 1px solid rgb(157 78 221 / 20%);
+    border-radius: 6px;
+    color: var(--primary-hover);
+    display: inline-flex;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    white-space: nowrap;
+}
+
+/* ===== SOURCE TOGGLE (PILL) ===== */
+.mcmm-source-toggle {
+    background: rgb(0 0 0 / 30%);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    padding: 4px;
+}
+
+.mcmm-source-btn {
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    transition: all 0.2s;
+}
+
+.mcmm-source-btn.active {
+    background: var(--primary);
+    color: rgb(255 255 255 / 100%);
+}
+
+.mcmm-source-btn:hover:not(.active) {
+    color: rgb(255 255 255 / 100%);
+}
+
+/* ===== QUEUE PANEL (Redesigned) ===== */
+.mcmm-queue-panel {
+    background: rgba(15, 16, 20, 0.9);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-left-width 0.4s, opacity 0.3s;
+    width: 0;
+    opacity: 0;
+    z-index: 20;
+}
+
+.mcmm-queue-panel.open {
+    width: 380px;
+    /* Slightly wider for better breathing room */
+    opacity: 1;
+}
+
+.mcmm-queue-header {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    /* Fainter border */
+    display: flex;
+    justify-content: space-between;
+    padding: 1.5rem;
+}
+
+.mcmm-queue-list {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+.mcmm-queue-footer {
+    background: rgba(255, 255, 255, 0.03);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 1.5rem;
+    display: flex;
+    gap: 1rem;
+}
+
+/* Queue Item */
+.mcmm-queue-item {
+    align-items: center;
+    background: rgb(255 255 255 / 3%);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    transition: all 0.2s;
+}
+
+.mcmm-queue-item:hover {
+    background: rgb(255 255 255 / 5%);
+    border-color: rgb(255 255 255 / 20%);
+}
+
+.mcmm-queue-thumb {
+    background-color: rgb(51 51 51 / 100%);
+    background-size: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+    height: 32px;
+    width: 32px;
+}
+
+.mcmm-queue-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mcmm-queue-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mcmm-queue-remove {
+    align-items: center;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    height: 24px;
+    justify-content: center;
+    transition: all 0.2s;
+    width: 24px;
+}
+
+.mcmm-queue-remove:hover {
+    background: rgb(248 113 113 / 10%);
+    color: var(--danger);
+}
+
+/* ===== MISC: ACTIVE FILTER CONTAINER ===== */
+[id="activeFilterContainer"] {
+    transition: all 0.2s ease;
+}
+
+[id="activeFilterContainer"]:hover {
+    background: rgb(157 78 221 / 20%);
+    border-color: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+[id="activeFilterContainer"]:active {
+    transform: translateY(0);
+}
+
+/* ===== BACKUP CARD: INFO + OVERLAY (kept, but removed duplicate grid/card/thumb/info/name overrides) ===== */
+
+/* Info Trigger (i) */
+.mcmm-backup-info-trigger {
+    align-items: center;
+    backdrop-filter: blur(12px);
+    background: rgb(255 255 255 / 10%);
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 50%;
+    box-shadow: 0 4px 10px rgb(0 0 0 / 30%);
+    color: rgb(255 255 255 / 100%);
+    cursor: help;
+    display: flex;
+    font-family: Outfit, sans-serif;
+    font-size: 14px;
+    font-style: italic;
+    font-weight: 900;
+    height: 30px;
+    justify-content: center;
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 30px;
+    z-index: 25;
+}
+
+.mcmm-backup-info-trigger::before {
+    content: "i";
+    margin-right: 1px;
+}
+
+.mcmm-backup-info-trigger .material-symbols-outlined {
+    display: none;
+}
+
+.mcmm-backup-info-trigger:hover {
+    background: var(--primary);
+    border-color: var(--primary-hover);
+    box-shadow: 0 0 15px var(--primary-dim);
+    transform: scale(1.1);
+}
+
+.mcmm-backup-panel-item .material-symbols-outlined {
+    color: var(--primary-hover);
+    /* Fallback color so icons never disappear */
+    background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+    /* Gradient only when supported */
+    background-clip: text;
+    /* stylelint-disable-next-line property-no-vendor-prefix */
+    -webkit-background-clip: text;
+    /* stylelint-disable-next-line property-no-vendor-prefix */
+    -webkit-text-fill-color: transparent;
+    font-size: 1.15rem;
+    margin-top: 2px;
+}
 
 @supports not ((-webkit-background-clip: text) and (-webkit-text-fill-color: transparent)) {
-     .mcmm-backup-panel-item .material-symbols-outlined {
-         background: none;
-         /* stylelint-disable-next-line property-no-vendor-prefix */
-         -webkit-text-fill-color: currentcolor;
-     }
+    .mcmm-backup-panel-item .material-symbols-outlined {
+        background: none;
+        /* stylelint-disable-next-line property-no-vendor-prefix */
+        -webkit-text-fill-color: currentcolor;
+    }
 }
 
 /* Floating Info Panel (canonical, merged) */
@@ -2592,11 +2666,11 @@
 }
 
 
- .mcmm-backup-info-trigger:hover .mcmm-backup-info-panel {
-     opacity: 1;
-     transform: translateY(0);
-     visibility: visible;
-     }
+.mcmm-backup-info-trigger:hover .mcmm-backup-info-panel {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+}
 
 
 /* Prevent the hover info panel from being clipped by parent containers */
@@ -2621,7 +2695,7 @@
 }
 
 /* Safety: if panes are implemented as sections inside a container */
-.mcmm-modal .mcmm-settings-content > .mcmm-settings-pane:not(.active) {
+.mcmm-modal .mcmm-settings-content>.mcmm-settings-pane:not(.active) {
     display: none;
 }
 
