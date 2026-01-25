@@ -395,13 +395,12 @@ if (!function_exists('write_ini_file')) {
     }
 }
 
-    // Debug log function
 // Debug log function
 function dbg($msg)
 {
-    $logFile = '/tmp/mcmm.log';
+    $logFile = dirname(__DIR__) . '/debug.log';
     $timestamp = date('Y-m-d H:i:s');
-    file_put_contents($logFile, "[$timestamp] $msg\n", FILE_APPEND);
+    @file_put_contents($logFile, "[$timestamp] $msg\n", FILE_APPEND);
 }
 
 /**
@@ -993,15 +992,25 @@ function jsonResponse($data, int $statusCode = 200): void
     exit;
 }
 
-function fetchCurseForgeModpacks(string $search, string $apiKey): ?array
+function fetchCurseForgeModpacks(string $search, string $apiKey, string $sort = 'popularity', int $page = 1, int $pageSize = 20): ?array
 {
+    $sortMap = [
+        'popularity' => 2,
+        'newest' => 3,
+        'updated' => 3,
+        'name' => 4,
+        'downloads' => 6
+    ];
+    $sortField = $sortMap[$sort] ?? 2;
+
     $query = http_build_query([
         'gameId' => 432,
         'classId' => 4471,
         'searchFilter' => $search,
-        'sortField' => 2, // popularity
+        'sortField' => $sortField,
         'sortOrder' => 'desc',
-        'pageSize' => 20
+        'index' => ($page - 1) * $pageSize,
+        'pageSize' => $pageSize
     ]);
 
     $payload = cfRequest('/mods/search?' . $query, $apiKey);
@@ -1019,11 +1028,168 @@ function fetchCurseForgeModpacks(string $search, string $apiKey): ?array
             'downloads' => formatDownloads($pack['downloadCount'] ?? 0),
             'img' => $pack['logo']['url'] ?? '',
             'summary' => $pack['summary'] ?? '',
-            'tags' => array_slice(array_map(fn($c) => $c['name'], $pack['categories'] ?? []), 0, 3)
+            'tags' => array_slice(array_map(fn($c) => $c['name'], $pack['categories'] ?? []), 0, 3),
+            'source' => 'curseforge'
         ];
     }
 
     return $modpacks;
+}
+
+function fetchModrinthModpacks(string $search, string $sort = 'popularity', int $page = 1, int $pageSize = 20): ?array
+{
+    $sortMap = [
+        'popularity' => 'downloads',
+        'newest' => 'newest',
+        'updated' => 'updated',
+        'name' => 'relevance'
+    ];
+    $index = $sortMap[$sort] ?? 'downloads';
+
+    $offset = ($page - 1) * $pageSize;
+    $query = http_build_query([
+        'query' => $search,
+        'facets' => '[["project_type:modpack"]]',
+        'offset' => $offset,
+        'limit' => $pageSize,
+        'index' => $index
+    ]);
+
+    $payload = mrRequest('/search?' . $query);
+    if (!$payload || !isset($payload['hits'])) {
+        return null;
+    }
+
+    $modpacks = [];
+    foreach ($payload['hits'] as $pack) {
+        $modpacks[] = [
+            'id' => $pack['project_id'],
+            'name' => $pack['title'],
+            'slug' => $pack['slug'] ?? '',
+            'author' => $pack['author'] ?? 'Unknown',
+            'downloads' => formatDownloads($pack['downloads'] ?? 0),
+            'img' => $pack['icon_url'] ?? '',
+            'summary' => $pack['description'] ?? '',
+            'tags' => array_slice($pack['categories'] ?? [], 0, 3),
+            'source' => 'modrinth'
+        ];
+    }
+
+    return $modpacks;
+}
+
+function fetchFTBModpacks(string $search, int $page = 1, int $pageSize = 20): ?array
+{
+    // Search endpoint: returns IDs
+    $url = "https://api.modpacks.ch/public/modpack/search/100?term=" . urlencode($search ?: 'FTB');
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode >= 400 || !$response) {
+        return null;
+    }
+
+    $data = json_decode($response, true);
+    if (!isset($data['packs']) || empty($data['packs'])) {
+        return [];
+    }
+
+    // Now we need details for these packs.
+    $offset = ($page - 1) * $pageSize;
+    $ids = array_slice($data['packs'], $offset, $pageSize);
+    $modpacks = [];
+
+    foreach ($ids as $id) {
+        // Cache these details because they don't change often and we're hitting them a lot
+        $cacheKey = "ftb_pack_det_" . $id;
+        $pack = mcmm_cache_get($cacheKey);
+
+        if (!$pack) {
+            $detUrl = "https://api.modpacks.ch/public/modpack/" . $id;
+            $ch = curl_init($detUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            $detRes = curl_exec($ch);
+            curl_close($ch);
+
+            if ($detRes) {
+                $pack = json_decode($detRes, true);
+                if ($pack) {
+                    mcmm_cache_set($cacheKey, $pack, 3600); // 1 hour cache
+                }
+            }
+        }
+
+        if ($pack && isset($pack['name'])) {
+            // Find logo if any
+            $logoUrl = '';
+            if (!empty($pack['art'])) {
+                foreach ($pack['art'] as $art) {
+                    if ($art['type'] === 'logo') {
+                        $logoUrl = $art['url'];
+                        break;
+                    }
+                }
+                if (!$logoUrl && !empty($pack['art'])) {
+                    $logoUrl = $pack['art'][0]['url'];
+                }
+            }
+
+            $modpacks[] = [
+                'id' => $pack['id'],
+                'name' => $pack['name'],
+                'slug' => $pack['slug'] ?? '',
+                'author' => $pack['author'] ?? 'FTB Team',
+                'downloads' => formatDownloads($pack['installs'] ?? 0),
+                'img' => $logoUrl,
+                'summary' => $pack['synopsis'] ?? '',
+                'tags' => ['FTB'],
+                'source' => 'ftb'
+            ];
+        }
+    }
+
+    return $modpacks;
+}
+
+function fetchFTBModpackFiles(int $modpackId): array
+{
+    $url = "https://api.modpacks.ch/public/modpack/" . $modpackId;
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    if (!$response) {
+        return [];
+    }
+
+    $data = json_decode($response, true);
+    if (!isset($data['versions']) || empty($data['versions'])) {
+        return [];
+    }
+
+    $files = [];
+    foreach ($data['versions'] as $v) {
+        $files[] = [
+            'id' => $v['id'],
+            'displayName' => $v['name'],
+            'releaseType' => 1, // FTB is mostly all "releases"
+            'gameVersions' => [$v['mcversion'] ?? 'Unknown'],
+            'source' => 'ftb'
+        ];
+    }
+
+    // Reverse to show newest first
+    return array_reverse($files);
 }
 
 function fetchCurseForgeMods(string $search, string $version, string $loader, int $page, int $pageSize, string $apiKey): array
@@ -1502,13 +1668,13 @@ function cfRequest(string $path, string $apiKey, bool $isFullUrl = false, string
     }
 
     if ($httpCode >= 400) {
-        dbg("CF HTTP Error $httpCode: $response");
+        dbg("CF HTTP Error $httpCode for $url. Response: " . substr($response, 0, 200));
         return null;
     }
 
     $json = json_decode($response, true);
     if (!$json) {
-        dbg("CF JSON Decode Error. Response: $response");
+        dbg("CF JSON Decode Error for $url. Response: " . substr($response, 0, 200));
         return null;
     }
 
@@ -2024,8 +2190,18 @@ function handleDeploy(array $config, array $defaults): void
     // Optional behavior: only include it in the response if non-null/non-empty
     // ---------------------------
     $downloadUrl = null;
+    $source = strtolower($input['source'] ?? 'curseforge');
 
-    if ($modId !== -1) {
+    if ($modId === -1) {
+        // Vanilla path: keep $downloadUrl as null
+        $resolvedFileId = $fileId ?: 'LATEST';
+        $downloadUrl = null; // explicit (optional)
+    } elseif ($source === 'ftb') {
+        // FTB path
+        $resolvedFileId = $fileId;
+        $downloadUrl = "https://api.modpacks.ch/public/modpack/$modId"; // Indicator for success
+    } else {
+        // CurseForge path
         [$resolvedFileId, $downloadUrl] = getModpackDownload(
             $modId,
             $config['curseforge_api_key'],
@@ -2056,10 +2232,6 @@ function handleDeploy(array $config, array $defaults): void
                 dbg("Resolved MC Version for Modpack $modId / File $resolvedFileId: $mcVerSelected");
             }
         }
-    } else {
-        // Vanilla path: keep $downloadUrl as null
-        $resolvedFileId = $fileId ?: 'LATEST';
-        $downloadUrl = null; // explicit (optional)
     }
 
     $dataDir = "/mnt/user/appdata/{$containerName}";
@@ -2079,25 +2251,9 @@ function handleDeploy(array $config, array $defaults): void
 
     $env = [
         'EULA' => 'TRUE',
-    ];
-
-    if ($modId === -1) {
-        $env['TYPE'] = 'VANILLA';
-        $env['VERSION'] = $resolvedFileId;
-    } else {
-        $env['TYPE'] = 'AUTO_CURSEFORGE';
-        $env['CF_API_KEY'] = $config['curseforge_api_key'] ?? '';
-        $env['CF_SLUG'] = $safeSlug ?: $serverName;
-        $env['CF_FILE_ID'] = $resolvedFileId ?: '';
-    }
-
-    $env += [
-        'MCMM_VERSION' => $mcVerSelected ?: ($modId === -1 ? $resolvedFileId : ''),
-        'MEMORY' => $memory,
         'SERVER_NAME' => $serverName,
         'SERVER_IP' => $serverIp,
-        'SERVER_PORT' => $port,
-        'ENABLE_QUERY' => 'TRUE',
+        'SERVER_PORT' => 25565,
         'QUERY_PORT' => $port,
         'MAX_PLAYERS' => $maxPlayers,
         'ENABLE_WHITELIST' => $whitelist !== '' ? 'TRUE' : 'FALSE',
@@ -2111,6 +2267,26 @@ function handleDeploy(array $config, array $defaults): void
         'USE_AIKAR_FLAGS' => $flagAikar ? 'TRUE' : 'FALSE',
         'JVM_OPTS' => $jvmFlags
     ];
+
+    if ($modId === -1) {
+        $env['TYPE'] = 'VANILLA';
+        $env['VERSION'] = $mcVerSelected ?: 'LATEST';
+    } elseif ($source === 'ftb') {
+        $env['TYPE'] = 'FTBA';
+        $env['FTB_MODPACK_ID'] = $modId;
+        if ($fileId) {
+            $env['FTB_MODPACK_VERSION_ID'] = $fileId;
+        }
+    } else {
+        $env['TYPE'] = 'AUTO_CURSEFORGE';
+        if (!empty($config['curseforge_api_key'])) {
+            $env['CF_API_KEY'] = $config['curseforge_api_key'];
+        }
+        $env['CF_SLUG'] = $safeSlug ?: $serverName;
+        if ($resolvedFileId) {
+            $env['CF_FILE_ID'] = $resolvedFileId;
+        }
+    }
 
     if ($iconUrl !== '') {
         $env['ICON'] = $iconUrl;

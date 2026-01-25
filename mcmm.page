@@ -247,13 +247,47 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
         <!-- Catalog Tab -->
         <div id="tab-catalog" class="mcmm-tab-content">
             <div class="mcmm-catalog-header">
-                <div class="mcmm-search">
-                    <span class="material-symbols-outlined mcmm-search-icon">search</span>
-                    <input type="text" class="mcmm-search-input" placeholder="Search modpacks..." id="modpackSearch" onkeyup="filterModpacks()" />
+                <div style="display: flex; flex-direction: column; gap: 1rem; width: 100%;">
+                    <!-- Source Tabs -->
+                    <div class="mcmm-source-tabs" style="display: flex; gap: 0.5rem; background: rgb(255 255 255 / 5%); padding: 0.4rem; border-radius: 12px; border: 1px solid var(--border); width: fit-content;">
+                        <button class="mcmm-source-tab active" onclick="switchModpackSource('curseforge', this)">CurseForge</button>
+                        <button class="mcmm-source-tab" onclick="switchModpackSource('modrinth', this)">Modrinth</button>
+                        <button class="mcmm-source-tab" onclick="switchModpackSource('ftb', this)">Feed The Beast</button>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                        <div class="mcmm-search" style="flex: 1; min-width: 250px;">
+                            <span class="material-symbols-outlined mcmm-search-icon">search</span>
+                            <input type="text" class="mcmm-search-input" placeholder="Search modpacks..." id="modpackSearch" onkeyup="if(event.key === 'Enter') { modpackState.page = 1; loadModpacks(this.value); }" />
+                        </div>
+                        
+                        <div style="display: flex; gap: 0.75rem; align-items: center;">
+                            <label class="mcmm-label" style="margin: 0; font-size: 0.8rem; white-space: nowrap;">Sort By:</label>
+                            <select id="modpackSort" class="mcmm-input" style="width: auto; min-width: 140px; height: 44px; margin: 0;" onchange="modpackState.page = 1; loadModpacks(document.getElementById('modpackSearch').value)">
+                                <option value="popularity">Popularity</option>
+                                <option value="newest">Last Updated</option>
+                                <option value="name">Name</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
+
             <div class="mcmm-modpack-grid" id="modpackGrid">
                 <!-- Loaded via JS -->
+            </div>
+
+            <!-- Pagination -->
+            <div id="modpackPagination" style="display: flex; justify-content: center; align-items: center; gap: 1.5rem; margin-top: 2rem; padding-bottom: 2rem;">
+                <button class="mcmm-btn" id="prevPage" onclick="changeModpackPage(-1)" disabled>
+                    <span class="material-symbols-outlined">chevron_left</span> Previous
+                </button>
+                <div style="font-weight: 500; font-size: 0.9rem; color: var(--text-secondary);">
+                    Page <span id="currentPageNum" style="color: var(--primary);">1</span>
+                </div>
+                <button class="mcmm-btn" id="nextPage" onclick="changeModpackPage(1)">
+                    Next <span class="material-symbols-outlined">chevron_right</span>
+                </button>
             </div>
         </div>
 

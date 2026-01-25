@@ -2820,3 +2820,123 @@ body {
     font-size: 1.15rem;
     line-height: 1;
 }
+
+/* Source Tabs */
+.mcmm-source-tabs {
+    display: flex;
+    gap: 0.25rem;
+    background: rgb(0 0 0 / 20%);
+    padding: 0.35rem;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    width: fit-content;
+}
+
+.mcmm-source-tab {
+    padding: 0.7rem 1.4rem;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.mcmm-source-tab:hover {
+    color: var(--text-main);
+    background: rgb(255 255 255 / 3%);
+}
+
+.mcmm-source-tab.active {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgb(157 78 221 / 30%);
+}
+
+/* Source Marker Badge */
+.mcmm-source-marker {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 0.35rem 0.75rem;
+    border-radius: 10px;
+    background: rgb(15 17 26 / 85%);
+    backdrop-filter: blur(10px);
+    font-size: 0.62rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    pointer-events: none;
+    border: 1px solid rgb(255 255 255 / 12%);
+    z-index: 10;
+    box-shadow: 0 4px 10px rgb(0 0 0 / 40%);
+}
+
+.mcmm-source-marker.curseforge {
+    color: #ff804d;
+    border-color: rgb(241 100 54 / 30%);
+}
+
+.mcmm-source-marker.modrinth {
+    color: #20f076;
+    border-color: rgb(29 217 106 / 30%);
+}
+
+.mcmm-source-marker.ftb {
+    color: #ffd633;
+    border-color: rgb(255 204 0 / 30%);
+}
+
+/* Pagination Controls */
+#modpackPagination .mcmm-btn {
+    height: 48px;
+    padding: 0 1.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    font-weight: 700;
+    font-size: 0.88rem;
+}
+
+#modpackPagination .mcmm-btn:not(:disabled):hover {
+    background: var(--bg-surface-hover);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+#modpackPagination .mcmm-btn:disabled {
+    opacity: 0.15;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+
+/* Enhanced Modpack Card */
+.mcmm-modpack-card {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mcmm-modpack-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 12px 30px rgb(0 0 0 / 50%), 0 0 0 1px var(--primary-dim);
+    transform: translateY(-4px);
+}
+
+.mcmm-modpack-thumb {
+    transition: transform 0.6s cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.mcmm-modpack-card:hover .mcmm-modpack-thumb {
+    transform: scale(1.08);
+}

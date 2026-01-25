@@ -162,8 +162,13 @@ window.addEventListener('error', function (event) {
     console.error("%c MCMM Runtime Error: ", "background:rgb(239  68  68 / 100%);color:rgb(255 255 255 / 100%);font-weight:700;padding:2px 6px;border-radius:4px;", event.message, "at", event.filename, ":", event.lineno);
 });
 
-var modpackState = { items: [], loading: false, error: '' };
+var modpackState = { items: [], loading: false, error: '', source: 'curseforge', sort: 'popularity', page: 1, limit: 12 };
 var modpackSearchTimer;
+
+window.switchModpackSource = switchModpackSource;
+window.changeModpackPage = changeModpackPage;
+window.loadModpacks = loadModpacks;
+window.filterModpacks = filterModpacks;
 var selectedModpack = null;
 var modpacksLoaded = false;
 var settingsCache = null;
@@ -310,7 +315,13 @@ function renderModpacks(data) {
         const card = document.createElement('div');
         card.className = 'mcmm-modpack-card';
         card.onclick = () => openDeployModal(pack);
+
+        // Use a source badge
+        const sourceClass = pack.source || 'curseforge';
+        const sourceLabel = sourceClass === 'curseforge' ? 'CF' : (sourceClass === 'modrinth' ? 'MR' : 'FTB');
+
         card.innerHTML = `
+            <div class="mcmm-source-marker ${sourceClass}">${sourceLabel}</div>
             <div class="mcmm-modpack-thumb" style="background-image: url('${pack.img || ''}')"></div>
             <div class="mcmm-modpack-info">
                 <div class="mcmm-modpack-name">${pack.name}</div>
@@ -323,20 +334,56 @@ function renderModpacks(data) {
         `;
         grid.appendChild(card);
     });
+
+    // Update pagination buttons
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    const pageNum = document.getElementById('currentPageNum');
+
+    if (prevBtn) prevBtn.disabled = modpackState.page <= 1;
+    if (pageNum) pageNum.textContent = modpackState.page;
+    if (nextBtn) nextBtn.disabled = data.length < modpackState.limit;
+}
+
+function switchModpackSource(source, btn) {
+    modpackState.source = source;
+    modpackState.page = 1;
+
+    // UI update for tabs
+    const container = btn.closest('.mcmm-source-tabs');
+    if (container) {
+        container.querySelectorAll('.mcmm-source-tab').forEach(t => t.classList.remove('active'));
+    }
+    btn.classList.add('active');
+
+    loadModpacks(document.getElementById('modpackSearch').value);
+}
+
+function changeModpackPage(delta) {
+    modpackState.page = Math.max(1, modpackState.page + delta);
+    loadModpacks(document.getElementById('modpackSearch').value);
+
+    // Scroll back to top of grid
+    document.getElementById('modpackGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function loadModpacks(query = '') {
-    if (typeof mcmmConfig !== 'undefined' && !mcmmConfig.has_api_key) {
+    // If not FTB, we check for API key (Modrinth also doesn't need key)
+    if (modpackState.source === 'curseforge' && (typeof mcmmConfig !== 'undefined' && !mcmmConfig.has_api_key)) {
         renderModpacks([]);
         return;
     }
 
     modpackState.loading = true;
     modpackState.error = '';
+
+    // Set sort from UI
+    modpackState.sort = document.getElementById('modpackSort')?.value || 'popularity';
+
     renderModpacks(modpackState.items);
 
     try {
-        const res = await fetch('/plugins/mcmm/api.php?action=modpacks&search=' + encodeURIComponent(query));
+        const res = await fetch(`/plugins/mcmm/api.php?action=modpacks&source=${modpackState.source}&search=${encodeURIComponent(query)}&sort=${modpackState.sort}&page=${modpackState.page}&page_size=${modpackState.limit}`);
         const data = await res.json();
         if (!data.success) {
             throw new Error(data.error || 'Failed to load modpacks');
@@ -353,7 +400,10 @@ async function loadModpacks(query = '') {
 function filterModpacks() {
     const query = document.getElementById('modpackSearch').value;
     clearTimeout(modpackSearchTimer);
-    modpackSearchTimer = setTimeout(() => loadModpacks(query), 300);
+    modpackSearchTimer = setTimeout(() => {
+        modpackState.page = 1;
+        loadModpacks(query);
+    }, 500);
 }
 
 // --- Mod Manager Logic ---
@@ -1463,7 +1513,8 @@ async function openDeployModal(pack) {
 
     // Fetch Modpack versions and render as buttons
     try {
-        const res = await fetch('/plugins/mcmm/api.php?action=mod_files&mod_id=' + pack.id);
+        const source = pack.source || 'curseforge';
+        const res = await fetch(`/plugins/mcmm/api.php?action=mod_files&source=${source}&mod_id=` + pack.id);
         const data = await res.json();
 
         if (data.success && data.data && data.data.length > 0) {
@@ -2337,6 +2388,7 @@ async function submitDeploy() {
     setDeployStatus('Deploying server...', false);
 
     const payload = {
+        source: selectedModpack.source || 'curseforge',
         modpack_id: selectedModpack.id,
         modpack_name: selectedModpack.name,
         modpack_author: selectedModpack.author || 'Unknown',

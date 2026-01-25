@@ -292,15 +292,50 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Missing ID'], 400);
             }
 
-            // Stop then remove container
+            // 1. Resolve paths BEFORE deleting container (so inspect works)
+            $dataDir = getContainerDataDirById($id);
+            $serverId = $id; // Sometimes $id is a name, sometimes a long hash
+
+            // Try to find the MCMM server ID if $id is container ID
+            $mcmmServerDir = null;
+            $serversBase = '/boot/config/plugins/mcmm/servers';
+            if (is_dir($serversBase)) {
+                $dirs = array_diff(scandir($serversBase), ['.', '..']);
+                foreach ($dirs as $d) {
+                    $cfgFile = "$serversBase/$d/config.json";
+                    if (file_exists($cfgFile)) {
+                        $cfg = json_decode(file_get_contents($cfgFile), true);
+                        if ($cfg && (($cfg['id'] ?? '') === $id || ($cfg['containerName'] ?? '') === $id)) {
+                            $mcmmServerDir = "$serversBase/$d";
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // 2. Stop then remove container
             $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
             $stopOut = shell_exec("$dockerBin stop " . escapeshellarg($id) . " 2>&1");
             $rmOut = shell_exec("$dockerBin rm " . escapeshellarg($id) . " 2>&1");
 
+            // 3. Clean up AppData
+            $dataDeleted = false;
+            if ($dataDir && is_dir($dataDir) && strpos($dataDir, 'appdata') !== false) {
+                // Safety check: ensure we are in appdata
+                shell_exec("rm -rf " . escapeshellarg($dataDir));
+                $dataDeleted = true;
+            }
+
+            // 4. Clean up MCMM Internal Config
+            if ($mcmmServerDir && is_dir($mcmmServerDir)) {
+                shell_exec("rm -rf " . escapeshellarg($mcmmServerDir));
+            }
+
             jsonResponse([
-            'success' => true,
-            'message' => 'Server deleted',
-            'output' => [$stopOut, $rmOut]
+                'success' => true,
+                'message' => 'Server and data deleted',
+                'data_deleted' => $dataDeleted,
+                'output' => [$stopOut, $rmOut]
             ]);
             break;
 
@@ -1033,17 +1068,34 @@ try {
 
         case 'search_modpacks':
         case 'modpacks':
-            if (empty($config['curseforge_api_key'])) {
-                jsonResponse(['success' => false, 'error' => 'CurseForge API key not configured'], 400);
-            }
-
+            $source = strtolower($_GET['source'] ?? 'curseforge');
             $search = $_GET['search'] ?? $_GET['q'] ?? '';
-            $modpacks = fetchCurseForgeModpacks($search, $config['curseforge_api_key']);
-            if ($modpacks === null) {
-                jsonResponse(['success' => false, 'error' => 'Failed to contact CurseForge'], 502);
+            $sort = $_GET['sort'] ?? 'popularity';
+            $page = max(1, intval($_GET['page'] ?? 1));
+            $pageSize = max(1, min(100, intval($_GET['page_size'] ?? 20)));
+
+            if ($source === 'ftb') {
+                $modpacks = fetchFTBModpacks($search, $page, $pageSize);
+                if ($modpacks === null) {
+                    jsonResponse(['success' => false, 'error' => 'Failed to contact FTB API'], 502);
+                }
+            } elseif ($source === 'modrinth') {
+                $modpacks = fetchModrinthModpacks($search, $sort, $page, $pageSize);
+                if ($modpacks === null) {
+                    jsonResponse(['success' => false, 'error' => 'Failed to contact Modrinth'], 502);
+                }
+            } else {
+                if (empty($config['curseforge_api_key'])) {
+                    jsonResponse(['success' => false, 'error' => 'CurseForge API key not configured'], 400);
+                }
+
+                $modpacks = fetchCurseForgeModpacks($search, $config['curseforge_api_key'], $sort, $page, $pageSize);
+                if ($modpacks === null) {
+                    jsonResponse(['success' => false, 'error' => 'Failed to contact CurseForge'], 502);
+                }
             }
 
-            jsonResponse(['success' => true, 'data' => $modpacks]);
+            jsonResponse(['success' => true, 'data' => $modpacks, 'source' => $source, 'page' => $page]);
             break;
 
         case 'detect_java_version':
@@ -1369,41 +1421,6 @@ try {
                 }
             }
             jsonResponse(['success' => true, 'started' => $started]);
-            break;
-
-        case 'mod_search':
-            $search = $_GET['search'] ?? '';
-            $page = intval($_GET['page'] ?? 1);
-            $pageSize = intval($_GET['page_size'] ?? 20);
-            $source = $_GET['source'] ?? 'curseforge';
-            $version = $_GET['version'] ?? '';
-            $loader = $_GET['loader'] ?? '';
-
-            // Cache Check
-            $cacheKey = 'mod_search_' . md5($search . $version . $loader . $source . $page . $pageSize . ($source === 'curseforge' ? ($config['curseforge_api_key'] ?? '') : ''));
-            $cached = mcmm_cache_get($cacheKey);
-            if ($cached) {
-                jsonResponse($cached);
-            }
-
-            $responsePayload = [];
-
-            if ($source === 'modrinth') {
-                [$mods, $total] = fetchModrinthMods($search, $version, $loader, $page, $pageSize);
-                $hasMore = ($page * $pageSize) < $total;
-                $responsePayload = ['success' => true, 'data' => $mods, 'page' => $page, 'pageSize' => $pageSize, 'total' => $total, 'hasMore' => $hasMore, 'version' => $version, 'loader' => $loader];
-            } else {
-                if (empty($config['curseforge_api_key'])) {
-                    jsonResponse(['success' => false, 'error' => 'CurseForge API key not configured'], 400);
-                }
-                [$mods, $total] = fetchCurseForgeMods($search, $version, $loader, $page, $pageSize, $config['curseforge_api_key']);
-                $hasMore = ($page * $pageSize) < $total;
-                $responsePayload = ['success' => true, 'data' => $mods, 'page' => $page, 'pageSize' => $pageSize, 'total' => $total, 'hasMore' => $hasMore, 'version' => $version, 'loader' => $loader];
-            }
-
-            // Save to cache (5 minutes)
-            mcmm_cache_set($cacheKey, $responsePayload, 300);
-            jsonResponse($responsePayload);
             break;
 
         case 'agent_debug':
@@ -2091,7 +2108,10 @@ try {
                 }
             }
 
-            if ($source === 'modrinth') {
+            if ($source === 'ftb') {
+                $files = fetchFTBModpackFiles((int)$modId);
+                jsonResponse(['success' => true, 'data' => $files]);
+            } elseif ($source === 'modrinth') {
                 $files = fetchModrinthFiles($modId, $mcVersion, $loader);
                 jsonResponse(['success' => true, 'data' => $files]);
             } else {
@@ -2193,87 +2213,6 @@ try {
             }
             break;
 
-        case 'mod_identify_batch':
-            $id = $_GET['id'] ?? '';
-            $filesJson = $_GET['files'] ?? '[]';
-            $filenames = json_decode($filesJson, true) ?: [];
-
-            if (!$id || empty($filenames)) {
-                jsonResponse(['success' => false, 'error' => 'Missing ID or files list'], 400);
-            }
-
-            $results = [];
-
-            foreach ($filenames as $filename) {
-                // Cache Check
-                $cacheKey = 'identify_mod_' . md5($filename);
-                $cached = mcmm_cache_get($cacheKey);
-
-                $found = null;
-                $source = '';
-
-                if ($cached) {
-                    $found = $cached['data'];
-                    $source = $cached['source'];
-                } else {
-                    // Perform Identification Logic
-                    // Clean filename
-                    $query = preg_replace('/\.jar$/i', '', $filename);
-                    $query = preg_replace('/[-_][vV]?\d+\.?\d+.*$/', '', $query);
-                    $query = preg_replace('/[-_]\d{4,}.*$/', '', $query);
-                    $query = trim(preg_replace('/([a-z])([A-Z])/', '$1 $2', $query));
-
-                    // 1. CurseForge
-                    $cfResult = [];
-                    if (!empty($config['curseforge_api_key'])) {
-                        $cfData = fetchCurseForgeMods($query, '', '', 1, 1, $config['curseforge_api_key']);
-                        $cfResult = $cfData[0] ?? [];
-                    }
-
-                    // 2. Modrinth
-                    $mrResult = [];
-                    if (empty($cfResult)) {
-                         $mrData = fetchModrinthMods($query, '', '', 1, 1);
-                         $mrResult = $mrData[0] ?? [];
-                    }
-
-                    if (!empty($cfResult)) {
-                        $found = $cfResult[0];
-                        $source = 'curseforge';
-                    } elseif (!empty($mrResult)) {
-                        $found = $mrResult[0];
-                        $source = 'modrinth';
-                    }
-
-                    // Cache result
-                    mcmm_cache_set($cacheKey, ['data' => $found, 'source' => $source], 3600 * 24);
-                }
-
-                if ($found) {
-                    $results[$filename] = $found;
-                    // Persist to local metadata
-                    $extra = [
-                        'author' => $found['author'] ?? 'Unknown',
-                        'summary' => $found['summary'] ?? '',
-                        'downloads' => $found['downloads'] ?? '',
-                        'mcVersion' => $found['mcVersion'] ?? ''
-                    ];
-                    saveModMetadata(
-                        $id,
-                        $found['id'],
-                        $source,
-                        $found['name'],
-                        $filename,
-                        $found['latestFileId'] ?? null,
-                        $found['icon'] ?? '',
-                        $extra
-                    );
-                }
-            }
-
-            jsonResponse(['success' => true, 'data' => $results]);
-            break;
-
         case 'identify_mod':
             $id = $_GET['id'] ?? '';
             $filename = $_GET['filename'] ?? '';
@@ -2281,7 +2220,7 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Missing parameters'], 400);
             }
 
-            // Cache Check
+    // Cache Check
             $cacheKey = 'identify_mod_' . md5($filename);
             $cached = mcmm_cache_get($cacheKey);
             if ($cached) {
@@ -2310,8 +2249,8 @@ try {
                 jsonResponse(['success' => true, 'data' => $found]);
             }
 
-            // Clean filename to search query
-            // Strip .jar, version strings, common prefixes/suffixes
+    // Clean filename to search query
+    // Strip .jar, version strings, common prefixes/suffixes
             $query = preg_replace('/\.jar$/i', '', $filename);
             $query = preg_replace('/[-_][vV]?\d+\.?\d+.*$/', '', $query); // Strip -1.20.1 etc
             $query = preg_replace('/[-_]\d{4,}.*$/', '', $query); // Strip long numbers
@@ -2319,21 +2258,21 @@ try {
 
             dbg("Identifying mod from filename '$filename' -> Query: '$query'");
 
-            // Try CurseForge first
+    // Try CurseForge first
             $cfResult = [];
             if (!empty($config['curseforge_api_key'])) {
                 $cfData = fetchCurseForgeMods($query, '', '', 1, 1, $config['curseforge_api_key']);
                 $cfResult = $cfData[0] ?? [];
             }
 
-            // Try Modrinth
+    // Try Modrinth
             $mrData = fetchModrinthMods($query, '', '', 1, 1);
             $mrResult = $mrData[0] ?? [];
 
             $found = null;
             $source = '';
 
-            // Heuristic: prefer CurseForge if it's an exact or high-quality match
+    // Heuristic: prefer CurseForge if it's an exact or high-quality match
             if (!empty($cfResult)) {
                 $found = $cfResult[0];
                 $source = 'curseforge';
@@ -2342,7 +2281,7 @@ try {
                 $source = 'modrinth';
             }
 
-            // Cache the result (found or null)
+    // Cache the result (found or null)
             mcmm_cache_set($cacheKey, ['data' => $found, 'source' => $source], 3600 * 24); // Cache for 24 hours
 
             if ($found) {
