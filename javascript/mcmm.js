@@ -316,12 +316,7 @@ function renderModpacks(data) {
         card.className = 'mcmm-modpack-card';
         card.onclick = () => openDeployModal(pack);
 
-        // Use a source badge
-        const sourceClass = pack.source || 'curseforge';
-        const sourceLabel = sourceClass === 'curseforge' ? 'CF' : (sourceClass === 'modrinth' ? 'MR' : 'FTB');
-
         card.innerHTML = `
-            <div class="mcmm-source-marker ${sourceClass}">${sourceLabel}</div>
             <div class="mcmm-modpack-thumb" style="background-image: url('${pack.img || ''}')"></div>
             <div class="mcmm-modpack-info">
                 <div class="mcmm-modpack-name">${pack.name}</div>
@@ -1511,24 +1506,16 @@ async function openDeployModal(pack) {
     if (versionStatus) versionStatus.textContent = 'Loading versions...';
     if (versionInput) versionInput.value = '';
 
-    // Fetch Modpack versions and render as buttons
-    try {
-        const source = pack.source || 'curseforge';
-        const res = await fetch(`/plugins/mcmm/api.php?action=mod_files&source=${source}&mod_id=` + pack.id);
-        const data = await res.json();
-
-        if (data.success && data.data && data.data.length > 0) {
-            renderDeployVersions(data.data);
-        } else {
-            renderDeployVersions([]);
-        }
-    } catch (e) {
-        console.error('Failed to load modpack versions', e);
-        renderDeployVersions([]);
-    }
-
     // Load latest defaults from API so deploy reflects current settings
-    const defaults = await loadSettingsDefaults();
+    // Load this early to show other fields faster
+    const defaultsPromise = loadSettingsDefaults();
+
+    // Show modal immediately
+    setDeployStatus('');
+    document.getElementById('deployModal').classList.add('open');
+
+    // Fetch defaults and fill fields
+    const defaults = await defaultsPromise;
     const cfg = defaults || (typeof mcmmConfig !== 'undefined' ? mcmmConfig : {});
 
     document.getElementById('deploy_port').value = cfg.default_port || 25565;
@@ -1555,8 +1542,21 @@ async function openDeployModal(pack) {
     const jvmField = document.getElementById('deploy_jvm_flags');
     if (jvmField) jvmField.value = cfg.jvm_flags || '';
 
-    setDeployStatus('');
-    document.getElementById('deployModal').classList.add('open');
+    // Fetch Modpack versions in background
+    try {
+        const source = pack.source || 'curseforge';
+        const res = await fetch(`/plugins/mcmm/api.php?action=mod_files&source=${source}&mod_id=` + pack.id);
+        const data = await res.json();
+
+        if (data.success && data.data && data.data.length > 0) {
+            renderDeployVersions(data.data);
+        } else {
+            renderDeployVersions([]);
+        }
+    } catch (e) {
+        console.error('Failed to load modpack versions', e);
+        renderDeployVersions([]);
+    }
 }
 
 async function openVanillaDeploy() {
@@ -2297,7 +2297,11 @@ function renderDeployVersions(files) {
         const isSelected = index === 0;
         const type = file.releaseType === 1 ? 'Release' : (file.releaseType === 2 ? 'Beta' : 'Alpha');
         const typeClass = file.releaseType === 1 ? 'release' : (file.releaseType === 2 ? 'beta' : 'alpha');
-        const mcVersions = (file.gameVersions || []).filter(v => /^\d+\.\d+(\.\d+)?$/.test(v)).join(', ') || 'Unknown MC';
+        let mcVersions = (file.gameVersions || []).filter(v => v && v !== 'Unknown' && /^\d+\.\d+(\.\d+)?$/.test(v)).join(', ');
+        if (!mcVersions && selectedModpack && selectedModpack.mcVersion && selectedModpack.mcVersion !== 'Unknown') {
+            mcVersions = selectedModpack.mcVersion;
+        }
+        if (!mcVersions) mcVersions = 'Unknown';
 
         // Detect Java version
         const firstMcVersion = (file.gameVersions || []).find(v => /^\d+\.\d+(\.\d+)?$/.test(v)) || '';

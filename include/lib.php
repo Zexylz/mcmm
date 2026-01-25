@@ -1078,19 +1078,55 @@ function fetchModrinthModpacks(string $search, string $sort = 'popularity', int 
     return $modpacks;
 }
 
+/**
+ * Robustly extract MC version from FTB modpack data
+ */
+function extractFtbVersion(array $pack): ?string
+{
+    // 1. Direct field
+    if (!empty($pack['mcversion'])) {
+        return $pack['mcversion'];
+    }
+
+    // 2. Scan tags for negative IDs (standard FTB)
+    if (!empty($pack['tags'])) {
+        foreach ($pack['tags'] as $tag) {
+            $name = $tag['name'] ?? '';
+            // FTB usually uses negative IDs for Minecraft version tags
+            if (isset($tag['id']) && (int)$tag['id'] < 0) {
+                // Remove non-numeric/dot chars (e.g. "Minecraft 1.20.1" -> "1.20.1")
+                $v = trim(preg_replace('/[^0-9.]/', '', $name));
+                if (preg_match('/^\d+\.\d+(\.\d+)?$/', $v)) {
+                    return $v;
+                }
+            }
+        }
+        // 3. Fallback: Scan tag names for version patterns
+        foreach ($pack['tags'] as $tag) {
+            $name = $tag['name'] ?? '';
+            if (preg_match('/\b\d+\.\d+(\.\d+)?\b/', $name, $matches)) {
+                return $matches[0];
+            }
+        }
+    }
+    return null;
+}
+
 function fetchFTBModpacks(string $search, int $page = 1, int $pageSize = 20): ?array
 {
     // Search endpoint: returns IDs
+    // We fetch up to 100 to support pagination accurately from the ID list
     $url = "https://api.modpacks.ch/public/modpack/search/100?term=" . urlencode($search ?: 'FTB');
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
     if ($httpCode >= 400 || !$response) {
+        dbg("FTB Search API failed with code $httpCode");
         return null;
     }
 
@@ -1099,60 +1135,100 @@ function fetchFTBModpacks(string $search, int $page = 1, int $pageSize = 20): ?a
         return [];
     }
 
-    // Now we need details for these packs.
     $offset = ($page - 1) * $pageSize;
     $ids = array_slice($data['packs'], $offset, $pageSize);
     $modpacks = [];
+    $toFetch = [];
+    $results = [];
 
+    // Step 1: Check cache for each ID (Bust with v3)
     foreach ($ids as $id) {
-        // Cache these details because they don't change often and we're hitting them a lot
-        $cacheKey = "ftb_pack_det_" . $id;
-        $pack = mcmm_cache_get($cacheKey);
+        $cacheKey = "ftb_pack_det_v3_" . $id;
+        $cached = mcmm_cache_get($cacheKey);
+        if ($cached) {
+            $results[$id] = $cached;
+        } else {
+            $toFetch[] = $id;
+        }
+    }
 
-        if (!$pack) {
+    // Step 2: Fetch missing details in parallel using curl_multi
+    if (!empty($toFetch)) {
+        $mh = curl_multi_init();
+        $handles = [];
+
+        foreach ($toFetch as $id) {
             $detUrl = "https://api.modpacks.ch/public/modpack/" . $id;
             $ch = curl_init($detUrl);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-            $detRes = curl_exec($ch);
-            curl_close($ch);
-
-            if ($detRes) {
-                $pack = json_decode($detRes, true);
-                if ($pack) {
-                    mcmm_cache_set($cacheKey, $pack, 3600); // 1 hour cache
-                }
-            }
+            curl_multi_add_handle($mh, $ch);
+            $handles[$id] = $ch;
         }
 
-        if ($pack && isset($pack['name'])) {
-            // Find logo if any
-            $logoUrl = '';
-            if (!empty($pack['art'])) {
-                foreach ($pack['art'] as $art) {
+        $running = null;
+        do {
+            curl_multi_exec($mh, $running);
+        } while ($running);
+
+        foreach ($handles as $id => $ch) {
+            $res = curl_multi_getcontent($ch);
+            if ($res) {
+                $pack = json_decode($res, true);
+                if ($pack && isset($pack['name'])) {
+                    $results[$id] = $pack;
+                    mcmm_cache_set("ftb_pack_det_v3_" . $id, $pack, 3600);
+                }
+            }
+            curl_multi_remove_handle($mh, $ch);
+            curl_close($ch);
+        }
+        curl_multi_close($mh);
+    }
+
+    // Step 3: Format the results in the original order
+    foreach ($ids as $id) {
+        if (!isset($results[$id])) {
+            continue;
+        }
+
+        $pack = $results[$id];
+        $mcVer = extractFtbVersion($pack);
+
+        // Extract Author name
+        $author = 'FTB Team';
+        if (!empty($pack['authors']) && is_array($pack['authors'])) {
+            $author = $pack['authors'][0]['name'] ?? $author;
+        }
+
+        $logoUrl = '';
+        if (!empty($pack['art'])) {
+            foreach ($pack['art'] as $art) {
+                if ($art['type'] === 'logo' || $art['type'] === 'square') {
+                    $logoUrl = $art['url'];
                     if ($art['type'] === 'logo') {
-                        $logoUrl = $art['url'];
-                        break;
+                        break; // Prefer logo
                     }
                 }
-                if (!$logoUrl && !empty($pack['art'])) {
-                    $logoUrl = $pack['art'][0]['url'];
-                }
             }
-
-            $modpacks[] = [
-                'id' => $pack['id'],
-                'name' => $pack['name'],
-                'slug' => $pack['slug'] ?? '',
-                'author' => $pack['author'] ?? 'FTB Team',
-                'downloads' => formatDownloads($pack['installs'] ?? 0),
-                'img' => $logoUrl,
-                'summary' => $pack['synopsis'] ?? '',
-                'tags' => ['FTB'],
-                'source' => 'ftb'
-            ];
+            if (!$logoUrl && !empty($pack['art'])) {
+                $logoUrl = $pack['art'][0]['url'];
+            }
         }
+
+        $modpacks[] = [
+            'id' => $pack['id'],
+            'name' => $pack['name'],
+            'slug' => $pack['slug'] ?? '',
+            'author' => $author,
+            'downloads' => formatDownloads($pack['installs'] ?? 0),
+            'img' => $logoUrl,
+            'summary' => $pack['synopsis'] ?? '',
+            'tags' => ['FTB'],
+            'source' => 'ftb',
+            'mcVersion' => $mcVer
+        ];
     }
 
     return $modpacks;
@@ -1160,6 +1236,12 @@ function fetchFTBModpacks(string $search, int $page = 1, int $pageSize = 20): ?a
 
 function fetchFTBModpackFiles(int $modpackId): array
 {
+    $cacheKey = "ftb_pack_vers_v3_" . $modpackId;
+    $cached = mcmm_cache_get($cacheKey);
+    if ($cached) {
+        return $cached;
+    }
+
     $url = "https://api.modpacks.ch/public/modpack/" . $modpackId;
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -1171,25 +1253,27 @@ function fetchFTBModpackFiles(int $modpackId): array
     if (!$response) {
         return [];
     }
-
     $data = json_decode($response, true);
     if (!isset($data['versions']) || empty($data['versions'])) {
         return [];
     }
 
+    $baseMcVer = extractFtbVersion($data);
+
     $files = [];
     foreach ($data['versions'] as $v) {
+        $mcVer = $v['mcversion'] ?? $baseMcVer ?? 'Unknown';
         $files[] = [
             'id' => $v['id'],
             'displayName' => $v['name'],
-            'releaseType' => 1, // FTB is mostly all "releases"
-            'gameVersions' => [$v['mcversion'] ?? 'Unknown'],
+            'releaseType' => 1,
+            'gameVersions' => [$mcVer],
             'source' => 'ftb'
         ];
     }
-
-    // Reverse to show newest first
-    return array_reverse($files);
+    $files = array_reverse($files);
+    mcmm_cache_set($cacheKey, $files, 3600);
+    return $files;
 }
 
 function fetchCurseForgeMods(string $search, string $version, string $loader, int $page, int $pageSize, string $apiKey): array

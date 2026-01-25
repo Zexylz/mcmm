@@ -249,7 +249,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
             <div class="mcmm-catalog-header">
                 <div style="display: flex; flex-direction: column; gap: 1rem; width: 100%;">
                     <!-- Source Tabs -->
-                    <div class="mcmm-source-tabs" style="display: flex; gap: 0.5rem; background: rgb(255 255 255 / 5%); padding: 0.4rem; border-radius: 12px; border: 1px solid var(--border); width: fit-content;">
+                    <div class="mcmm-source-tabs">
                         <button class="mcmm-source-tab active" onclick="switchModpackSource('curseforge', this)">CurseForge</button>
                         <button class="mcmm-source-tab" onclick="switchModpackSource('modrinth', this)">Modrinth</button>
                         <button class="mcmm-source-tab" onclick="switchModpackSource('ftb', this)">Feed The Beast</button>

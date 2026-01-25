@@ -682,7 +682,8 @@ body {
 
 /* Keep server action area aligned even if optional buttons (Mods) are missing */
 .mcmm-server-actions {
-    --actions-gap: 0.55rem; /* must match your gap */
+    --actions-gap: 0.55rem;
+    /* must match your gap */
     gap: var(--actions-gap);
 
     /* 7 buttons total (including Mods) => fixed width keeps left edge aligned */
@@ -2832,4 +2833,102 @@ body {
     display: inline-flex;
     font-size: 1.15rem;
     line-height: 1;
+}
+
+/* =========================================================
+   CATALOG SOURCE TABS
+   ========================================================= */
+.mcmm-source-tabs {
+    display: flex;
+    gap: 0.35rem;
+    background: rgb(255 255 255 / 4%);
+    padding: 0.4rem;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    width: fit-content;
+    margin-bottom: 0.5rem;
+}
+
+.mcmm-source-tab {
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    text-transform: none;
+    letter-spacing: normal;
+    box-shadow: none !important;
+}
+
+.mcmm-source-tab:hover {
+    color: var(--text-main) !important;
+    background: rgb(255 255 255 / 4%) !important;
+}
+
+.mcmm-source-tab.active {
+    background: var(--primary) !important;
+    color: white !important;
+    box-shadow: 0 4px 15px rgb(157 78 221 / 35%) !important;
+}
+
+/* =========================================================
+   CATALOG PAGINATION
+   ========================================================= */
+#modpackPagination .mcmm-btn {
+    height: 48px;
+    padding: 0 1.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    font-weight: 700;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+#modpackPagination .mcmm-btn:not(:disabled):hover {
+    background: var(--bg-surface-hover);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgb(0 0 0 / 40%);
+}
+
+#modpackPagination .mcmm-btn:disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+
+/* =========================================================
+   ENHANCED MODPACK GRID
+   ========================================================= */
+.mcmm-modpack-card {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.mcmm-modpack-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 15px 35px rgb(0 0 0 / 60%), 0 0 0 1px var(--primary-dim);
+    transform: translateY(-6px);
+}
+
+.mcmm-modpack-thumb {
+    transition: transform 0.8s cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.mcmm-modpack-card:hover .mcmm-modpack-thumb {
+    transform: scale(1.1);
 }
