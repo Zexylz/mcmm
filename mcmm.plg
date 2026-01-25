@@ -1,0 +1,117 @@
+<?xml version='1.0' standalone='yes'?>
+<!DOCTYPE PLUGIN [
+<!ENTITY name      "mcmm">
+<!ENTITY author    "Zexylz">
+<!ENTITY version   "2023.12.08">
+<!ENTITY launch    "Settings/mcmm">
+<!ENTITY gitURL    "https://github.com/Zexylz/MCMM">
+<!ENTITY pluginURL "https://github.com/Zexylz/MCMM/releases/latest/download/mcmm.plg">
+]>
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0">
+<CHANGES>
+###2023.12.08
+- Nightly Build Fetcher
+</CHANGES>
+<FILE Run="/bin/bash">
+<INLINE>
+# 1. Fetch Latest Nightly URL
+echo "Checking for latest nightly build from &gitURL;..."
+API_URL="https://api.github.com/repos/Zexylz/MCMM/releases"
+# Get the browser_download_url for mcmm-plugin.zip from the first (latest) release
+# We use curl with a User-Agent (required by GitHub) and jq to parse
+DOWNLOAD_URL=$(curl -s -H "User-Agent: Unraid-MCMM-Installer" "$API_URL" | jq -r '.[0].assets[] | select(.name == "mcmm-plugin.zip") | .browser_download_url')
+
+if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" == "null" ]; then
+    echo "Error: Could not find mcmm-plugin.zip in the latest release."
+    exit 1
+fi
+
+echo "Downloading Nightly: $DOWNLOAD_URL"
+mkdir -p /boot/config/plugins/&name;
+wget -q --no-check-certificate -O /boot/config/plugins/&name;/install.zip "$DOWNLOAD_URL"
+
+# 2. Extract
+unzip -q -o /boot/config/plugins/&name;/install.zip -d /tmp/mcmm-install
+
+# 3. Install
+mkdir -p /usr/local/emhttp/plugins/&name;
+# The zip contains a folder 'mcmm', so we copy contents of that folder
+cp -r /tmp/mcmm-install/mcmm/* /usr/local/emhttp/plugins/&name;/
+
+# 4. Cleanup
+rm -rf /tmp/mcmm-install
+rm -f /boot/config/plugins/&name;/install.zip
+
+# 5. Permissions
+chown -R root:root /usr/local/emhttp/plugins/&name;
+chmod -R 755 /usr/local/emhttp/plugins/&name;
+
+echo "&name; nightly installed successfully."
+</INLINE>
+</FILE>
+<FILE Run="/bin/bash" Method="remove">
+<INLINE>
+rm -rf /usr/local/emhttp/plugins/&name;
+rm -rf /boot/config/plugins/&name;
+echo "&name; removed"
+</INLINE>
+</FILE>
+</PLUGIN><?xml version='1.0' standalone='yes'?>
+<!DOCTYPE PLUGIN [
+<!ENTITY name      "mcmm">
+<!ENTITY author    "Zexylz">
+<!ENTITY version   "2023.12.08">
+<!ENTITY launch    "Settings/mcmm">
+<!ENTITY gitURL    "https://github.com/Zexylz/MCMM">
+<!ENTITY pluginURL "https://github.com/Zexylz/MCMM/releases/latest/download/mcmm.plg">
+]>
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0">
+<CHANGES>
+###2023.12.08
+- Nightly Build Fetcher
+</CHANGES>
+<FILE Run="/bin/bash">
+<INLINE>
+# 1. Fetch Latest Nightly URL
+echo "Checking for latest nightly build from &gitURL;..."
+API_URL="https://api.github.com/repos/Zexylz/MCMM/releases"
+# Get the browser_download_url for mcmm-plugin.zip from the first (latest) release
+# We use curl with a User-Agent (required by GitHub) and jq to parse
+DOWNLOAD_URL=$(curl -s -H "User-Agent: Unraid-MCMM-Installer" "$API_URL" | jq -r '.[0].assets[] | select(.name == "mcmm-plugin.zip") | .browser_download_url')
+
+if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" == "null" ]; then
+    echo "Error: Could not find mcmm-plugin.zip in the latest release."
+    exit 1
+fi
+
+echo "Downloading Nightly: $DOWNLOAD_URL"
+mkdir -p /boot/config/plugins/&name;
+wget -q --no-check-certificate -O /boot/config/plugins/&name;/install.zip "$DOWNLOAD_URL"
+
+# 2. Extract
+unzip -q -o /boot/config/plugins/&name;/install.zip -d /tmp/mcmm-install
+
+# 3. Install
+mkdir -p /usr/local/emhttp/plugins/&name;
+# The zip contains a folder 'mcmm', so we copy contents of that folder
+cp -r /tmp/mcmm-install/mcmm/* /usr/local/emhttp/plugins/&name;/
+
+# 4. Cleanup
+rm -rf /tmp/mcmm-install
+rm -f /boot/config/plugins/&name;/install.zip
+
+# 5. Permissions
+chown -R root:root /usr/local/emhttp/plugins/&name;
+chmod -R 755 /usr/local/emhttp/plugins/&name;
+
+echo "&name; nightly installed successfully."
+</INLINE>
+</FILE>
+<FILE Run="/bin/bash" Method="remove">
+<INLINE>
+rm -rf /usr/local/emhttp/plugins/&name;
+rm -rf /boot/config/plugins/&name;
+echo "&name; removed"
+</INLINE>
+</FILE>
+</PLUGIN>
