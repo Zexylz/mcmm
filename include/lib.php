@@ -2125,84 +2125,70 @@ function getMinecraftStatus(string $host, int $port, int $timeout = 1): ?array
     return null;
 }
 
-function getServerMetadata(array $env, array $config, string $containerName, string $apiKey, string $image = '', int $port = 0, string $containerId = ''): array
-{
-    $mcVersion = '';
-    $loader = '';
-    $modpackVersion = '';
-    $debug = [];
-
-    $dataDir = getContainerDataDir($containerName, $containerId);
-    $debug['dataDir'] = $dataDir;
-
-    // Check for .install-curseforge.env file (Source of Truth)
-    $envFile = ($dataDir ? $dataDir . '/.install-curseforge.env' : '');
-
-    if ($envFile && file_exists($envFile)) {
-        $content = @file_get_contents($envFile);
-        if ($content) {
-            // Helper closure to strip quotes
-            $cleanVal = function ($v) {
-                return trim($v, " \n\r\t\v\0\"'");
-            };
-
-            // Minecraft Version
-            if (preg_match('/^MINECRAFT_VERSION=(.*)$/m', $content, $m)) {
-                $mcVersion = $cleanVal($m[1]);
-            }
-            if ((!$mcVersion || strtoupper($mcVersion) === 'LATEST') && preg_match('/^VERSION=(.*)$/m', $content, $m)) {
-                $val = $cleanVal($m[1]);
-                // If VERSION looks like a MC version (X.Y.Z), use it as fallback
-                if (preg_match('/^\d+\.\d+(\.\d+)?$/', $val)) {
-                    $mcVersion = $val;
-                }
-            }
-
-            // Loader
-            if (preg_match('/^TYPE=(.*)$/m', $content, $m)) {
-                $val = strtolower($cleanVal($m[1]));
-                if (in_array($val, ['forge', 'fabric', 'quilt', 'neoforge'])) {
-                    $loader = $val;
-                }
-            }
-            if (!$loader && preg_match('/^LOADER=(.*)$/m', $content, $m)) {
-                $loader = strtolower($cleanVal($m[1]));
-            }
-
-            // Modpack Version
-            if (preg_match('/^MODPACK_VERSION=(.*)$/m', $content, $m)) {
-                $modpackVersion = $cleanVal($m[1]);
-            }
-        }
-    }
-
-    return ['mcVersion' => $mcVersion, 'loader' => $loader, 'modpackVersion' => $modpackVersion, '_debug' => $debug];
-}
-
-/**
- * Scans a server directory for clues about the Minecraft Version and Loader.
- */
 function detectVersionFromFiles(string $dir): array
 {
     $ver = '';
     $loader = '';
 
-    // Vanilla JARs: minecraft_server.1.21.1.jar
-    $jars = glob("$dir/minecraft_server.*.jar");
-    if ($jars) {
-        // Sort by modification time descending to get the most likely active one
-        usort($jars, function ($a, $b) {
-            return filemtime($b) - filemtime($a);
-        });
-        foreach ($jars as $jar) {
-            if (preg_match('/minecraft_server\.(\d+\.\d+(\.\d+)?)\.jar/', basename($jar), $m)) {
-                $ver = $m[1];
-                break;
+    // 1. Check root JSON files (Common in some modern packs)
+    $jsonFiles = ['version.json', 'versions.json', 'modpack.json', 'minecraftinstance.json', 'manifest.json'];
+    foreach ($jsonFiles as $jf) {
+        $path = "$dir/$jf";
+        if (file_exists($path)) {
+            $data = @json_decode(@file_get_contents($path), true);
+            if ($data) {
+                // MC Version markers
+                $mc = $data['mc_version'] ?? $data['minecraft'] ?? $data['minecraft_version'] ?? '';
+                if (is_array($mc)) {
+                    $mc = $mc['version'] ?? '';
+                }
+                if ($mc && preg_match('/^\d+\.\d+(\.\d+)?$/', (string)$mc)) {
+                    $ver = (string)$mc;
+                    break;
+                }
             }
         }
     }
 
-    // Mod Loaders
+    // 2. Check libraries for MC version (The most reliable for installed servers)
+    if (!$ver) {
+        $libPaths = [
+            "$dir/libraries/net/minecraft/server",
+            "$dir/libraries/net/minecraft/client",
+            "$dir/libraries/net/minecraft",
+            "$dir/libraries/com/mojang/minecraft"
+        ];
+        foreach ($libPaths as $lp) {
+            if (is_dir($lp)) {
+                $dirs = glob("$lp/*", GLOB_ONLYDIR);
+                if ($dirs) {
+                    usort($dirs, 'version_compare');
+                    $bestDir = end($dirs);
+                    $v = basename($bestDir);
+                    if (preg_match('/^\d+\.\d+(\.\d+)?$/', $v)) {
+                        $ver = $v;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. JAR Filenames in root: minecraft_server.1.21.1.jar or server-1.20.1.jar
+    if (!$ver) {
+        $jars = glob("$dir/*.jar");
+        if ($jars) {
+            foreach ($jars as $jar) {
+                $base = basename($jar);
+                if (preg_match('/(?:minecraft_server|server)[.-](\d+\.\d+(\.\d+)?)/i', $base, $m)) {
+                    $ver = $m[1];
+                    break;
+                }
+            }
+        }
+    }
+
+    // 4. Mod Loader detection
     if (file_exists("$dir/fabric-server-launch.jar") || is_dir("$dir/libraries/net/fabricmc")) {
         $loader = 'fabric';
     } elseif (is_dir("$dir/libraries/net/neoforged")) {
@@ -2214,6 +2200,172 @@ function detectVersionFromFiles(string $dir): array
     }
 
     return ['mcVersion' => $ver, 'loader' => $loader];
+}
+
+function getServerMetadata(array $env, array $config, string $containerName, string $apiKey, string $image = '', int $port = 0, string $containerId = ''): array
+{
+    $mcVersion = '';
+    $loader = '';
+    $modpackVersion = '';
+    $modpackId = $env['CF_PROJECT_ID'] ?? $env['FTB_MODPACK_ID'] ?? '';
+    $modpackFileId = $env['CF_FILE_ID'] ?? $env['FTB_MODPACK_VERSION_ID'] ?? '';
+    $debug = [];
+
+    $dataDir = getContainerDataDir($containerName, $containerId);
+    $debug['dataDir'] = $dataDir;
+
+    // 1. Check for install environment files (The Absolute Source of Truth for itzg installers)
+    if ($dataDir) {
+        $envFiles = glob(rtrim($dataDir, '/') . '/.install-*.env');
+        foreach ($envFiles as $envFile) {
+            $content = @file_get_contents($envFile);
+            if ($content) {
+                $cleanVal = function ($v) {
+                    return trim($v, " \n\r\t\v\0\"'");
+                };
+
+                // Detect MC Version
+                if (preg_match('/^MINECRAFT_VERSION=(.*)$/m', $content, $m)) {
+                    $mcVersion = $cleanVal($m[1]);
+                }
+                if ((!$mcVersion || strtoupper($mcVersion) === 'LATEST') && preg_match('/^VERSION=(.*)$/m', $content, $m)) {
+                    $val = $cleanVal($m[1]);
+                    if (preg_match('/^\d+\.\d+(\.\d+)?$/', $val)) {
+                        $mcVersion = $val;
+                    }
+                }
+
+                // Detect Loader Type
+                if (preg_match('/^TYPE=(.*)$/m', $content, $m)) {
+                    $val = strtolower($cleanVal($m[1]));
+                    if (in_array($val, ['forge', 'fabric', 'quilt', 'neoforge'])) {
+                        $loader = $val;
+                    }
+                }
+
+                // Detect Modpack Meta
+                if (preg_match('/^MODPACK_VERSION=(.*)$/m', $content, $m)) {
+                    $modpackVersion = $cleanVal($m[1]);
+                }
+                if (!$modpackId) {
+                    if (preg_match('/^CF_PROJECT_ID=(.*)$/m', $content, $m)) {
+                        $modpackId = $cleanVal($m[1]);
+                    } elseif (preg_match('/^FTB_MODPACK_ID=(.*)$/m', $content, $m)) {
+                        $modpackId = $cleanVal($m[1]);
+                    }
+                }
+                if (!$modpackFileId) {
+                    if (preg_match('/^CF_FILE_ID=(.*)$/m', $content, $m)) {
+                        $modpackFileId = $cleanVal($m[1]);
+                    } elseif (preg_match('/^FTB_MODPACK_VERSION_ID=(.*)$/m', $content, $m)) {
+                        $modpackFileId = $cleanVal($m[1]);
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Try JSON and Text files if env file didn't give us everything
+    if ($dataDir && (!$mcVersion || strtoupper($mcVersion) === 'LATEST' || !$modpackVersion)) {
+        // A. Check for simple version files first
+        $textFiles = ['version', 'version.txt', 'instance.txt', 'modpack.txt'];
+        foreach ($textFiles as $tf) {
+            $path = rtrim($dataDir, '/') . '/' . $tf;
+            if (file_exists($path)) {
+                $line = trim(@file_get_contents($path));
+                if ($line && strlen($line) < 30 && preg_match('/^\d+/', $line)) {
+                    $modpackVersion = $line;
+                    break;
+                }
+            }
+        }
+
+        // B. Deep Scan JSON Files (Including dot-prefixed ones found in FTB)
+        $jsonFiles = [
+            'version.json', 'versions.json', 'modpack.json', 'minecraftinstance.json',
+            'manifest.json', '.manifest.json', 'ftb-modpack.json', 'instance.json'
+        ];
+        foreach ($jsonFiles as $jf) {
+            $path = rtrim($dataDir, '/') . '/' . $jf;
+            if (file_exists($path)) {
+                $jsonData = @json_decode(@file_get_contents($path), true);
+                if ($jsonData) {
+                    if (!$modpackVersion) {
+                        $modpackVersion = $jsonData['versionName'] ?? $jsonData['version'] ?? $jsonData['modpack_version'] ?? $jsonData['pack_version'] ?? $jsonData['packVersion'] ?? '';
+                    }
+                    if (!$mcVersion || strtoupper($mcVersion) === 'LATEST') {
+                        $mcVersion = $jsonData['mc_version'] ?? $jsonData['minecraft'] ?? $jsonData['minecraft_version'] ?? '';
+                        // Support FTB ModPackTargets structure
+                        if (!$mcVersion && isset($jsonData['modPackTargets']['mcVersion'])) {
+                            $mcVersion = $jsonData['modPackTargets']['mcVersion'];
+                        }
+                        if (!$mcVersion && isset($jsonData['minecraft']['version'])) {
+                            $mcVersion = $jsonData['minecraft']['version'];
+                        }
+                        if (!$mcVersion && $jf === 'minecraftinstance.json') {
+                            $mcVersion = $jsonData['baseModLoader']['minecraftVersion'] ?? '';
+                        }
+                    }
+                    if (!$loader) {
+                        if (isset($jsonData['baseModLoader']['name'])) {
+                            $loader = $jsonData['baseModLoader']['name'];
+                        } elseif (isset($jsonData['modPackTargets']['modLoader']['name'])) {
+                            $loader = $jsonData['modPackTargets']['modLoader']['name'];
+                        } elseif (isset($jsonData['minecraft']['modLoaders'][0]['id'])) {
+                            $id = $jsonData['minecraft']['modLoaders'][0]['id'];
+                            if (strpos($id, 'forge') !== false) {
+                                $loader = 'forge';
+                            } elseif (strpos($id, 'fabric') !== false) {
+                                $loader = 'fabric';
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Fallback to file-based MC/Loader detection (scanning libraries/ folder)
+    if (!$mcVersion || strtoupper($mcVersion) === 'LATEST' || !$loader) {
+        if ($dataDir) {
+            $guessed = detectVersionFromFiles($dataDir);
+            if ((!$mcVersion || strtoupper($mcVersion) === 'LATEST') && $guessed['mcVersion']) {
+                $mcVersion = $guessed['mcVersion'];
+            }
+            if (!$loader && $guessed['loader']) {
+                $loader = $guessed['loader'];
+            }
+        }
+    }
+
+    // 4. Final Fallback to Env vars from Docker Container
+    if ((!$mcVersion || strtoupper($mcVersion) === 'LATEST') && isset($env['VERSION'])) {
+        $mcVersion = $env['VERSION'];
+    }
+    if (!$loader && isset($env['TYPE'])) {
+        $lt = strtolower($env['TYPE']);
+        if (in_array($lt, ['forge', 'fabric', 'quilt', 'neoforge'])) {
+            $loader = $lt;
+        }
+        if ($lt === 'ftba' || $lt === 'auto_curseforge') {
+            $loader = $lt === 'ftba' ? 'FTB' : 'Modded';
+        }
+    }
+
+    // 5. Final fallback for Modpack Version if we have the custom env var
+    if (!$modpackVersion && isset($env['MODPACK_VERSION'])) {
+        $modpackVersion = $env['MODPACK_VERSION'];
+    }
+
+    return [
+        'mcVersion' => ($mcVersion && strtoupper($mcVersion) !== 'LATEST') ? $mcVersion : 'Latest',
+        'loader' => $loader ?: 'Vanilla',
+        'modpackVersion' => $modpackVersion,
+        'modpackId' => $modpackId,
+        'modpackFileId' => $modpackFileId,
+        'cache_ver' => 'v11',
+        '_debug' => $debug
+    ];
 }
 
 /**
@@ -2349,8 +2501,16 @@ function handleDeploy(array $config, array $defaults): void
         'ENABLE_ROLLING_LOGS' => $flagRolling ? 'TRUE' : 'FALSE',
         'USE_LOG_TIMESTAMP' => $flagLogTs ? 'TRUE' : 'FALSE',
         'USE_AIKAR_FLAGS' => $flagAikar ? 'TRUE' : 'FALSE',
-        'JVM_OPTS' => $jvmFlags
+        'JVM_OPTS' => $jvmFlags,
+        'MODPACK_VERSION' => $input['modpack_version_name'] ?? ''
     ];
+
+    if ($modId !== -1) {
+        $env['CF_PROJECT_ID'] = $modId;
+        if ($resolvedFileId) {
+            $env['CF_FILE_ID'] = $resolvedFileId;
+        }
+    }
 
     if ($modId === -1) {
         $env['TYPE'] = 'VANILLA';

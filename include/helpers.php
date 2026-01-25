@@ -139,12 +139,14 @@ function getMinecraftServers()
                     }
 
                     // Metadata cache
-                    $metaFile = "/boot/config/plugins/mcmm/servers/" . md5($containerName) . "/metadata.json";
+                    $metaFile = "/boot/config/plugins/mcmm/servers/" . md5($containerName) . "/metadata_v11.json";
+                    $modpackVer = '';
                     if (file_exists($metaFile)) {
                         $meta = json_decode(file_get_contents($metaFile), true);
                         if ($meta) {
                             $mcVer = $meta['mcVersion'] ?? 'Latest';
                             $loaderVer = $meta['loader'] ?? 'Vanilla';
+                            $modpackVer = $meta['modpackVersion'] ?? '';
                         }
                     }
 
@@ -159,7 +161,8 @@ function getMinecraftServers()
                         'ramUsedMb' => $ramUsedMb,
                         'cpu' => $cpuUsage,
                         'mcVersion' => $mcVer,
-                        'loader' => $loaderVer
+                        'loader' => $loaderVer,
+                        'modpackVersion' => $modpackVer
                     ];
 
                     $debugLog .= "Added server: $containerName\n";

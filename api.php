@@ -789,10 +789,12 @@ try {
                             if (!is_dir($metaDir)) {
                                 @mkdir($metaDir, 0755, true);
                             }
-                            $metaFile = $metaDir . '/metadata.json';
+                            $metaFile = $metaDir . '/metadata_v11.json';
                             $metadataCache = [
                             'mcVersion' => $mcVer ?: 'Unknown',
                             'loader' => $loaderVer ?: 'Vanilla',
+                            'modpackVersion' => $modpackVer ?? '',
+                            'cache_ver' => $metadata['cache_ver'] ?? 'v11',
                             'lastUpdated' => time()
                             ];
                             @file_put_contents($metaFile, json_encode($metadataCache));

@@ -2349,7 +2349,11 @@ function pickJavaVersionLocal(mcVersion) {
 function setDeployVersion(fileId, buttonEl) {
     const hidden = document.getElementById('deploy_version');
     const javaHidden = document.getElementById('deploy_java_version');
+    const nameHidden = document.getElementById('deploy_modpack_version_name');
     if (hidden) hidden.value = fileId;
+    if (nameHidden && buttonEl) {
+        nameHidden.value = buttonEl.querySelector('.mcmm-version-name')?.textContent || '';
+    }
 
     // Extract metadata from button if present
     if (buttonEl) {
@@ -2398,6 +2402,7 @@ async function submitDeploy() {
         modpack_author: selectedModpack.author || 'Unknown',
         modpack_slug: selectedModpack.slug || selectedModpack.name || '',
         modpack_file_id: document.getElementById('deploy_version').value || '',
+        modpack_version_name: document.getElementById('deploy_modpack_version_name')?.value || '',
         server_name: document.getElementById('deploy_name').value,
         port: parseInt(document.getElementById('deploy_port').value, 10),
         memory: document.getElementById('deploy_memory').value,

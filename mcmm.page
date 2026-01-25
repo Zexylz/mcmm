@@ -165,6 +165,9 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                     <?php echo htmlspecialchars($server['name']); ?>
                                     <span class="mcmm-badge"><?php echo htmlspecialchars($mcVersion); ?></span>
                                     <span class="mcmm-badge secondary"><?php echo htmlspecialchars($loader); ?></span>
+                                    <?php if (!empty($server['modpackVersion'])) : ?>
+                                        <span class="mcmm-badge info" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9; border-color: rgba(14, 165, 233, 0.3);"><?php echo htmlspecialchars($server['modpackVersion']); ?></span>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="mcmm-server-subtitle">
                                     <span class="mcmm-status-dot"></span>
@@ -549,6 +552,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                     <input type="hidden" id="deploy_java_version" value="" />
                     <input type="hidden" id="deploy_mc_version" value="" />
                     <input type="hidden" id="deploy_loader" value="" />
+                    <input type="hidden" id="deploy_modpack_version_name" value="" />
                 </div>
 
                 <div class="mcmm-section-divider">Network & Priority</div>
