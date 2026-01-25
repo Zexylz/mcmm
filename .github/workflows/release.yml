@@ -33,13 +33,16 @@ jobs:
           cd release
           zip -r ../mcmm-plugin.zip mcmm
 
-      # Nur für main-Pushes (kein Tag): Datum setzen
+      # Nur für main-Pushes (kein Tag): Datum als Output setzen
       - name: Set date
+        id: meta
         if: github.ref_type != 'tag'
-        run: echo "DATE=$(date -u +%Y%m%d)" >> $GITHUB_ENV
+        shell: bash
+        run: echo "date=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
 
-      # Nightly changelog generieren (stabil, squash-friendly, mit PR-Links)
+      # Nightly changelog generieren (stabil, squash-friendly, mit PR-Links) -> Output (multiline)
       - name: Generate Nightly Changelog (pretty, squash-friendly)
+        id: changelog
         if: github.ref_type != 'tag'
         shell: bash
         run: |
@@ -136,13 +139,13 @@ jobs:
           # Wichtig: Stelle sicher, dass die Datei mit Newline endet
           echo >> "$OUT"
 
-          # Robust in GITHUB_ENV schreiben: Delimiter garantiert in eigener Zeile
+          # Multiline Output korrekt setzen
           {
-            echo "CHANGELOG<<EOF"
+            echo "text<<EOF"
             cat "$OUT"
-            echo ""     # garantiert Zeilenumbruch vor EOF
+            echo ""
             echo "EOF"
-          } >> "$GITHUB_ENV"
+          } >> "$GITHUB_OUTPUT"
 
       # Nightly prerelease bei JEDEM Push auf main (mit Changelog in der Beschreibung)
       - name: Create GitHub Release (nightly)
@@ -150,12 +153,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: mcmm-plugin.zip
-          tag_name: nightly-${{ env.DATE }}-${{ github.run_number }}
-          name: Nightly ${{ env.DATE }} (#${{ github.run_number }})
+          tag_name: nightly-${{ steps.meta.outputs.date }}-${{ github.run_number }}
+          name: Nightly ${{ steps.meta.outputs.date }} (#${{ github.run_number }})
           prerelease: true
           draft: false
           generate_release_notes: false
-          body: ${{ env.CHANGELOG }}
+          body: ${{ steps.changelog.outputs.text }}
           target_commitish: ${{ github.sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
