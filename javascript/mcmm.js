@@ -1530,17 +1530,45 @@ async function openVanillaDeploy() {
     if (versionStatus) versionStatus.textContent = 'Choose Official Version:';
     if (versionInput) versionInput.value = 'LATEST';
 
-    const vanillaVersions = [
-        { id: 'LATEST', displayName: 'Version: Latest Stable', gameVersions: ['LATEST'], releaseType: 1 },
-        { id: '1.20.4', displayName: 'Version: 1.20.4', gameVersions: ['1.20.4'], releaseType: 1 },
-        { id: '1.20.1', displayName: 'Version: 1.20.1', gameVersions: ['1.20.1'], releaseType: 1 },
-        { id: '1.19.4', displayName: 'Version: 1.19.4', gameVersions: ['1.19.4'], releaseType: 1 },
-        { id: '1.18.2', displayName: 'Version: 1.18.2', gameVersions: ['1.18.2'], releaseType: 1 },
-        { id: '1.16.5', displayName: 'Version: 1.16.5', gameVersions: ['1.16.5'], releaseType: 1 },
-        { id: '1.12.2', displayName: 'Version: 1.12.2', gameVersions: ['1.12.2'], releaseType: 1 }
-    ];
+    // Fetch official version manifest dynamically
+    versionList.innerHTML = '<div style="color: var(--text-secondary);">Fetching official versions...</div>';
 
-    renderDeployVersions(vanillaVersions);
+    try {
+        const res = await fetch('https://launchermeta.mojang.com/mc/game/version_manifest.json');
+        const data = await res.json();
+
+        let vanillaVersions = [];
+
+        // Add specific versions (Release only, filtering out snapshots)
+        // Mojang manifest has roughly 80-100 release versions over history.
+        // Slice(0, 50) was cutting off older ones. 
+        // We can just grab ALL releases.
+        const releases = data.versions.filter(v => v.type === 'release'); //.slice(0, 100); 
+
+        releases.forEach(v => {
+            vanillaVersions.push({
+                id: v.id,
+                displayName: `Version: ${v.id}`,
+                gameVersions: [v.id],
+                releaseType: 1
+            });
+        });
+
+        renderDeployVersions(vanillaVersions);
+    } catch (e) {
+        console.error('Failed to fetch vanilla versions:', e);
+        // Fallback
+        const fallbackVersions = [
+            { id: 'LATEST', displayName: 'Version: Latest', gameVersions: ['LATEST'], releaseType: 1 },
+            { id: '1.20.4', displayName: 'Version: 1.20.4', gameVersions: ['1.20.4'], releaseType: 1 },
+            { id: '1.20.1', displayName: 'Version: 1.20.1', gameVersions: ['1.20.1'], releaseType: 1 },
+            { id: '1.19.4', displayName: 'Version: 1.19.4', gameVersions: ['1.19.4'], releaseType: 1 },
+            { id: '1.18.2', displayName: 'Version: 1.18.2', gameVersions: ['1.18.2'], releaseType: 1 },
+            { id: '1.16.5', displayName: 'Version: 1.16.5', gameVersions: ['1.16.5'], releaseType: 1 },
+            { id: '1.12.2', displayName: 'Version: 1.12.2', gameVersions: ['1.12.2'], releaseType: 1 }
+        ];
+        renderDeployVersions(fallbackVersions);
+    }
 
     const defaults = await loadSettingsDefaults();
     const cfg = defaults || (typeof mcmmConfig !== 'undefined' ? mcmmConfig : {});

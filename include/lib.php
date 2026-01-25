@@ -1892,7 +1892,7 @@ function getServerMetadata(array $env, array $config, string $containerName, str
         $content = @file_get_contents($envFile);
         if ($content) {
             // Helper closure to strip quotes
-            $cleanVal = function($v) {
+            $cleanVal = function ($v) {
                 return trim($v, " \n\r\t\v\0\"'");
             };
 
@@ -2226,6 +2226,17 @@ XML;
     }
 
     ensureMetricsAgent($containerName, trim($output[0] ?? $containerName), $dataDir);
+
+    // If Vanilla (no modpack), generate the tracking file so we can detect version
+    if (empty($modpackName) || $modpackName === 'Vanilla' || empty($downloadUrl)) {
+        $envContent = "MINECRAFT_VERSION=" . ($mcVerSelected ?: 'LATEST') . "\n";
+        $envContent .= "TYPE=vanilla\n";
+        $envContent .= "LOADER=vanilla\n";
+        // Optionally add MODPACK_NAME if we want to treat it as a "Vanilla Pack"
+        $envContent .= "MODPACK_NAME=Vanilla\n";
+
+        file_put_contents($dataDir . '/.install-curseforge.env', $envContent);
+    }
 
     $serversDir = '/boot/config/plugins/mcmm/servers';
     if (!is_dir($serversDir)) {
