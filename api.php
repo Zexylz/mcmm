@@ -1442,7 +1442,7 @@ try {
             break;
 
         case 'debug_backups':
-            $backupDir = '/mnt/user/appdata/mcmm/backups';
+            $backupDir = '/mnt/user/appdata/backups';
             $files = glob($backupDir . '/*.zip');
             jsonResponse([
             'dir' => $backupDir,
@@ -1453,7 +1453,7 @@ try {
             break;
 
         case 'backups_list':
-            $backupDir = '/mnt/user/appdata/mcmm/backups';
+            $backupDir = '/mnt/user/appdata/backups';
             if (!is_dir($backupDir)) {
                 @mkdir($backupDir, 0755, true);
             }
@@ -1582,7 +1582,7 @@ try {
             }
 
 // 3. Prepare backup
-            $backupDir = '/mnt/user/appdata/mcmm/backups';
+            $backupDir = '/mnt/user/appdata/backups';
             if (!is_dir($backupDir)) {
                 @mkdir($backupDir, 0755, true);
             }
@@ -1619,7 +1619,7 @@ try {
             }
             // Safety check: ensure no path traversal
             $name = basename($name);
-            $path = '/mnt/user/appdata/mcmm/backups/' . $name;
+            $path = '/mnt/user/appdata/backups/' . $name;
             if (file_exists($path)) {
                 @unlink($path);
                 jsonResponse(['success' => true, 'message' => 'Backup deleted']);
@@ -1634,7 +1634,7 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Missing filename'], 400);
             }
             $name = basename($name);
-            $backupPath = '/mnt/user/appdata/mcmm/backups/' . $name;
+            $backupPath = '/mnt/user/appdata/backups/' . $name;
             if (!file_exists($backupPath)) {
                 jsonResponse(['success' => false, 'error' => 'Backup file not found'], 404);
             }
@@ -2341,6 +2341,223 @@ try {
             } else {
                 jsonResponse(['success' => false, 'error' => 'Failed to delete file'], 500);
             }
+            break;
+
+        case 'mods_scan':
+            // Scan a server's mods folder and cache the results
+            require_once __DIR__ . '/include/mod_manager.php';
+
+            $id = $_GET['id'] ?? '';
+            if (!$id) {
+                jsonResponse(['success' => false, 'error' => 'Missing server ID'], 400);
+            }
+
+            $dataDir = getContainerDataDir($id);
+            if (!$dataDir) {
+                jsonResponse(['success' => false, 'error' => 'Could not locate server data directory'], 404);
+            }
+
+            $mods = scanServerMods($dataDir);
+
+            // Cache the results
+            $serversDir = '/boot/config/plugins/mcmm/servers';
+            $serverHash = md5($id);
+            $cacheDir = "$serversDir/$serverHash";
+            if (!is_dir($cacheDir)) {
+                @mkdir($cacheDir, 0755, true);
+            }
+
+            $cacheFile = "$cacheDir/mods_cache.json";
+            file_put_contents($cacheFile, json_encode([
+                'timestamp' => time(),
+                'serverId' => $id,
+                'mods' => $mods
+            ], JSON_PRETTY_PRINT));
+
+            jsonResponse([
+                'success' => true,
+                'data' => $mods,
+                'count' => count($mods)
+            ]);
+            break;
+
+        case 'mods_list':
+            // List mods for a server (from cache or fresh scan)
+            require_once __DIR__ . '/include/mod_manager.php';
+
+            $id = $_GET['id'] ?? '';
+            $forceRefresh = isset($_GET['refresh']);
+
+            if (!$id) {
+                jsonResponse(['success' => false, 'error' => 'Missing server ID'], 400);
+            }
+
+            $serversDir = '/boot/config/plugins/mcmm/servers';
+            $serverHash = md5($id);
+            $cacheFile = "$serversDir/$serverHash/mods_cache.json";
+
+            $mods = [];
+            $cached = false;
+
+            // Try to use cache if not forcing refresh
+            if (!$forceRefresh && file_exists($cacheFile)) {
+                $cacheData = json_decode(file_get_contents($cacheFile), true);
+                if ($cacheData && isset($cacheData['mods'])) {
+                    // Cache is valid for 1 hour
+                    if ((time() - ($cacheData['timestamp'] ?? 0)) < 3600) {
+                        $mods = $cacheData['mods'];
+                        $cached = true;
+                    }
+                }
+            }
+
+            // Fresh scan if no valid cache
+            if (!$cached) {
+                $dataDir = getContainerDataDir($id);
+                if (!$dataDir) {
+                    jsonResponse(['success' => false, 'error' => 'Could not locate server data directory'], 404);
+                }
+
+                $mods = scanServerMods($dataDir);
+
+                // Update cache
+                $cacheDir = dirname($cacheFile);
+                if (!is_dir($cacheDir)) {
+                    @mkdir($cacheDir, 0755, true);
+                }
+                file_put_contents($cacheFile, json_encode([
+                    'timestamp' => time(),
+                    'serverId' => $id,
+                    'mods' => $mods
+                ], JSON_PRETTY_PRINT));
+            }
+
+            jsonResponse([
+                'success' => true,
+                'data' => $mods,
+                'count' => count($mods),
+                'cached' => $cached
+            ]);
+            break;
+
+        case 'mods_check_updates':
+            // Check for updates to installed mods
+            require_once __DIR__ . '/include/mod_manager.php';
+
+            $id = $_GET['id'] ?? '';
+            if (!$id) {
+                jsonResponse(['success' => false, 'error' => 'Missing server ID'], 400);
+            }
+
+            $apiKey = $config['curseforge_api_key'] ?? '';
+            if (!$apiKey) {
+                jsonResponse(['success' => false, 'error' => 'CurseForge API key not configured'], 400);
+            }
+
+            // Get mods list
+            $dataDir = getContainerDataDir($id);
+            if (!$dataDir) {
+                jsonResponse(['success' => false, 'error' => 'Could not locate server data directory'], 404);
+            }
+
+            $mods = scanServerMods($dataDir);
+
+            // Get server MC version for filtering
+            $mcVersion = '';
+            $serverHash = md5($id);
+            $metaFile = "/boot/config/plugins/mcmm/servers/$serverHash/metadata_v11.json";
+            if (file_exists($metaFile)) {
+                $meta = json_decode(file_get_contents($metaFile), true);
+                $mcVersion = $meta['mcVersion'] ?? '';
+            }
+
+            // Check for updates
+            $modsWithUpdates = checkModUpdates($mods, $apiKey, $mcVersion);
+
+            // Cache the results
+            $cacheFile = "/boot/config/plugins/mcmm/servers/$serverHash/mods_updates.json";
+            file_put_contents($cacheFile, json_encode([
+                'timestamp' => time(),
+                'mods' => $modsWithUpdates
+            ], JSON_PRETTY_PRINT));
+
+            $updatesAvailable = array_filter($modsWithUpdates, function ($m) {
+                return $m['updateAvailable'] ?? false;
+            });
+
+            jsonResponse([
+                'success' => true,
+                'data' => $modsWithUpdates,
+                'updatesAvailable' => count($updatesAvailable),
+                'totalMods' => count($modsWithUpdates)
+            ]);
+            break;
+
+        case 'mod_update':
+            // Update a specific mod to latest version
+            require_once __DIR__ . '/include/mod_manager.php';
+
+            $id = $_GET['id'] ?? '';
+            $modFile = $_GET['file'] ?? '';
+
+            if (!$id || !$modFile) {
+                jsonResponse(['success' => false, 'error' => 'Missing parameters'], 400);
+            }
+
+            $apiKey = $config['curseforge_api_key'] ?? '';
+            if (!$apiKey) {
+                jsonResponse(['success' => false, 'error' => 'CurseForge API key not configured'], 400);
+            }
+
+            $dataDir = getContainerDataDir($id);
+            if (!$dataDir) {
+                jsonResponse(['success' => false, 'error' => 'Could not locate server data directory'], 404);
+            }
+
+            $modsDir = rtrim($dataDir, '/') . '/mods';
+            $oldModPath = $modsDir . '/' . basename($modFile);
+
+            if (!file_exists($oldModPath)) {
+                jsonResponse(['success' => false, 'error' => 'Mod file not found'], 404);
+            }
+
+            // Get mod info
+            $modInfo = extractModInfo($oldModPath);
+
+            if (!isset($modInfo['curseforgeId']) || !isset($modInfo['latestFileId'])) {
+                jsonResponse(['success' => false, 'error' => 'Update information not available'], 400);
+            }
+
+            // Download new version
+            $downloadUrl = "https://api.curseforge.com/v1/mods/{$modInfo['curseforgeId']}/files/{$modInfo['latestFileId']}/download";
+            $tempPath = $modsDir . '/' . uniqid('temp_') . '.jar';
+
+            $success = downloadMod($downloadUrl, $tempPath, $modInfo['latestHash'] ?? '');
+
+            if (!$success) {
+                jsonResponse(['success' => false, 'error' => 'Failed to download update'], 500);
+            }
+
+            // Backup old mod
+            $backupPath = $oldModPath . '.backup';
+            @rename($oldModPath, $backupPath);
+
+            // Move new mod into place
+            $newModName = $modInfo['latestFileName'] ?? basename($tempPath);
+            $newModPath = $modsDir . '/' . $newModName;
+            rename($tempPath, $newModPath);
+
+            // Clear mods cache
+            $serverHash = md5($id);
+            @unlink("/boot/config/plugins/mcmm/servers/$serverHash/mods_cache.json");
+            @unlink("/boot/config/plugins/mcmm/servers/$serverHash/mods_updates.json");
+
+            jsonResponse([
+                'success' => true,
+                'message' => 'Mod updated successfully',
+                'oldFile' => basename($modFile),
+                'newFile' => $newModName
+            ]);
             break;
 
         default:
