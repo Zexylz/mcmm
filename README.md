@@ -29,7 +29,24 @@ configuration, and deployment documentation may be added as the project matures.
 ## Latest Release
 
 <!-- START_RELEASE -->
-*Trigger a release to see the latest AI-generated release notes here.*
+# Release v0.0.4
+
+We're excited to announce the release of v0.0.4! This update primarily focuses on essential internal maintenance, versioning, and foundational improvements, paving the way for future enhancements.
+
+## 🚀 New Features
+This release concentrates on underlying infrastructure and administrative updates. No new user-facing features are introduced in this version.
+
+## 🛠 Improvements & Refinement
+Key updates in this release include:
+*   **Version Management**: Several internal version bumps across the project (`v0.0.1` through `v0.0.4`) to streamline our release process.
+*   **Plugin File Configuration**: Updates to plugin files for various releases, enhancing internal consistency and build processes.
+
+## 🐛 Bug Fixes
+No specific bug fixes were identified in the commit history for this release.
+
+---
+
+Thank you for your continued support!
 <!-- END_RELEASE -->
 
 ---
@@ -75,13 +92,20 @@ still leveraging best-in-class container images for Minecraft server execution.
 <!-- START_TREE -->
 ```
 .
-├── .github/ scripts, workflows, linters
+├── .github/ (scripts, workflows, linters)
 ├── images/
 ├── include/
 ├── javascript/
 ├── plugin/
 ├── styles/
-└── api.php, mcmm.page, etc.
+├── empty_report.json
+├── default.cfg
+├── mcmm.page
+├── README.md
+├── api.php
+├── mcmm-plugin.zip
+├── package.json
+├── release_notes.md
 ```
 <!-- END_TREE -->
 
