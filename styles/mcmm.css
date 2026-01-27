@@ -65,8 +65,10 @@ div.title {
 
     /* medium border radius */
     --blur-strength-base: 12px;
+
     /* base backdrop blur strength */
     --blur-strength: calc(var(--blur-strength-base) * var(--ui-scale));
+
     /* backdrop blur strength */
     --content-max-width: calc(clamp(1100px, 92vw, 1600px) * var(--ui-scale));
 
@@ -201,6 +203,7 @@ body {
     margin-left: auto;
     margin-right: auto;
     padding-left: var(--gutter);
+
     /* dynamic side padding */
     padding-right: var(--gutter);
 }
@@ -916,6 +919,7 @@ body {
 
 
 /* ===== MOD MANAGER ICONS (restored) ===== */
+
 /* ===== PREMIUM MOD ICONS (Redesigned) ===== */
 .mcmm-mod-icon {
     align-items: center;
@@ -1039,9 +1043,9 @@ body {
 .mcmm-modpack-card:hover {
     z-index: 10;
     background: linear-gradient(135deg, rgb(35 37 50 / 80%), rgb(25 27 40 / 90%));
-    border-color: rgb(157 78 221 / 50%);
-    box-shadow: 0 10px 25px rgb(0 0 0 / 30%), 0 0 0 1px rgb(157 78 221 / 50%);
-    transform: translateY(-4px);
+    border-color: var(--primary);
+    box-shadow: 0 15px 35px rgb(0 0 0 / 60%), 0 0 0 1px var(--primary-dim);
+    transform: translateY(-6px);
 }
 
 /* Vanilla Card Special Styling */
@@ -1066,11 +1070,12 @@ body {
 
     /* Slightly shorter for better proportions */
     position: relative;
-    transition: transform 0.5s ease;
+    transition: transform 0.8s cubic-bezier(0.2, 0, 0.2, 1);
 }
 
 .mcmm-modpack-card:hover .mcmm-modpack-thumb {
-    transform: scale(1.05);
+    transform: scale(1.1);
+
     /* Subtle zoom on hover */
 }
 
@@ -1151,6 +1156,7 @@ body {
     backdrop-filter: blur(4px);
     border: 2px solid rgb(255 255 255 / 30%);
     border-radius: 50%;
+
     /* Circle checkbox */
     cursor: pointer;
     display: flex;
@@ -1922,7 +1928,6 @@ body {
     color: var(--text-muted);
     cursor: pointer;
     font-size: 1.5rem;
-
     padding: 0;
     transition: color 0.2s;
 }
@@ -1941,6 +1946,7 @@ body {
 .mcmm-modal .mcmm-tabs {
     display: inline-flex;
     width: fit-content;
+
     /* statt flex */
     ;
 }
@@ -2473,6 +2479,7 @@ body {
 
 .mcmm-queue-panel.open {
     width: 380px;
+
     /* Slightly wider for better breathing room */
     opacity: 1;
 }
@@ -2627,8 +2634,10 @@ body {
 
 .mcmm-backup-panel-item .material-symbols-outlined {
     color: var(--primary-hover);
+
     /* Fallback color so icons never disappear */
     background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+
     /* Gradient only when supported */
     background-clip: text;
     /* stylelint-disable-next-line property-no-vendor-prefix */
@@ -2897,7 +2906,7 @@ body {
 
 .mcmm-source-tab.active {
     background: var(--primary) !important;
-    color: white !important;
+    color: rgb(255 255 255) !important;
     box-shadow: 0 4px 15px rgb(157 78 221 / 35%) !important;
 }
 
@@ -2932,28 +2941,3 @@ body {
     filter: grayscale(1);
 }
 
-/* =========================================================
-   ENHANCED MODPACK GRID
-   ========================================================= */
-.mcmm-modpack-card {
-    position: relative;
-    overflow: hidden;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.mcmm-modpack-card:hover {
-    border-color: var(--primary);
-    box-shadow: 0 15px 35px rgb(0 0 0 / 60%), 0 0 0 1px var(--primary-dim);
-    transform: translateY(-6px);
-}
-
-.mcmm-modpack-thumb {
-    transition: transform 0.8s cubic-bezier(0.2, 0, 0.2, 1);
-}
-
-.mcmm-modpack-card:hover .mcmm-modpack-thumb {
-    transform: scale(1.1);
-}
