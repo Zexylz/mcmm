@@ -35,18 +35,20 @@ def get_commit_log(from_tag, to_tag):
         print(f"Error getting commit log: {e}")
         return ""
 
-def generate_notes(commits, api_key):
+def generate_notes(current_tag, commits, api_key):
     try:
         client = genai.Client(api_key=api_key)
         
         prompt = f"""
-        You are a release note generator. Below is a list of commit messages for a new release.
+        You are a release note generator for version {current_tag}. 
+        Below is a list of commit messages for this release.
         Please summarize them into a beautiful, human-readable release note markdown.
         Group them into sections like:
         - 🚀 New Features
         - 🛠 Improvements & Refinement
         - 🐛 Bug Fixes
         
+        IMPORTANT: Use only "{current_tag}" as the version number in your text.
         Keep it concise and professional.
         
         Commits:
@@ -94,9 +96,9 @@ def main():
     commits = get_commit_log(prev_tag, current_tag)
     if not commits:
         print("No commits found between tags.")
-        notes = "No changes recorded."
+        notes = f"Release {current_tag}\n\nNo changes recorded."
     else:
-        notes = generate_notes(commits, api_key)
+        notes = generate_notes(current_tag, commits, api_key)
         
     with open("release_notes.md", "w", encoding="utf-8") as f:
         f.write(notes)
