@@ -2,8 +2,6 @@ name: Create Release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*"
   release:
@@ -79,133 +77,11 @@ jobs:
           echo "Package contents:"
           unzip -l mcmm-plugin.zip | tail -n +4 | head -n -2
 
-      # Nur für main-Pushes (kein Tag): Datum als Output setzen
-      - name: Set date
-        id: meta
-        if: github.ref_type != 'tag'
-        shell: bash
-        run: echo "date=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
-
-      # Nightly changelog generieren (stabil, squash-friendly, mit PR-Links) -> Output (multiline)
-      - name: Generate Nightly Changelog (pretty, squash-friendly)
-        id: changelog
-        if: github.ref_type != 'tag'
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          LAST_TAG="$(git tag --list "nightly-*" --sort=-creatordate | head -n 1 || true)"
-          REPO="${GITHUB_REPOSITORY}"
-          OUT="changelog.md"
-
-          pr_linkify () {
-            local s="$1"
-            if [[ "$s" =~ \(\#([0-9]+)\) ]]; then
-              local pr="${BASH_REMATCH[1]}"
-              s="${s/(\#${pr})/ [#${pr}](https:\/\/github.com\/${REPO}\/pull\/${pr})}"
-            fi
-            echo "$s"
-          }
-
-          {
-            echo "## Nightly Changelog"
-            echo
-            echo "- Commit: \`${GITHUB_SHA:0:7}\`"
-            echo "- Run: #${GITHUB_RUN_NUMBER}"
-            echo "- Trigger: ${GITHUB_EVENT_NAME}"
-            echo
-          } > "$OUT"
-
-          if [[ -z "$LAST_TAG" ]]; then
-            {
-              echo "No previous nightly tag found. This is the first nightly release."
-              echo
-              echo "### Changes"
-              echo
-              git log -n 50 --no-merges --pretty=format:"- %s (\`%h\`, %an)"
-              echo
-            } >> "$OUT"
-          else
-            {
-              echo "Previous nightly: \`${LAST_TAG}\`"
-              echo
-              echo "[Compare changes](https://github.com/${REPO}/compare/${LAST_TAG}...${GITHUB_SHA})"
-              echo
-            } >> "$OUT"
-
-            COMMITS="$(git log "${LAST_TAG}..HEAD" --no-merges --pretty=format:'%s|%h|%an')"
-
-            declare -A sections=(
-              [Features]=""
-              [Fixes]=""
-              [Performance]=""
-              [Refactor]=""
-              [Docs]=""
-              [Tests]=""
-              [Build]=""
-              [CI]=""
-              [Chore]=""
-              [Other]=""
-            )
-
-            while IFS= read -r row; do
-              [[ -z "$row" ]] && continue
-              subject="${row%%|*}"
-              rest="${row#*|}"
-              hash="${rest%%|*}"
-              author="${rest#*|}"
-
-              pretty="$(pr_linkify "$subject")"
-              line="- ${pretty} (\`${hash}\`, ${author})"
-
-              case "$subject" in
-                feat:*|feat\(*\):*)         sections[Features]+="$line"$'\n' ;;
-                fix:*|fix\(*\):*)           sections[Fixes]+="$line"$'\n' ;;
-                perf:*|perf\(*\):*)         sections[Performance]+="$line"$'\n' ;;
-                refactor:*|refactor\(*\):*) sections[Refactor]+="$line"$'\n' ;;
-                docs:*|docs\(*\):*)         sections[Docs]+="$line"$'\n' ;;
-                test:*|tests:*|test\(*\):*) sections[Tests]+="$line"$'\n' ;;
-                build:*|build\(*\):*)       sections[Build]+="$line"$'\n' ;;
-                ci:*|ci\(*\):*)             sections[CI]+="$line"$'\n' ;;
-                chore:*|chore\(*\):*)       sections[Chore]+="$line"$'\n' ;;
-                *)                          sections[Other]+="$line"$'\n' ;;
-              esac
-            done <<< "$COMMITS"
-
-            for key in Features Fixes Performance Refactor Docs Tests Build CI Chore Other; do
-              if [[ -n "${sections[$key]}" ]]; then
-                echo "### $key" >> "$OUT"
-                echo >> "$OUT"
-                printf "%s\n" "${sections[$key]}" >> "$OUT"
-                echo >> "$OUT"
-              fi
-            done
-          fi
-
-          # Wichtig: Stelle sicher, dass die Datei mit Newline endet
-          echo >> "$OUT"
-
-          # Multiline Output korrekt setzen
-          {
-            echo "text<<EOF"
-            cat "$OUT"
-            echo ""
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      # Nightly prerelease bei JEDEM Push auf main (mit Changelog in der Beschreibung)
-      - name: Create GitHub Release (nightly)
-        if: github.ref_type != 'tag'
-        uses: softprops/action-gh-release@v2
+      - name: Generate AI Release Notes
+        id: ai_notes
+        uses: reservamos/ai-release-notes@v1
         with:
-          files: mcmm-plugin.zip
-          tag_name: nightly-${{ steps.meta.outputs.date }}-${{ github.run_number }}
-          name: Nightly ${{ steps.meta.outputs.date }} (#${{ github.run_number }})
-          prerelease: true
-          draft: false
-          generate_release_notes: false
-          body: ${{ steps.changelog.outputs.text }}
-          target_commitish: ${{ github.sha }}
+          apiKey: ${{ secrets.OPENAI_API_KEY }}
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
 
@@ -218,7 +94,8 @@ jobs:
           tag_name: ${{ github.ref_name }}
           prerelease: false
           draft: false
-          generate_release_notes: true
+          generate_release_notes: false
+          body: ${{ steps.ai_notes.outputs.notes }}
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
 
