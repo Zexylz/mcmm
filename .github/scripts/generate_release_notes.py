@@ -65,7 +65,7 @@ def generate_notes(commits, api_key):
         return response.choices[0].message.content.strip()
     except Exception as e:
         print(f"Error calling OpenAI: {e}")
-        return f"Release notes could not be generated automatically.\n\nChanges:\n{commits}"
+        return f"Release notes could not be generated automatically (AI Error: {e}).\n\nChanges:\n{commits}"
 
 def main():
     api_key = os.environ.get("OPENAI_API_KEY")
