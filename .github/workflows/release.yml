@@ -6,6 +6,10 @@ on:
       - main
     tags:
       - "v*"
+  release:
+    types:
+      - prereleased
+      - released
   workflow_dispatch:
 
 concurrency:
@@ -224,8 +228,8 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
-    # Nur bei GitHub Releases ausführen (nicht bei Push auf main)
-    if: github.event_name == 'release' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
+    # Nur bei GitHub Releases ausführen (prereleased/released Events)
+    if: github.event_name == 'release'
     steps:
       - uses: actions/checkout@v4
       - uses: dkaser/unraid-plugin-release-action@v1
