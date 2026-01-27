@@ -1,11 +1,11 @@
 import os
 import subprocess
 import sys
-import google.generativeai as genai
+import time
+from google import genai
 
 def get_latest_tag():
     try:
-        # Get all tags sorted by creation date
         tags = subprocess.check_output(["git", "tag", "--sort=-creatordate"]).decode("utf-8").split()
         return tags[0] if tags else None
     except Exception as e:
@@ -28,7 +28,6 @@ def get_commit_log(from_tag, to_tag):
         if from_tag:
             cmd = ["git", "log", f"{from_tag}..{to_tag}", "--pretty=format:%s"]
         else:
-            # If no previous tag, get last 20 commits
             cmd = ["git", "log", "-n", "20", "--pretty=format:%s"]
         
         return subprocess.check_output(cmd).decode("utf-8")
@@ -38,15 +37,8 @@ def get_commit_log(from_tag, to_tag):
 
 def generate_notes(commits, api_key):
     try:
-        genai.configure(api_key=api_key)
+        client = genai.Client(api_key=api_key)
         
-        # Debug: List all available models
-        try:
-            available_models = [m.name for m in genai.list_models()]
-            print(f"Available models for this key: {available_models}")
-        except Exception as list_err:
-            available_models = [f"Error listing: {list_err}"]
-
         prompt = f"""
         You are a release note generator. Below is a list of commit messages for a new release.
         Please summarize them into a beautiful, human-readable release note markdown.
@@ -61,34 +53,32 @@ def generate_notes(commits, api_key):
         {commits}
         """
         
-        # Try different model versions as fallback
-        # Priority based on user's available models list
         models_to_try = [
             'gemini-2.5-flash',
             'gemini-2.0-flash',
-            'gemini-1.5-flash', # Fallback to 1.5 just in case
-            'models/gemini-2.5-flash',
-            'models/gemini-2.0-flash',
-            'models/gemini-1.5-flash'
+            'gemini-2.0-flash-lite'
         ]
         
         last_error = None
         for model_name in models_to_try:
             try:
                 print(f"Trying Gemini model: {model_name}...")
-                model = genai.GenerativeModel(model_name)
-                response = model.generate_content(prompt)
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
                 return response.text.strip()
             except Exception as e:
                 print(f"Model {model_name} failed: {e}")
                 last_error = e
+                if "429" in str(e):
+                    time.sleep(5) # Small wait if rate limited
                 continue
         
         raise last_error
     except Exception as e:
         print(f"Error calling Gemini: {e}")
-        model_list_str = "\n".join(available_models[:10]) # Show first 10
-        return f"Release notes could not be generated automatically (AI Error: {e}).\n\nAvailable Models according to your key:\n{model_list_str}\n\nChanges:\n{commits}"
+        return f"Release notes could not be generated automatically (AI Error: {e}).\n\nChanges:\n{commits}"
 
 def main():
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -108,7 +98,6 @@ def main():
     else:
         notes = generate_notes(commits, api_key)
         
-    # Write to a file for GitHub Actions to read
     with open("release_notes.md", "w", encoding="utf-8") as f:
         f.write(notes)
     

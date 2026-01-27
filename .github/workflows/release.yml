@@ -9,13 +9,81 @@ on:
       - prereleased
       - released
   workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Type of version bump (ignored if triggered by tag push)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  release:
+  # MANUALLY TRIGGERED: Bumps version, commits, and pushes a new tag
+  # This tag push will then trigger the THIS SAME WORKFLOW via the push: tags trigger
+  bump-version:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Calculate and Push Version
+        id: version
+        run: |
+          git fetch --tags
+          LATEST_TAG=$(git tag -l "v*" | sort -V | tail -n 1)
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="v0.0.0"
+          fi
+          
+          VERSION=${LATEST_TAG#v}
+          IFS='.' read -r major minor patch <<< "$VERSION"
+          
+          BUMP_TYPE="${{ inputs.bump_type }}"
+          if [ "$BUMP_TYPE" == "major" ]; then
+            major=$((major + 1)); minor=0; patch=0
+          elif [ "$BUMP_TYPE" == "minor" ]; then
+            minor=$((minor + 1)); patch=0
+          else
+            patch=$((patch + 1))
+          fi
+          
+          NEW_VERSION="$major.$minor.$patch"
+          NEW_TAG="v$NEW_VERSION"
+          
+          echo "New Version: $NEW_VERSION"
+          
+          npm version $NEW_VERSION --no-git-tag-version --allow-same-version
+          git add package.json package-lock.json || true
+          
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: bump version to $NEW_VERSION"
+            git push origin HEAD:main
+          fi
+          
+          git tag $NEW_TAG
+          git push origin $NEW_TAG
+
+  # TRIGGERED BY: v* tag push (either manual or from bump-version job)
+  create-release:
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -33,7 +101,7 @@ jobs:
           python-version: '3.14'
 
       - name: Install Dependencies
-        run: pip install google-generativeai
+        run: pip install google-genai
 
       - name: Generate AI Release Notes
         id: ai_notes
@@ -42,55 +110,32 @@ jobs:
           GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
           python .github/scripts/generate_release_notes.py
-          # Output to GITHUB_ENV for later steps if needed, but we'll use a file
           echo "NOTES_FILE=release_notes.md" >> "$GITHUB_ENV"
 
       - name: Create Release Package
-        # ... (rest of existing steps)
         shell: bash
         run: |
           set -euo pipefail
-          
-          # Validate required files exist
           required_files=("api.php" "default.cfg" ".htaccess" "mcmm.page")
           required_dirs=("include" "images" "javascript" "styles")
           
           for f in "${required_files[@]}"; do
-            if [[ ! -f "$f" ]]; then
-              echo "ERROR: Required file '$f' not found!"
-              exit 1
-            fi
+            [[ -f "$f" ]] || { echo "ERROR: '$f' not found!"; exit 1; }
           done
-          
           for d in "${required_dirs[@]}"; do
-            if [[ ! -d "$d" ]]; then
-              echo "ERROR: Required directory '$d' not found!"
-              exit 1
-            fi
+            [[ -d "$d" ]] || { echo "ERROR: '$d' not found!"; exit 1; }
           done
           
           mkdir -p release/mcmm
-          cp -r include release/mcmm/
-          cp -r images release/mcmm/
-          cp -r javascript release/mcmm/
-          cp -r styles release/mcmm/
-          cp api.php release/mcmm/
-          cp default.cfg release/mcmm/
-          cp .htaccess release/mcmm/
-          cp mcmm.page release/mcmm/
-          cd release
-          zip -r ../mcmm-plugin.zip mcmm
+          cp -r include images javascript styles release/mcmm/
+          cp api.php default.cfg .htaccess mcmm.page release/mcmm/
+          cd release && zip -r ../mcmm-plugin.zip mcmm
           
       - name: Validate ZIP package
         shell: bash
         run: |
           set -euo pipefail
-          if [[ ! -f "mcmm-plugin.zip" ]]; then
-            echo "ERROR: ZIP file was not created!"
-            exit 1
-          fi
-          
-          # Validate ZIP integrity
+          [[ -f "mcmm-plugin.zip" ]] || { echo "ERROR: ZIP not created!"; exit 1; }
           unzip -t mcmm-plugin.zip > /dev/null
           echo "ZIP validation successful"
           
@@ -98,9 +143,7 @@ jobs:
           echo "Package contents:"
           unzip -l mcmm-plugin.zip | tail -n +4 | head -n -2
 
-      # Normale Release bei v* Tag-Push
-      - name: Create GitHub Release (tag)
-        if: github.ref_type == 'tag'
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2.5.0
         with:
           files: mcmm-plugin.zip
@@ -112,7 +155,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
 
-  # Unraid Plugin Release (generiert .plg und .txz Dateien)
+  # TRIGGERED BY: release created/published
   unraid-plugin:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -125,36 +168,17 @@ jobs:
       - name: Build and Package Plugin
         id: build
         run: |
-          # Make build script executable
           chmod +x build.sh
-          
-          # Run build script to populate src/ directory
           ./build.sh
-          
-          # Determine version (strip 'v' prefix if present)
           VERSION="${{ github.event.release.tag_name }}"
           VERSION="${VERSION#v}"
           PACKAGE_NAME="mcmm-plugin"
           PACKAGE_FILE="${PACKAGE_NAME}-${VERSION}-noarch-1.txz"
           
-          echo "Building package version: $VERSION"
-          echo "Package file: $PACKAGE_FILE"
-          
-          # Create release directory
           mkdir -p release
-          
-          # Create txz package from src directory
-          cd src
-          tar --owner=0 --group=0 -cJf "../release/${PACKAGE_FILE}" *
-          cd ..
-          
-          # Calculate checksum
+          cd src && tar --owner=0 --group=0 -cJf "../release/${PACKAGE_FILE}" * && cd ..
           CHECKSUM=$(sha256sum "release/${PACKAGE_FILE}" | awk '{print $1}')
           
-          echo "Package created at: release/${PACKAGE_FILE}"
-          echo "Checksum: $CHECKSUM"
-          
-          # Export variables for next steps
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
           echo "package_file=release/$PACKAGE_FILE" >> "$GITHUB_OUTPUT"
@@ -167,7 +191,6 @@ jobs:
           data_file: plugin/plugin.json
         env:
           PLUGIN_VERSION: ${{ steps.build.outputs.version }}
-          # Simple changelog link
           PLUGIN_CHANGELOG: "Release notes: ${{ github.event.release.html_url }}"
           PLUGIN_CHECKSUM: ${{ steps.build.outputs.checksum }}
           PLUGIN_RELEASE: ""
@@ -179,8 +202,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add plugin/mcmm.plg
-          # Only commit if there are changes (ignore errors if empty commit)
-          git commit -m "chore: update plugin file for release ${{ github.event.release.tag_name }}" || echo "No changes to commit"
+          git commit -m "chore: update plugin file for release ${{ github.event.release.tag_name }}" || echo "No changes"
           git push origin HEAD:main
           
       - name: Upload Package Asset
@@ -188,4 +210,4 @@ jobs:
         with:
           files: ${{ steps.build.outputs.package_file }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT }}
