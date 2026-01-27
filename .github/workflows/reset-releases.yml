@@ -59,11 +59,3 @@ jobs:
           
           git commit -m "chore: reset version to 0.0.0 [skip ci]" || echo "Already at 0.0.0"
           git push origin HEAD:main
-
-      - name: Create v0.0.0 Tag
-        env:
-          GH_TOKEN: ${{ secrets.PAT }}
-        run: |
-          git tag v0.0.0
-          git push origin v0.0.0
-          # Manually trigger release for v0.0.0 if needed, or let the push trigger handle it (if PAT is working)
