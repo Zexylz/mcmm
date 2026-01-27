@@ -42,7 +42,7 @@ jobs:
       - name: Install Dependencies
         run: |
           npm ci --no-audit --no-fund
-          pip install openai
+          pip install google-generativeai
           
       # --- CSS FIXING ---
       - name: Extract CSS (Mirror of style-checks)
@@ -53,18 +53,15 @@ jobs:
           shopt -s globstar nullglob
           mapfile -t page_files < <(printf '%s\n' **/*.page)
           for f in "${page_files[@]}"; do
-             # Same awk/perl logic as style-checks.yml
              out_style=".tmp-stylelint/${f}.style.css"
              out_inline=".tmp-stylelint/${f}.inline.css"
              mkdir -p "$(dirname "$out_style")" "$(dirname "$out_inline")"
              
-             # 1) <style> ... </style> line-preserving
              awk '
                BEGIN { in_style=0 }
                {
                  line=$0
                  low=tolower($0)
-
                  if (!in_style) {
                    if (low ~ /<style([[:space:]][^>]*)?>/) {
                      in_style=1
@@ -86,58 +83,19 @@ jobs:
                }
              ' "$f" > "$out_style"
              
-             # 2) Inline styles line-preserving, PHP-safe, wrapped as dummy selectors
              perl -ne '
-               BEGIN {
-                 $ln = 0;
-                 $idx = 0;
-                 $in_script = 0;
-                 $in_style  = 0;
-               }
-
-               sub decode_entities {
-                 my ($s) = @_;
-                 $s =~ s/&quot;/"/g;
-                 $s =~ s/&apos;/'\''/g;
-                 $s =~ s/&lt;/</g;
-                 $s =~ s/&gt;/>/g;
-                 $s =~ s/&amp;/&/g;
-                 return $s;
-               }
-
-               sub normalize_decls {
-                 my ($s) = @_;
-                 $s =~ s/^\s+|\s+$//g;
-                 $s =~ s/\s*;\s*$/;/;
-                 $s .= ";" if $s !~ /;\s*$/;
-                 return $s;
-               }
-
+               BEGIN { $ln = 0; $idx = 0; $in_script = 0; $in_style  = 0; }
+               sub decode_entities { my ($s) = @_; $s =~ s/&quot;/"/g; $s =~ s/&apos;/'\''/g; $s =~ s/&lt;/</g; $s =~ s/&gt;/>/g; $s =~ s/&amp;/&/g; return $s; }
+               sub normalize_decls { my ($s) = @_; $s =~ s/^\s+|\s+$//g; $s =~ s/\s*;\s*$/;/; $s .= ";" if $s !~ /;\s*$/; return $s; }
                $ln++;
                my $line = $_;
                my $low  = lc($line);
-
-               # Skip inside <script>...</script>
                if (!$in_script && $low =~ /<script\b/) { $in_script = 1; }
-               if ($in_script) {
-                 print "\n";
-                 if ($low =~ /<\/script>/) { $in_script = 0; }
-                 next;
-               }
-
-               # Skip inside <style>...</style>
+               if ($in_script) { print "\n"; if ($low =~ /<\/script>/) { $in_script = 0; } next; }
                if (!$in_style && $low =~ /<style\b/) { $in_style = 1; }
-               if ($in_style) {
-                 print "\n";
-                 if ($low =~ /<\/style>/) { $in_style = 0; }
-                 next;
-               }
-
-               # Remove PHP fragments on this line (PHP-safe)
+               if ($in_style) { print "\n"; if ($low =~ /<\/style>/) { $in_style = 0; } next; }
                $line =~ s/<\?(?:php|=)?.*?\?>//g;
-
                my @rules = ();
-
                while ($line =~ /style\s*=\s*"([^"]*)"/gi) {
                  my $s = decode_entities($1);
                  next if $s =~ /<\?/ || $s =~ /\?>/;
@@ -146,7 +104,6 @@ jobs:
                  $idx++;
                  push @rules, ".__inline_style_$idx__ { $s }";
                }
-
                while ($line =~ /style\s*=\s*'\''([^'\'']*)'\''/gi) {
                  my $s = decode_entities($1);
                  next if $s =~ /<\?/ || $s =~ /\?>/;
@@ -155,29 +112,21 @@ jobs:
                  $idx++;
                  push @rules, ".__inline_style_$idx__ { $s }";
                }
-
-               if (@rules) {
-                 print join(" ", @rules), "\n";
-               } else {
-                 print "\n";
-               }
+               if (@rules) { print join(" ", @rules), "\n"; } else { print "\n"; }
              ' "$f" > "$out_inline"
           done
-          
-          # Remove fully empty extracted files
           find .tmp-stylelint -type f -name "*.css" -exec sh -c 'grep -q "[^[:space:]]" "$1" || rm -f "$1"' _ {} \; || true
-          
+
       - name: Run Stylelint & Generate Report
         if: inputs.target == 'css'
-        continue-on-error: true # Don't fail, we want to fix
+        continue-on-error: true
         run: |
-          # run stylelint on extracted files, output json
           npx stylelint "**/*.css" ".tmp-stylelint/**/*.css" --config .github/linters/.stylelintrc.json --formatter json > stylelint-report.json || true
           
       - name: Parse Report & Fix with AI
         if: inputs.target == 'css'
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           python .github/scripts/ai_fix.py --linter stylelint --report stylelint-report.json
 
@@ -187,5 +136,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "style: auto-fix lint errors with AI" || echo "No changes"
+          git commit -m "style: auto-fix lint errors with AI (Gemini)" || echo "No changes"
           git push

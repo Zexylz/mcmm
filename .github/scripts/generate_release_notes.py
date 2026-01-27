@@ -1,7 +1,7 @@
 import os
 import subprocess
 import sys
-from openai import OpenAI
+import google.generativeai as genai
 
 def get_latest_tag():
     try:
@@ -37,42 +37,36 @@ def get_commit_log(from_tag, to_tag):
         return ""
 
 def generate_notes(commits, api_key):
-    client = OpenAI(api_key=api_key)
-    
-    prompt = f"""
-    You are a release note generator. Below is a list of commit messages for a new release.
-    Please summarize them into a beautiful, human-readable release note markdown.
-    Group them into sections like:
-    - 🚀 New Features
-    - 🛠 Improvements & Refinement
-    - 🐛 Bug Fixes
-    
-    Keep it concise and professional.
-    
-    Commits:
-    {commits}
-    """
-    
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that generates release notes."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7
-        )
-        return response.choices[0].message.content.strip()
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        prompt = f"""
+        You are a release note generator. Below is a list of commit messages for a new release.
+        Please summarize them into a beautiful, human-readable release note markdown.
+        Group them into sections like:
+        - 🚀 New Features
+        - 🛠 Improvements & Refinement
+        - 🐛 Bug Fixes
+        
+        Keep it concise and professional.
+        
+        Commits:
+        {commits}
+        """
+        
+        response = model.generate_content(prompt)
+        return response.text.strip()
     except Exception as e:
-        print(f"Error calling OpenAI: {e}")
+        print(f"Error calling Gemini: {e}")
         return f"Release notes could not be generated automatically (AI Error: {e}).\n\nChanges:\n{commits}"
 
 def main():
-    api_key = os.environ.get("OPENAI_API_KEY")
+    api_key = os.environ.get("GEMINI_API_KEY")
     current_tag = os.environ.get("GITHUB_REF_NAME")
     
     if not api_key:
-        print("Error: OPENAI_API_KEY not set.")
+        print("Error: GEMINI_API_KEY not set.")
         sys.exit(1)
         
     prev_tag = get_previous_tag(current_tag)
