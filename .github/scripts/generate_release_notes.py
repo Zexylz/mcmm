@@ -40,6 +40,13 @@ def generate_notes(commits, api_key):
     try:
         genai.configure(api_key=api_key)
         
+        # Debug: List all available models
+        try:
+            available_models = [m.name for m in genai.list_models()]
+            print(f"Available models for this key: {available_models}")
+        except Exception as list_err:
+            available_models = [f"Error listing: {list_err}"]
+
         prompt = f"""
         You are a release note generator. Below is a list of commit messages for a new release.
         Please summarize them into a beautiful, human-readable release note markdown.
@@ -55,11 +62,13 @@ def generate_notes(commits, api_key):
         """
         
         # Try different model versions as fallback
+        # Use exact names from the list if possible
         models_to_try = [
             'gemini-1.5-flash', 
-            'gemini-1.5-flash-latest', 
-            'gemini-2.0-flash-exp', 
-            'gemini-1.5-pro'
+            'gemini-1.5-flash-8b',
+            'gemini-2.0-flash-exp',
+            'gemini-1.5-pro',
+            'models/gemini-1.5-flash'
         ]
         
         last_error = None
@@ -77,7 +86,8 @@ def generate_notes(commits, api_key):
         raise last_error
     except Exception as e:
         print(f"Error calling Gemini: {e}")
-        return f"Release notes could not be generated automatically (AI Error: {e}).\n\nChanges:\n{commits}"
+        model_list_str = "\n".join(available_models[:10]) # Show first 10
+        return f"Release notes could not be generated automatically (AI Error: {e}).\n\nAvailable Models according to your key:\n{model_list_str}\n\nChanges:\n{commits}"
 
 def main():
     api_key = os.environ.get("GEMINI_API_KEY")

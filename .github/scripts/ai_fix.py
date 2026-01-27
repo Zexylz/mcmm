@@ -14,6 +14,9 @@ def fix_file(file_path, errors, api_key):
 
     genai.configure(api_key=api_key)
     
+    # Debug: List available models if we hit errors
+    available_models_info = "Unknown"
+
     error_desc = ""
     for err in errors:
         line = err.get('line', '?')
@@ -42,9 +45,10 @@ def fix_file(file_path, errors, api_key):
         # Try different model versions as fallback
         models_to_try = [
             'gemini-1.5-flash', 
-            'gemini-1.5-flash-latest', 
-            'gemini-2.0-flash-exp', 
-            'gemini-1.5-pro'
+            'gemini-1.5-flash-8b',
+            'gemini-2.0-flash-exp',
+            'gemini-1.5-pro',
+            'models/gemini-1.5-flash'
         ]
         
         fixed_content = None
@@ -55,13 +59,20 @@ def fix_file(file_path, errors, api_key):
                 model = genai.GenerativeModel(model_name)
                 response = model.generate_content(prompt)
                 fixed_content = response.text.strip()
-                break
+                if fixed_content:
+                    break
             except Exception as e:
                 print(f"Model {model_name} failed: {e}")
                 last_error = e
                 continue
         
         if not fixed_content:
+            # If all failed, try to list models for debugging
+            try:
+                available_models_info = ", ".join([m.name for m in genai.list_models()][:10])
+                print(f"Available models for key: {available_models_info}")
+            except:
+                pass
             raise last_error
         
         # Basic sanity check: remove markdown code blocks
