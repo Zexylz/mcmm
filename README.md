@@ -26,10 +26,27 @@ configuration, and deployment documentation may be added as the project matures.
 
 ---
 
+## Latest Release
+
+<!-- START_RELEASE -->
+*Trigger a release to see the latest AI-generated release notes here.*
+<!-- END_RELEASE -->
+
+---
+
 ## Architecture
 
 MCMM follows a modular and extensible architecture, designed to clearly separate concerns
 and support future growth.
+
+```mermaid
+graph TD
+    A[Docker Container] -->|Runtime| B(Minecraft Server)
+    C[MCMM Platform] -->|Manage| D{Modpack Definitions}
+    D -->|Inject| B
+    E[External Config] -->|Configure| C
+    E -->|Parameters| B
+```
 
 ### Container Runtime Layer
 
@@ -53,10 +70,37 @@ still leveraging best-in-class container images for Minecraft server execution.
 
 ---
 
+## Project Structure
+
+<!-- START_TREE -->
+```
+.
+├── .github/ scripts, workflows, linters
+├── images/
+├── include/
+├── javascript/
+├── plugin/
+├── styles/
+└── api.php, mcmm.page, etc.
+```
+<!-- END_TREE -->
+
+---
+
 ## Code Quality and Tooling
 
 The repository enforces strict coding standards through automated tooling to ensure
 long-term maintainability and reliability:
+
+```mermaid
+graph LR
+    A[Git Commit] --> B{CI Workflow}
+    B -->|Check| C[PHP: PSR-12]
+    B -->|Analyze| D[PHPStan]
+    B -->|Lint| E[ESLint / Stylelint]
+    B -->|Verify| F[HTMLHint]
+    C & D & E & F --> G[Release]
+```
 
 - **PHP**: PSR-12 compliance enforced via PHP CodeSniffer
 - **Static Analysis**: PHPStan

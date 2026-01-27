@@ -155,6 +155,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
 
+      - name: Update README with Dynamic Content
+        run: |
+          python .github/scripts/update_readme.py
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "chore: update README with release notes for ${{ github.ref_name }}" || echo "No changes to README"
+          git push origin HEAD:main
+
   # TRIGGERED BY: release created/published
   unraid-plugin:
     runs-on: ubuntu-latest
