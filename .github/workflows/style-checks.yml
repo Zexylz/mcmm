@@ -72,7 +72,7 @@ jobs:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.eslint }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -114,7 +114,7 @@ jobs:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.stylelint }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -320,7 +320,7 @@ jobs:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.htmlhint }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
