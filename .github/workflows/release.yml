@@ -79,7 +79,7 @@ jobs:
 
       - name: Generate AI Release Notes
         id: ai_notes
-        uses: reservamos/ai-release-notes@v1
+        uses: reservamos/ai-release-notes-action@v1
         with:
           apiKey: ${{ secrets.OPENAI_API_KEY }}
           model: "gpt-4o"
