@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import argparse
+import time
 from google import genai
 
 def fix_file(file_path, errors, client):
@@ -39,8 +40,9 @@ def fix_file(file_path, errors, client):
     try:
         # Try different model versions as fallback
         models_to_try = [
+            'gemini-2.5-flash',
             'gemini-2.0-flash',
-            'gemini-1.5-flash'
+            'gemini-2.0-flash-lite'
         ]
         
         fixed_content = None
@@ -58,6 +60,10 @@ def fix_file(file_path, errors, client):
             except Exception as e:
                 print(f"Model {model_name} failed: {e}")
                 last_error = e
+                # If we hit quota, it's better to fail this file than to try another model immediately
+                if "429" in str(e):
+                    print("Quota exceeded (429). Skipping further attempts for this file.")
+                    break
                 continue
         
         if not fixed_content:
@@ -180,9 +186,16 @@ def main():
                  else:
                      print(f"Skipping unknown file mapping: {path} -> {clean_path}")
 
-    for file_path, errors in files_to_fix.items():
+    # Process each file with a delay to avoid rate limiting
+    file_list = list(files_to_fix.items())
+    for i, (file_path, errors) in enumerate(file_list):
         print(f"Fixing {file_path} with {len(errors)} errors...")
-        fix_file(file_path, errors, client)
+        success = fix_file(file_path, errors, client)
+        
+        # Delay between files (except for the last one)
+        if i < len(file_list) - 1:
+            print("Waiting 10 seconds to avoid API rate limits...")
+            time.sleep(10)
 
 if __name__ == "__main__":
     main()
