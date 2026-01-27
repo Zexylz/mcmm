@@ -228,14 +228,74 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
-    # Nur bei GitHub Releases ausführen (prereleased/released Events)
     if: github.event_name == 'release'
     steps:
       - uses: actions/checkout@v4
-      - name: Make build script executable
-        run: chmod +x build.sh
-      - uses: dkaser/unraid-plugin-release-action@v1
+
+      - name: Build and Package Plugin
+        id: build
+        run: |
+          # Make build script executable
+          chmod +x build.sh
+          
+          # Run build script to populate src/ directory
+          ./build.sh
+          
+          # Determine version (strip 'v' prefix if present)
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"
+          PACKAGE_NAME="mcmm-plugin"
+          PACKAGE_FILE="${PACKAGE_NAME}-${VERSION}-noarch-1.txz"
+          
+          echo "Building package version: $VERSION"
+          echo "Package file: $PACKAGE_FILE"
+          
+          # Create release directory
+          mkdir -p release
+          
+          # Create txz package from src directory
+          cd src
+          tar --owner=0 --group=0 -cJf "../release/${PACKAGE_FILE}" *
+          cd ..
+          
+          # Calculate checksum
+          CHECKSUM=$(sha256sum "release/${PACKAGE_FILE}" | awk '{print $1}')
+          
+          echo "Package created at: release/${PACKAGE_FILE}"
+          echo "Checksum: $CHECKSUM"
+          
+          # Export variables for next steps
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "CHECKSUM=$CHECKSUM" >> $GITHUB_ENV
+          echo "PACKAGE_FILE=release/$PACKAGE_FILE" >> $GITHUB_ENV
+
+      - name: Generate PLG file
+        uses: dkaser/jinja2-action@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          build_script: ./build.sh
-          changelog_releases: 0
+          template: plugin/plugin.j2
+          output_file: plugin/mcmm.plg
+          data_file: plugin/plugin.json
+        env:
+          PLUGIN_VERSION: ${{ env.VERSION }}
+          # Simple changelog link
+          PLUGIN_CHANGELOG: "Release notes: ${{ github.event.release.html_url }}"
+          PLUGIN_CHECKSUM: ${{ env.CHECKSUM }}
+          PLUGIN_RELEASE: ""
+          PLUGIN_TAG: ${{ github.event.release.tag_name }}
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+          
+      - name: Commit PLG file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add plugin/mcmm.plg
+          # Only commit if there are changes (ignore errors if empty commit)
+          git commit -m "chore: update plugin file for release ${{ github.event.release.tag_name }}" || echo "No changes to commit"
+          git push
+          
+      - name: Upload Package Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.PACKAGE_FILE }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
