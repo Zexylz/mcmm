@@ -265,9 +265,9 @@ jobs:
           echo "Checksum: $CHECKSUM"
           
           # Export variables for next steps
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "CHECKSUM=$CHECKSUM" >> $GITHUB_ENV
-          echo "PACKAGE_FILE=release/$PACKAGE_FILE" >> $GITHUB_ENV
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
+          echo "package_file=release/$PACKAGE_FILE" >> "$GITHUB_OUTPUT"
 
       - name: Generate PLG file
         uses: dkaser/jinja2-action@v1
@@ -276,10 +276,10 @@ jobs:
           output_file: plugin/mcmm.plg
           data_file: plugin/plugin.json
         env:
-          PLUGIN_VERSION: ${{ env.VERSION }}
+          PLUGIN_VERSION: ${{ steps.build.outputs.version }}
           # Simple changelog link
           PLUGIN_CHANGELOG: "Release notes: ${{ github.event.release.html_url }}"
-          PLUGIN_CHECKSUM: ${{ env.CHECKSUM }}
+          PLUGIN_CHECKSUM: ${{ steps.build.outputs.checksum }}
           PLUGIN_RELEASE: ""
           PLUGIN_TAG: ${{ github.event.release.tag_name }}
           GITHUB_CONTEXT: ${{ toJson(github) }}
@@ -296,6 +296,6 @@ jobs:
       - name: Upload Package Asset
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.PACKAGE_FILE }}
+          files: ${{ steps.build.outputs.package_file }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
