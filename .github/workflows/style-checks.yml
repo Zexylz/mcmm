@@ -29,16 +29,24 @@ on:
   pull_request:
     branches: ["main"]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+
 jobs:
   phpcs:
     name: PHPCS
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.phpcs }}
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.5"
+          php-version: "8.4"
           tools: phpcs
           coverage: none
       - run: phpcs --standard=.github/linters/phpcs.xml --extensions=php,page --report=full .
@@ -46,12 +54,13 @@ jobs:
   phpstan:
     name: PHPStan
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.phpstan }}
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.5"
+          php-version: "8.4"
           tools: phpstan
           coverage: none
       - run: phpstan analyse --configuration=.github/linters/phpstan.neon --memory-limit=1G
@@ -59,25 +68,17 @@ jobs:
   eslint:
     name: ESLint
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.eslint }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci --no-audit --no-fund
-
-      - name: Determine changed files (PR only)
-        if: ${{ github.event_name == 'pull_request' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin "${{ github.base_ref }}" --depth=1
-          git diff --name-only "origin/${{ github.base_ref }}"...HEAD > .tmp-changed.txt
-          echo "Changed files:"
-          sed 's/^/ - /' .tmp-changed.txt || true
+      - uses: ./.github/actions/get-changed-files
 
       - name: Run ESLint (changed files on PR; all on push)
         shell: bash
@@ -101,28 +102,25 @@ jobs:
               --format stylish
           fi
 
+      - name: Cleanup temporary files
+        if: always()
+        shell: bash
+        run: rm -rf .tmp-changed.txt || true
+
   stylelint:
     name: Stylelint
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.stylelint }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci --no-audit --no-fund
-
-      - name: Determine changed files (PR only)
-        if: ${{ github.event_name == 'pull_request' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin "${{ github.base_ref }}" --depth=1
-          git diff --name-only "origin/${{ github.base_ref }}"...HEAD > .tmp-changed.txt
-          echo "Changed files:"
-          sed 's/^/ - /' .tmp-changed.txt || true
+      - uses: ./.github/actions/get-changed-files
 
       - name: Extract CSS from .page (line-preserving, PHP-safe, dummy selectors)
         shell: bash
@@ -270,6 +268,7 @@ jobs:
 
             filtered_css=()
             for f in "${css_files[@]}"; do
+              [[ -z "$f" ]] && continue
               [[ "$f" == dist/* ]] && continue
               [[ "$f" == *.min.css ]] && continue
               [[ -f "$f" ]] || continue
@@ -286,9 +285,17 @@ jobs:
               exit 0
             fi
 
+            # Build args array to avoid empty argument issues
+            args=()
+            if [[ ${#filtered_css[@]} -gt 0 ]]; then
+              args+=("${filtered_css[@]}")
+            fi
+            if [[ "$have_tmp" == "true" ]]; then
+              args+=(".tmp-stylelint/**/*.css")
+            fi
+
             npx stylelint \
-              "${filtered_css[@]}" \
-              ".tmp-stylelint/**/*.css" \
+              "${args[@]}" \
               --config .github/linters/.stylelintrc.json \
               --formatter verbose \
               --max-warnings 0
@@ -301,28 +308,25 @@ jobs:
               --max-warnings 0
           fi
 
+      - name: Cleanup temporary files
+        if: always()
+        shell: bash
+        run: rm -rf .tmp-stylelint .tmp-changed.txt || true
+
   htmlhint:
     name: HTMLHint
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.htmlhint }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci --no-audit --no-fund
-
-      - name: Determine changed files (PR only)
-        if: ${{ github.event_name == 'pull_request' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin "${{ github.base_ref }}" --depth=1
-          git diff --name-only "origin/${{ github.base_ref }}"...HEAD > .tmp-changed.txt
-          echo "Changed files:"
-          sed 's/^/ - /' .tmp-changed.txt || true
+      - uses: ./.github/actions/get-changed-files
 
       - name: Prepare HTML (changed .page on PR; all on push)
         shell: bash
@@ -378,3 +382,8 @@ jobs:
             exit 0
           fi
           npx htmlhint --config .github/linters/.htmlhintrc ".tmp-htmlhint/**/*.html"
+
+      - name: Cleanup temporary files
+        if: always()
+        shell: bash
+        run: rm -rf .tmp-htmlhint .tmp-changed.txt || true
