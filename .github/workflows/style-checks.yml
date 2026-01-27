@@ -44,7 +44,7 @@ jobs:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.phpcs }}
     steps:
       - uses: actions/checkout@v6.0.2
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@2.36.0
         with:
           php-version: "8.4"
           tools: phpcs
@@ -58,7 +58,7 @@ jobs:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.phpstan }}
     steps:
       - uses: actions/checkout@v6.0.2
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@2.36.0
         with:
           php-version: "8.4"
           tools: phpstan

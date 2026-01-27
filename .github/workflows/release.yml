@@ -30,7 +30,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v6.2.0
         with:
-          python-version: '3.12'
+          python-version: '3.14'
 
       - name: Install Dependencies
         run: pip install google-generativeai
@@ -160,7 +160,7 @@ jobs:
           echo "package_file=release/$PACKAGE_FILE" >> "$GITHUB_OUTPUT"
 
       - name: Generate PLG file
-        uses: dkaser/jinja2-action@v1
+        uses: dkaser/jinja2-action@v1.4.0
         with:
           template: plugin/plugin.j2
           output_file: plugin/mcmm.plg
@@ -184,7 +184,7 @@ jobs:
           git push origin HEAD:main
           
       - name: Upload Package Asset
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.5.0
         with:
           files: ${{ steps.build.outputs.package_file }}
         env:
