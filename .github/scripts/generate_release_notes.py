@@ -39,7 +39,6 @@ def get_commit_log(from_tag, to_tag):
 def generate_notes(commits, api_key):
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
         
         prompt = f"""
         You are a release note generator. Below is a list of commit messages for a new release.
@@ -55,8 +54,27 @@ def generate_notes(commits, api_key):
         {commits}
         """
         
-        response = model.generate_content(prompt)
-        return response.text.strip()
+        # Try different model versions as fallback
+        models_to_try = [
+            'gemini-1.5-flash', 
+            'gemini-1.5-flash-latest', 
+            'gemini-2.0-flash-exp', 
+            'gemini-1.5-pro'
+        ]
+        
+        last_error = None
+        for model_name in models_to_try:
+            try:
+                print(f"Trying Gemini model: {model_name}...")
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content(prompt)
+                return response.text.strip()
+            except Exception as e:
+                print(f"Model {model_name} failed: {e}")
+                last_error = e
+                continue
+        
+        raise last_error
     except Exception as e:
         print(f"Error calling Gemini: {e}")
         return f"Release notes could not be generated automatically (AI Error: {e}).\n\nChanges:\n{commits}"

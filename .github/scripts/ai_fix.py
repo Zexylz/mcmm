@@ -13,9 +13,7 @@ def fix_file(file_path, errors, api_key):
         return False
 
     genai.configure(api_key=api_key)
-    # Use flash for speed and safety
-    model = genai.GenerativeModel('gemini-1.5-flash')
-
+    
     error_desc = ""
     for err in errors:
         line = err.get('line', '?')
@@ -41,8 +39,30 @@ def fix_file(file_path, errors, api_key):
     """
 
     try:
-        response = model.generate_content(prompt)
-        fixed_content = response.text.strip()
+        # Try different model versions as fallback
+        models_to_try = [
+            'gemini-1.5-flash', 
+            'gemini-1.5-flash-latest', 
+            'gemini-2.0-flash-exp', 
+            'gemini-1.5-pro'
+        ]
+        
+        fixed_content = None
+        last_error = None
+        for model_name in models_to_try:
+            try:
+                print(f"Trying Gemini model: {model_name}...")
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content(prompt)
+                fixed_content = response.text.strip()
+                break
+            except Exception as e:
+                print(f"Model {model_name} failed: {e}")
+                last_error = e
+                continue
+        
+        if not fixed_content:
+            raise last_error
         
         # Basic sanity check: remove markdown code blocks
         if fixed_content.startswith("```"):
