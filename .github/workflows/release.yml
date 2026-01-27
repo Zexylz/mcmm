@@ -207,7 +207,7 @@ jobs:
           body: ${{ steps.changelog.outputs.text }}
           target_commitish: ${{ github.sha }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT }}
 
       # Normale Release bei v* Tag-Push
       - name: Create GitHub Release (tag)
@@ -220,7 +220,7 @@ jobs:
           draft: false
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT }}
 
   # Unraid Plugin Release (generiert .plg und .txz Dateien)
   unraid-plugin:
