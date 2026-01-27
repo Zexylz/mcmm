@@ -30,7 +30,10 @@ def get_commit_log(from_tag, to_tag):
         else:
             cmd = ["git", "log", "-n", "20", "--pretty=format:%s"]
         
-        return subprocess.check_output(cmd).decode("utf-8")
+        commits = subprocess.check_output(cmd).decode("utf-8").split("\n")
+        # Filter out bot commits
+        filtered = [c for c in commits if "chore: update README" not in c and "chore: update plugin file" not in c]
+        return "\n".join(filtered)
     except Exception as e:
         print(f"Error getting commit log: {e}")
         return ""
