@@ -62,12 +62,13 @@ def generate_notes(commits, api_key):
         """
         
         # Try different model versions as fallback
-        # Use exact names from the list if possible
+        # Priority based on user's available models list
         models_to_try = [
-            'gemini-1.5-flash', 
-            'gemini-1.5-flash-8b',
-            'gemini-2.0-flash-exp',
-            'gemini-1.5-pro',
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
+            'gemini-1.5-flash', # Fallback to 1.5 just in case
+            'models/gemini-2.5-flash',
+            'models/gemini-2.0-flash',
             'models/gemini-1.5-flash'
         ]
         
