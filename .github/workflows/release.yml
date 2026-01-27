@@ -81,10 +81,10 @@ jobs:
         id: ai_notes
         uses: reservamos/ai-release-notes-action@v0.0.1
         with:
-          apiKey: ${{ secrets.OPENAI_API_KEY }}
-          model: "gpt-4o"
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          token: ${{ secrets.PAT }}
+          version: ${{ github.ref_name }}
+          language: "en"
 
       # Normale Release bei v* Tag-Push
       - name: Create GitHub Release (tag)
