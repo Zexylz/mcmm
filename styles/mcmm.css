@@ -18,12 +18,14 @@ div.title {
     display: none;
 }
 
-/* stylelint-disable-next-line selector-max-id */
+/* stylelint-disable selector-max-id, selector-id-pattern */
 #displaybox {
     margin: 0;
     padding: 0;
     max-width: 100%;
 }
+
+/* stylelint-enable selector-max-id, selector-id-pattern */
 
 .mcmm-app,
 .mcmm-app * {
@@ -57,34 +59,47 @@ div.title {
     --danger: rgb(248 113 113 / 100%);
     --warning: rgb(251 191 36 / 100%);
     --radius-sm: calc(clamp(8px, 0.6vw, 10px) * var(--ui-scale));
+
     /* small border radius */
     --radius-md: calc(clamp(14px, 1.0vw, 18px) * var(--ui-scale));
+
     /* medium border radius */
     --blur-strength-base: 12px;
     /* base backdrop blur strength */
     --blur-strength: calc(var(--blur-strength-base) * var(--ui-scale));
     /* backdrop blur strength */
     --content-max-width: calc(clamp(1100px, 92vw, 1600px) * var(--ui-scale));
+
     /* max width for main content container */
     --mcmm-icon-60: calc(60px * var(--ui-scale));
+
     /* server row icon size */
     --mcmm-icon-56: calc(56px * var(--ui-scale));
+
     /* mod icon size */
     --mcmm-icon-80: calc(80px * var(--ui-scale));
+
     /* large mod icon size */
     --mcmm-thumb-180: calc(180px * var(--ui-scale));
+
     /* modpack thumb size */
     --mcmm-btn-icon: calc(46px * var(--ui-scale));
+
     /* server action button size */
     --mcmm-btn-icon-sm: calc(44px * var(--ui-scale));
+
     /* server action button size (small screens) */
     --mcmm-page-btn-h: calc(34px * var(--ui-scale));
+
     /* pagination button height */
     --mcmm-page-btn-w: calc(36px * var(--ui-scale));
+
     /* pagination button width */
     --mcmm-pagination-btn-h: calc(32px * var(--ui-scale));
+
     /* pagination button height */
     --gutter: calc(clamp(14px, 2.2vw, 36px) * var(--ui-scale));
+
     /* responsive side padding: min 16px, ideal 2vw, max 32px */
 }
 
@@ -136,6 +151,7 @@ div.title {
     width: 100%;
     margin-bottom: 50px;
     transform: none;
+
     /* IMPORTANT: No transform scaling (prevents scroll stalls on Chromium/Unraid) */
     transform-origin: initial;
 }
@@ -196,6 +212,7 @@ body {
     display: flex;
     justify-content: space-between;
     padding-top: 2rem;
+
     /* vertical spacing kept explicit */
     padding-bottom: 0;
 }
@@ -438,17 +455,17 @@ body {
     align-items: center;
     background: var(--bg-surface);
     border: none;
+
     /* Perf: make this cheap by default */
-    ;
     box-shadow: inset 0 0 0 2px var(--primary);
+
     /* IMPORTANT: Unraid/Chromium backdrop-filter can break borders. Use inset shadow as the border source (reliable). */
-    ;
     border-radius: var(--radius-md);
     display: flex;
     gap: 1.25rem;
     min-height: 92px;
+
     /* Layout: consistent spacing */
-    ;
     overflow: hidden;
     padding: 1.2rem 1.5rem;
     position: relative;
@@ -490,8 +507,8 @@ body {
     bottom: 0;
     width: 14px;
     border-radius: var(--radius-md) 0 0 var(--radius-md);
+
     /* ≈ Icon + Abstand, ggf. feinjustieren */
-    ;
     pointer-events: none;
     z-index: 1;
 }
@@ -536,6 +553,7 @@ body {
     display: flex;
     flex-direction: column;
     flex: 0 0 clamp(240px, 26vw, 340px);
+
     /* consistent width so metrics align vertically */
     min-width: 220px;
 }
@@ -619,8 +637,8 @@ body {
     gap: 1.4rem;
     padding: 0 0.5rem;
     min-width: 280px;
+
     /* less aggressive than 0 2rem; keeps spacing consistent */
-    ;
 }
 
 .mcmm-metric {
@@ -683,6 +701,7 @@ body {
 /* Keep server action area aligned even if optional buttons (Mods) are missing */
 .mcmm-server-actions {
     --actions-gap: 0.55rem;
+
     /* must match your gap */
     gap: var(--actions-gap);
 
@@ -1005,9 +1024,9 @@ body {
 .mcmm-modpack-card {
     background: linear-gradient(135deg, rgb(30 32 45 / 60%), rgb(22 24 35 / 80%));
     backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgb(255 255 255 / 8%);
     border-radius: 12px;
+
     /* Smooth rounded corners */
     cursor: pointer;
     position: relative;
@@ -1044,6 +1063,7 @@ body {
     background-repeat: no-repeat;
     background-size: cover;
     height: 140px;
+
     /* Slightly shorter for better proportions */
     position: relative;
     transition: transform 0.5s ease;
@@ -1059,6 +1079,7 @@ body {
     bottom: 0;
     content: "";
     height: 100%;
+
     /* Full fade for better text readability */
     left: 0;
     position: absolute;
@@ -1152,7 +1173,7 @@ body {
 .mcmm-modpack-card.selected .mcmm-checkbox {
     background: var(--primary);
     border-color: var(--primary);
-    color: white;
+    color: rgb(255 255 255);
     transform: scale(1.1);
 }
 
@@ -1901,6 +1922,7 @@ body {
     color: var(--text-muted);
     cursor: pointer;
     font-size: 1.5rem;
+
     padding: 0;
     transition: color 0.2s;
 }
@@ -2434,11 +2456,10 @@ body {
 
 /* ===== QUEUE PANEL (Redesigned) ===== */
 .mcmm-queue-panel {
-    background: rgba(15, 16, 20, 0.9);
+    background: rgb(15 16 20 / 90%);
     backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.6);
+    border-left: 1px solid rgb(255 255 255 / 10%);
+    box-shadow: -10px 0 30px rgb(0 0 0 / 60%);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -2458,8 +2479,9 @@ body {
 
 .mcmm-queue-header {
     align-items: center;
-    background: rgba(255, 255, 255, 0.03);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgb(255 255 255 / 3%);
+    border-bottom: 1px solid rgb(255 255 255 / 8%);
+
     /* Fainter border */
     display: flex;
     justify-content: space-between;
@@ -2476,8 +2498,8 @@ body {
 }
 
 .mcmm-queue-footer {
-    background: rgba(255, 255, 255, 0.03);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgb(255 255 255 / 3%);
+    border-top: 1px solid rgb(255 255 255 / 8%);
     padding: 1.5rem;
     display: flex;
     gap: 1rem;
@@ -2543,19 +2565,22 @@ body {
 }
 
 /* ===== MISC: ACTIVE FILTER CONTAINER ===== */
-[id="activeFilterContainer"] {
+/* stylelint-disable selector-max-id, selector-id-pattern */
+#activeFilterContainer {
     transition: all 0.2s ease;
 }
 
-[id="activeFilterContainer"]:hover {
+#activeFilterContainer:hover {
     background: rgb(157 78 221 / 20%);
     border-color: var(--primary-hover);
     transform: translateY(-1px);
 }
 
-[id="activeFilterContainer"]:active {
+#activeFilterContainer:active {
     transform: translateY(0);
 }
+
+/* stylelint-enable selector-max-id, selector-id-pattern */
 
 /* ===== BACKUP CARD: INFO + OVERLAY (kept, but removed duplicate grid/card/thumb/info/name overrides) ===== */
 
@@ -2879,7 +2904,7 @@ body {
 /* =========================================================
    CATALOG PAGINATION
    ========================================================= */
-#modpackPagination .mcmm-btn {
+.mcmm-pagination-container .mcmm-btn {
     height: 48px;
     padding: 0 1.8rem;
     display: flex;
@@ -2894,14 +2919,14 @@ body {
     transition: all 0.2s ease;
 }
 
-#modpackPagination .mcmm-btn:not(:disabled):hover {
+.mcmm-pagination-container .mcmm-btn:not(:disabled):hover {
     background: var(--bg-surface-hover);
     border-color: var(--primary);
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgb(0 0 0 / 40%);
 }
 
-#modpackPagination .mcmm-btn:disabled {
+.mcmm-pagination-container .mcmm-btn:disabled {
     opacity: 0.2;
     cursor: not-allowed;
     filter: grayscale(1);
