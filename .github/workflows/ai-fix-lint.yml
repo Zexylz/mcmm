@@ -121,7 +121,7 @@ jobs:
         if: inputs.target == 'css'
         continue-on-error: true
         run: |
-          npx stylelint "**/*.css" ".tmp-stylelint/**/*.css" --config .github/linters/.stylelintrc.json --formatter json > stylelint-report.json || true
+          npx stylelint "**/*.css" ".tmp-stylelint/**/*.css" --config .github/linters/.stylelintrc.json --formatter json --output-file stylelint-report.json || true
           
       - name: Parse Report & Fix with AI
         if: inputs.target == 'css'
