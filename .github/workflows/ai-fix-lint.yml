@@ -42,7 +42,7 @@ jobs:
       - name: Install Dependencies
         run: |
           npm ci --no-audit --no-fund
-          pip install google-generativeai
+          pip install google-genai
           
       # --- CSS FIXING ---
       - name: Extract CSS (Mirror of style-checks)

@@ -2,20 +2,15 @@ import os
 import sys
 import json
 import argparse
-import google.generativeai as genai
+from google import genai
 
-def fix_file(file_path, errors, api_key):
+def fix_file(file_path, errors, client):
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
     except Exception as e:
         print(f"Error reading {file_path}: {e}")
         return False
-
-    genai.configure(api_key=api_key)
-    
-    # Debug: List available models if we hit errors
-    available_models_info = "Unknown"
 
     error_desc = ""
     for err in errors:
@@ -43,14 +38,9 @@ def fix_file(file_path, errors, api_key):
 
     try:
         # Try different model versions as fallback
-        # Priority based on user's available models list
         models_to_try = [
-            'gemini-2.5-flash',
             'gemini-2.0-flash',
-            'gemini-1.5-flash',
-            'models/gemini-2.5-flash',
-            'models/gemini-2.0-flash',
-            'models/gemini-1.5-flash'
+            'gemini-1.5-flash'
         ]
         
         fixed_content = None
@@ -58,8 +48,10 @@ def fix_file(file_path, errors, api_key):
         for model_name in models_to_try:
             try:
                 print(f"Trying Gemini model: {model_name}...")
-                model = genai.GenerativeModel(model_name)
-                response = model.generate_content(prompt)
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
                 fixed_content = response.text.strip()
                 if fixed_content:
                     break
@@ -69,13 +61,10 @@ def fix_file(file_path, errors, api_key):
                 continue
         
         if not fixed_content:
-            # If all failed, try to list models for debugging
-            try:
-                available_models_info = ", ".join([m.name for m in genai.list_models()][:10])
-                print(f"Available models for key: {available_models_info}")
-            except:
-                pass
-            raise last_error
+             print("All models failed to generate a response.")
+             if last_error:
+                 raise last_error
+             return False
         
         # Basic sanity check: remove markdown code blocks
         if fixed_content.startswith("```"):
@@ -100,13 +89,11 @@ def fix_file(file_path, errors, api_key):
             return False
 
         # 2. Syntax Check (php -l)
-        # We need to write to a temp file first to check syntax
         temp_check_path = file_path + ".check.php"
         try:
             with open(temp_check_path, 'w', encoding='utf-8') as f:
                 f.write(fixed_content)
             
-            # Run php -l
             import subprocess
             result = subprocess.run(['php', '-l', temp_check_path], capture_output=True, text=True)
             
@@ -150,46 +137,42 @@ def main():
         sys.exit(1)
 
     try:
+        if not os.path.exists(args.report) or os.path.getsize(args.report) == 0:
+            print(f"Report file {args.report} is empty or missing. Nothing to fix.")
+            return
+
         with open(args.report, 'r') as f:
             report_data = json.load(f)
+    except json.JSONDecodeError:
+        print(f"Error: Report file {args.report} is not a valid JSON. It might be empty or corrupted.")
+        return
     except Exception as e:
         print(f"Error loading report {args.report}: {e}")
         sys.exit(1)
 
-    # Group errors by ORIGINAL file path
-    # This requires the linter output to map back to the original file, 
-    # OR we map the temp file path back to the original.
-    
+    if not report_data:
+        print("Report is empty. Nothing to fix.")
+        return
+
+    client = genai.Client(api_key=api_key)
     files_to_fix = {} 
     
-    # Logic to parse specific linter formats and map temp paths to real paths
-    # This part depends highly on the input JSON format of each linter.
-    # For simplicity, we assume the workflow handles mapping or the "file" argument is mostly used.
-    
-    # Implementation specific to standard JSON outputs:
     if args.linter == 'eslint':
         for item in report_data:
             if item.get('messages'):
-                if real_path not in files_to_fix:
-                    files_to_fix[real_path] = []
-                files_to_fix[real_path].extend(item['messages'])
+                file_path = item.get('filePath')
+                if file_path:
+                    if file_path not in files_to_fix:
+                        files_to_fix[file_path] = []
+                    files_to_fix[file_path].extend(item['messages'])
 
     elif args.linter == 'stylelint':
-        # Stylelint JSON: [ { "source": "...", "warnings": [...] } ]
         for item in report_data:
             path = item.get('source', '')
             if item.get('warnings'):
-                 # Heuristic to find original file from temp extraction
-                 # .tmp-stylelint/path/to/file.page.style.css
-                 # We need to reconstruct 'path/to/file.page'
-                 
-                 # Remove prefix
                  clean_path = path.replace(".tmp-stylelint/", "").replace(".tmp-stylelint\\", "")
-                 # Remove suffixes added by extraction script
-                 # The script adds .style.css or .inline.css
                  clean_path = clean_path.replace(".style.css", "").replace(".inline.css", "")
                  
-                 # Verify file exists
                  if os.path.exists(clean_path):
                      if clean_path not in files_to_fix:
                          files_to_fix[clean_path] = []
@@ -197,10 +180,9 @@ def main():
                  else:
                      print(f"Skipping unknown file mapping: {path} -> {clean_path}")
 
-    # Process each file
     for file_path, errors in files_to_fix.items():
         print(f"Fixing {file_path} with {len(errors)} errors...")
-        fix_file(file_path, errors, api_key)
+        fix_file(file_path, errors, client)
 
 if __name__ == "__main__":
     main()
