@@ -24,8 +24,29 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: pip install openai
+
+      - name: Generate AI Release Notes
+        id: ai_notes
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          python .github/scripts/generate_release_notes.py
+          # Output to GITHUB_ENV for later steps if needed, but we'll use a file
+          echo "NOTES_FILE=release_notes.md" >> "$GITHUB_ENV"
 
       - name: Create Release Package
+        # ... (rest of existing steps)
         shell: bash
         run: |
           set -euo pipefail
@@ -77,26 +98,17 @@ jobs:
           echo "Package contents:"
           unzip -l mcmm-plugin.zip | tail -n +4 | head -n -2
 
-      - name: Generate AI Release Notes
-        id: ai_notes
-        uses: reservamos/ai-release-notes-action@v0.0.1
-        with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          token: ${{ secrets.PAT }}
-          version: ${{ github.ref_name }}
-          language: "en"
-
       # Normale Release bei v* Tag-Push
       - name: Create GitHub Release (tag)
         if: github.ref_type == 'tag'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.5.0
         with:
           files: mcmm-plugin.zip
           tag_name: ${{ github.ref_name }}
           prerelease: false
           draft: false
           generate_release_notes: false
-          body: ${{ steps.ai_notes.outputs.notes }}
+          body_path: release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
 
