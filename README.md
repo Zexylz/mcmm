@@ -29,13 +29,15 @@ configuration, and deployment documentation may be added as the project matures.
 ## Latest Release
 
 <!-- START_RELEASE -->
-## Release Notes v0.0.1
+# Release Notes v0.0.1
 
-### 🛠 Improvements & Refinement
+We are excited to announce the release of **v0.0.1**! This initial release sets the foundation and introduces core updates to get things rolling.
 
-*   Updated the README to include release notes for v0.0.1.
-*   Prepared and updated the plugin file for release v0.0.1.
-*   Introduced internal version management and stability preparations for v0.0.1.
+## 🛠 Improvements & Refinement
+
+*   **Documentation Updates**: The README file has been refreshed to include the latest release notes and information, making it easier to get started.
+*   **Plugin File Preparation**: Essential plugin files have been updated and prepared to ensure a smooth and stable release.
+*   **Codebase Synchronization**: The project codebase has been synchronized, incorporating recent internal developments and maintenance.
 <!-- END_RELEASE -->
 
 ---
