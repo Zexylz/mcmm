@@ -79,12 +79,10 @@ jobs:
 
       - name: Generate AI Release Notes
         id: ai_notes
-        uses: reservamos/ai-release-notes-action@v1.0.0
+        uses: reservamos/ai-release-notes@v1
         with:
           apiKey: ${{ secrets.OPENAI_API_KEY }}
-          model: "gpt-5.2"
-          version: v1.0.0
-          language: "en"
+          model: "gpt-4o"
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
 
