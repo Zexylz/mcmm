@@ -29,24 +29,13 @@ configuration, and deployment documentation may be added as the project matures.
 ## Latest Release
 
 <!-- START_RELEASE -->
-# Release v0.0.4
+## Release Notes v0.0.1
 
-We're excited to announce the release of v0.0.4! This update primarily focuses on essential internal maintenance, versioning, and foundational improvements, paving the way for future enhancements.
+### 🛠 Improvements & Refinement
 
-## 🚀 New Features
-This release concentrates on underlying infrastructure and administrative updates. No new user-facing features are introduced in this version.
-
-## 🛠 Improvements & Refinement
-Key updates in this release include:
-*   **Version Management**: Several internal version bumps across the project (`v0.0.1` through `v0.0.4`) to streamline our release process.
-*   **Plugin File Configuration**: Updates to plugin files for various releases, enhancing internal consistency and build processes.
-
-## 🐛 Bug Fixes
-No specific bug fixes were identified in the commit history for this release.
-
----
-
-Thank you for your continued support!
+*   Updated the README to include release notes for v0.0.1.
+*   Prepared and updated the plugin file for release v0.0.1.
+*   Introduced internal version management and stability preparations for v0.0.1.
 <!-- END_RELEASE -->
 
 ---
