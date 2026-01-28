@@ -882,30 +882,6 @@ async function identifyModsBatch(filenames) {
     }
 }
 
-async function identifyModBackground(filename) {
-    if (!currentServerId) return;
-    try {
-        const res = await fetch(`/plugins/mcmm/api.php?action=identify_mod&id=${currentServerId}&filename=${encodeURIComponent(filename)}`);
-        const data = await res.json();
-        if (data.success && data.data) {
-            console.log(`[MCMM] Successfully identified ${filename} as ${data.data.name}`);
-            // Update the mod in state
-            modState.installed = modState.installed.map(m => {
-                if (m.file === filename) {
-                    return {
-                        ...m,
-                        ...data.data,
-                        needsIdentification: false
-                    };
-                }
-                return m;
-            });
-            if (modState.view === 'installed') renderMods();
-        }
-    } catch (e) {
-        console.error(`[MCMM] Failed to identify ${filename}:`, e);
-    }
-}
 
 function renderMods() {
     const container = document.getElementById('modList');
@@ -2531,7 +2507,6 @@ async function submitDeploy() {
 }
 
 // --- Console ---
-var consoleInterval;
 var currentConsoleId = null;
 var currentConsoleName = null;
 
