@@ -528,6 +528,29 @@ function saveModMetadata($serverId, $modId, $platform, $modName, $fileName, $fil
     $json = json_encode($modsData, JSON_PRETTY_PRINT);
     if (file_put_contents($metaFile, $json) === false) {
         dbg("ERROR: Failed to write metadata to $metaFile");
+    }
+
+    // --- GLOBAL DICTIONARY UPDATE ---
+    $globalFile = '/mnt/user/appdata/mcmm/mod_ids.json';
+    $globalData = [];
+    $globalDir = dirname($globalFile);
+    if (!is_dir($globalDir)) {
+        @mkdir($globalDir, 0777, true);
+    }
+
+    if (file_exists($globalFile)) {
+        $globalData = json_decode(file_get_contents($globalFile), true) ?: [];
+    }
+
+    // Only update if missing or newer info
+    if (!isset($globalData[$modId])) {
+        $globalData[$modId] = [
+            'name' => $modName,
+            'source' => $platform,
+            'icon' => $logo,
+            'description' => $extraData['summary'] ?? '',
+        ];
+        file_put_contents($globalFile, json_encode($globalData, JSON_PRETTY_PRINT));
     } else {
         dbg("Successfully saved metadata for mod $modId");
     }
@@ -2407,6 +2430,13 @@ function handleDeploy(array $config, array $defaults): void
         jsonResponse(['success' => false, 'error' => 'A container with this name already exists'], 409);
     }
 
+    $dataDir = "/mnt/user/appdata/" . $containerName;
+    if (!is_dir($dataDir)) {
+        if (!@mkdir($dataDir, 0777, true)) {
+            jsonResponse(['success' => false, 'error' => "Failed to create data directory: $dataDir"], 500);
+        }
+    }
+
     $port = intval($input['port'] ?? $config['default_port']);
     if ($port < 1 || $port > 65535) {
         $port = 25565;
@@ -2470,9 +2500,10 @@ function handleDeploy(array $config, array $defaults): void
         }
     }
 
-    $dataDir = "/mnt/user/appdata/{$containerName}";
-    if (!is_dir($dataDir)) {
-        @mkdir($dataDir, 0775, true);
+    // --- GLOBAL DICTIONARY PATH ---
+    $globalIdsFile = "/mnt/user/appdata/mcmm/mod_ids.json";
+    if (!is_dir(dirname($globalIdsFile))) {
+        @mkdir(dirname($globalIdsFile), 0777, true);
     }
 
     $flagPvp = boolInput($input['pvp'] ?? $config['default_pvp'], $config['default_pvp']);
@@ -2491,6 +2522,7 @@ function handleDeploy(array $config, array $defaults): void
         'SERVER_IP' => $serverIp,
         'SERVER_PORT' => 25565,
         'QUERY_PORT' => $port,
+        'MEMORY' => $memory,
         'MAX_PLAYERS' => $maxPlayers,
         'ENABLE_WHITELIST' => $whitelist !== '' ? 'TRUE' : 'FALSE',
         'WHITELIST' => $whitelist,

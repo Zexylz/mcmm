@@ -2283,17 +2283,16 @@ try {
                 $source = 'modrinth';
             }
 
-    // Cache the result (found or null)
-            mcmm_cache_set($cacheKey, ['data' => $found, 'source' => $source], 3600 * 24); // Cache for 24 hours
-
             if ($found) {
-                dbg("Matched mod '$filename' to " . ($found['name'] ?? 'unknown') . " via $source");
+                // Extract author/summary if available
                 $extra = [
-                'author' => $found['author'] ?? 'Unknown',
-                'summary' => $found['summary'] ?? '',
-                'downloads' => $found['downloads'] ?? '',
-                'mcVersion' => $found['mcVersion'] ?? ''
+                    'author' => $found['author'] ?? 'Unknown',
+                    'summary' => $found['summary'] ?? '',
+                    'downloads' => $found['downloads'] ?? '',
+                    'mcVersion' => $found['mcVersion'] ?? ''
                 ];
+
+                // Save!
                 saveModMetadata(
                     $id,
                     $found['id'],
@@ -2304,11 +2303,163 @@ try {
                     $found['icon'] ?? '',
                     $extra
                 );
+
+                // Cache for 24h
+                mcmm_cache_set($cacheKey, ['data' => $found, 'source' => $source], 86400);
+
                 jsonResponse(['success' => true, 'data' => $found]);
             } else {
-                jsonResponse(['success' => false, 'error' => 'No match found']);
+                jsonResponse(['success' => false, 'error' => 'Mod not found'], 404);
             }
             break;
+
+        case 'import_manifest':
+            require_once __DIR__ . '/include/mod_manager.php';
+            $id = $_REQUEST['id'] ?? '';
+            $json = $_REQUEST['manifest_json'] ?? '';
+
+            // Handle raw POST body if param is missing
+            if (!$json) {
+                 $input = json_decode(file_get_contents('php://input'), true);
+                if (is_array($input)) {
+                    $id = $input['id'] ?? $id;
+                    $json = $input['manifest_json'] ?? ($input['json'] ?? '');
+                    if (is_array($json)) {
+                        $json = json_encode($json);
+                    }
+                }
+            }
+
+            if (!$id || !$json) {
+                jsonResponse(['success' => false, 'error' => 'Missing ID or manifest JSON'], 400);
+            }
+
+            $data = json_decode($json, true);
+            if (!$data) {
+                 jsonResponse(['success' => false, 'error' => 'Invalid JSON'], 400);
+            }
+
+            // Extract mods
+            $modsToFetch = [];
+            $manifestMap = []; // mid => fileId
+
+            // Format 1: CurseForge manifest.json
+            if (isset($data['files']) && is_array($data['files'])) {
+                foreach ($data['files'] as $f) {
+                    if (isset($f['projectID'])) {
+                        $pid = (int)$f['projectID'];
+                        $fid = (int)($f['fileID'] ?? 0);
+                        $modsToFetch[] = $pid;
+                        $manifestMap[$pid] = $fid;
+                    }
+                }
+            }
+            // Format 2: FTB / Instance (minecraftinstance.json)
+            elseif (isset($data['installedAddons']) && is_array($data['installedAddons'])) {
+                foreach ($data['installedAddons'] as $addon) {
+                    if (isset($addon['addonID'])) {
+                        $pid = (int)$addon['addonID'];
+                        $fid = (int)($addon['installedFile']['id'] ?? 0);
+                        $modsToFetch[] = $pid;
+                        $manifestMap[$pid] = $fid;
+                    }
+                }
+            }
+
+            if (empty($modsToFetch)) {
+                jsonResponse(['success' => false, 'error' => 'No mods found in manifest'], 400);
+            }
+
+            if (empty($config['curseforge_api_key'])) {
+                 jsonResponse(['success' => false, 'error' => 'CurseForge API Key required'], 400);
+            }
+
+            // Batch Fetch details
+            $cfMods = fetchCurseForgeModsBatch($modsToFetch, $config['curseforge_api_key']);
+
+            // Update Metadata
+            $serversDir = '/boot/config/plugins/mcmm/servers';
+            $metaFile = "$serversDir/$id/installed_mods.json";
+
+            $metadata = [];
+            if (file_exists($metaFile)) {
+                $metadata = json_decode(file_get_contents($metaFile), true) ?: [];
+            }
+
+            $doDownload = isset($_REQUEST['download']) && ($_REQUEST['download'] === 'true' || $_REQUEST['download'] === '1');
+            $modsDir = $doDownload ? getContainerModsDir($id) : null;
+            if ($doDownload && !$modsDir) {
+                 $doDownload = false;
+            }
+            if ($doDownload && !is_dir($modsDir)) {
+                @mkdir($modsDir, 0775, true);
+            }
+
+            $count = 0;
+            $downloaded = 0;
+
+            foreach ($cfMods as $mod) {
+                 $pid = $mod['id'];
+                 $fid = $manifestMap[$pid] ?? null;
+
+                 $author = !empty($mod['authors']) ? $mod['authors'][0]['name'] : 'Unknown';
+                 $logo = $mod['logo']['thumbnailUrl'] ?? $mod['logo']['url'] ?? '';
+
+                 // Try to resolve filename from fileID
+                 $fileName = $mod['slug'] . '.jar';
+                if ($fid && !empty($mod['latestFiles'])) {
+                    foreach ($mod['latestFiles'] as $lf) {
+                        if ($lf['id'] == $fid) {
+                            $fileName = $lf['fileName'];
+                            break;
+                        }
+                    }
+                }
+
+                 // Download if requested
+                if ($doDownload && $fid) {
+                    $targetPath = "$modsDir/$fileName";
+                    if (!file_exists($targetPath)) {
+                        $dUrl = getModDownloadUrl((int)$pid, (string)$fid, $config['curseforge_api_key']);
+                        if ($dUrl) {
+                            if (downloadMod($dUrl, $targetPath)) {
+                                @chown($targetPath, 99);
+                                @chgrp($targetPath, 100);
+                                @chmod($targetPath, 0664);
+                                $downloaded++;
+                            } else {
+                                // Log failure but continue
+                                dbg("Failed to download mod: $fileName from $dUrl");
+                            }
+                        }
+                    }
+                }
+
+                 $metadata[$pid] = array_merge([
+                    'modId' => $pid,
+                    'name' => $mod['name'],
+                    'platform' => 'curseforge',
+                    'fileName' => $fileName,
+                    'fileId' => $fid,
+                    'logo' => $logo,
+                    'author' => $author,
+                    'summary' => $mod['summary'] ?? '',
+                    'installedAt' => time()
+                 ], $metadata[$pid] ?? []);
+                 $count++;
+            }
+
+            // Make dir if needed
+            if (!is_dir(dirname($metaFile))) {
+                @mkdir(dirname($metaFile), 0755, true);
+            }
+
+            // Save updated metadata
+            file_put_contents($metaFile, json_encode($metadata, JSON_PRETTY_PRINT));
+
+            jsonResponse(['success' => true, 'count' => $count, 'message' => "Imported metadata for $count mods"]);
+            break;
+
 
         case 'mod_delete':
             $id = $_GET['id'] ?? '';
@@ -2321,7 +2472,7 @@ try {
             $filePath = "$modsDir/" . basename($file); // prevent directory traversal
 
             if (file_exists($filePath) && unlink($filePath)) {
-            // Also remove from metadata
+                // Also remove from metadata
                 $serversDir = '/boot/config/plugins/mcmm/servers';
                 $metaFile = "$serversDir/$id/installed_mods.json";
                 if (file_exists($metaFile)) {
@@ -2352,7 +2503,7 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Missing server ID'], 400);
             }
 
-            $dataDir = getContainerDataDir($id);
+            $dataDir = getContainerDataDirById($id);
             if (!$dataDir) {
                 jsonResponse(['success' => false, 'error' => 'Could not locate server data directory'], 404);
             }
@@ -2369,9 +2520,9 @@ try {
 
             $cacheFile = "$cacheDir/mods_cache.json";
             file_put_contents($cacheFile, json_encode([
-                'timestamp' => time(),
-                'serverId' => $id,
-                'mods' => $mods
+            'timestamp' => time(),
+            'serverId' => $id,
+            'mods' => $mods
             ], JSON_PRETTY_PRINT));
 
             jsonResponse([
@@ -2413,12 +2564,70 @@ try {
 
             // Fresh scan if no valid cache
             if (!$cached) {
-                $dataDir = getContainerDataDir($id);
+                $dataDir = getContainerDataDirById($id);
                 if (!$dataDir) {
                     jsonResponse(['success' => false, 'error' => 'Could not locate server data directory'], 404);
                 }
 
                 $mods = scanServerMods($dataDir);
+
+                // Hydrate with Global Dictionary
+                $globalFile = '/mnt/user/appdata/mcmm/mod_ids.json';
+                $globalData = [];
+                // Ensure directory exists
+                if (!is_dir(dirname($globalFile))) {
+                    @mkdir(dirname($globalFile), 0777, true);
+                }
+
+                if (file_exists($globalFile)) {
+                     $globalData = json_decode(file_get_contents($globalFile), true) ?: [];
+                }
+
+                // Collect missing IDs for batch fetch
+                $missingIds = [];
+                foreach ($mods as &$mod) {
+                    // If modId known but no pretty name/icon in scan, check global
+                    if (!empty($mod['modId']) && isset($globalData[$mod['modId']])) {
+                        $g = $globalData[$mod['modId']];
+                        $mod['name'] = $g['name'] ?? $mod['name'];
+                        $mod['icon'] = $g['icon'] ?? '';
+                        $mod['description'] = $g['description'] ?? '';
+                        $mod['source'] = $g['source'] ?? 'curseforge';
+                    } elseif (!empty($mod['modId']) && is_numeric($mod['modId'])) {
+                        $missingIds[] = (int)$mod['modId'];
+                    }
+                }
+                unset($mod); // break reference
+
+                // Batch fetch from API if we have missing IDs and an API key
+                if (!empty($missingIds) && !empty($config['curseforge_api_key'])) {
+                     $missingIds = array_unique($missingIds);
+                     $fetched = fetchCurseForgeModsBatch($missingIds, $config['curseforge_api_key']);
+
+                     // Update mods array and global dictionary
+                    foreach ($fetched as $f) {
+                        $fid = $f['id'];
+                        // Add to global
+                        $globalData[$fid] = [
+                            'name' => $f['name'],
+                            'source' => 'curseforge',
+                            'icon' => $f['logo']['thumbnailUrl'] ?? $f['logo']['url'] ?? '',
+                            'description' => $f['summary'] ?? ''
+                        ];
+
+                        // Update current list
+                        foreach ($mods as &$m) {
+                            if (isset($m['modId']) && (int)$m['modId'] === $fid) {
+                                $m['name'] = $f['name'];
+                                $m['icon'] = $f['logo']['thumbnailUrl'] ?? $f['logo']['url'] ?? '';
+                                $m['description'] = $f['summary'] ?? '';
+                                $m['source'] = 'curseforge';
+                            }
+                        }
+                    }
+                     // Save updated global dictionary
+                     file_put_contents($globalFile, json_encode($globalData, JSON_PRETTY_PRINT));
+                }
 
                 // Update cache
                 $cacheDir = dirname($cacheFile);
@@ -2426,17 +2635,17 @@ try {
                     @mkdir($cacheDir, 0755, true);
                 }
                 file_put_contents($cacheFile, json_encode([
-                    'timestamp' => time(),
-                    'serverId' => $id,
-                    'mods' => $mods
+                'timestamp' => time(),
+                'serverId' => $id,
+                'mods' => $mods
                 ], JSON_PRETTY_PRINT));
             }
 
             jsonResponse([
-                'success' => true,
-                'data' => $mods,
-                'count' => count($mods),
-                'cached' => $cached
+            'success' => true,
+            'data' => $mods,
+            'count' => count($mods),
+            'cached' => $cached
             ]);
             break;
 
@@ -2455,7 +2664,7 @@ try {
             }
 
             // Get mods list
-            $dataDir = getContainerDataDir($id);
+            $dataDir = getContainerDataDirById($id);
             if (!$dataDir) {
                 jsonResponse(['success' => false, 'error' => 'Could not locate server data directory'], 404);
             }
@@ -2477,8 +2686,8 @@ try {
             // Cache the results
             $cacheFile = "/boot/config/plugins/mcmm/servers/$serverHash/mods_updates.json";
             file_put_contents($cacheFile, json_encode([
-                'timestamp' => time(),
-                'mods' => $modsWithUpdates
+            'timestamp' => time(),
+            'mods' => $modsWithUpdates
             ], JSON_PRETTY_PRINT));
 
             $updatesAvailable = array_filter($modsWithUpdates, function ($m) {
@@ -2509,7 +2718,7 @@ try {
                 jsonResponse(['success' => false, 'error' => 'CurseForge API key not configured'], 400);
             }
 
-            $dataDir = getContainerDataDir($id);
+            $dataDir = getContainerDataDirById($id);
             if (!$dataDir) {
                 jsonResponse(['success' => false, 'error' => 'Could not locate server data directory'], 404);
             }
@@ -2553,10 +2762,10 @@ try {
             @unlink("/boot/config/plugins/mcmm/servers/$serverHash/mods_updates.json");
 
             jsonResponse([
-                'success' => true,
-                'message' => 'Mod updated successfully',
-                'oldFile' => basename($modFile),
-                'newFile' => $newModName
+            'success' => true,
+            'message' => 'Mod updated successfully',
+            'oldFile' => basename($modFile),
+            'newFile' => $newModName
             ]);
             break;
 

@@ -196,6 +196,7 @@ var modState = {
 };
 var modSearchTimer;
 var serverRefreshInterval = null;
+var consoleInterval = null;
 
 // Deploy progress state
 var deployLogInterval = null;
@@ -2523,7 +2524,8 @@ function openConsole(serverId, serverName) {
 
     fetchLogs();
     fetchLogs();
-    // consoleInterval = setInterval(fetchLogs, 2000); // Removed in favor of global polling
+    if (consoleInterval) clearInterval(consoleInterval);
+    consoleInterval = setInterval(fetchLogs, 2000);
 
     document.getElementById('consoleInput').focus();
 }
@@ -2556,7 +2558,10 @@ async function fetchLogs() {
 function closeConsole() {
     document.getElementById('consoleModal').classList.remove('open');
     document.getElementById('consoleModal').classList.remove('open');
-    // if (consoleInterval) clearInterval(consoleInterval); // Handled by global polling check
+    if (consoleInterval) {
+        clearInterval(consoleInterval);
+        consoleInterval = null;
+    }
     currentConsoleId = null;
 }
 
