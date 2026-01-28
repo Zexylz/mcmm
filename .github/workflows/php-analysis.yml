@@ -1,0 +1,35 @@
+name: PHP Static Analysis
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  php-analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6.0.2
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4' # Adjust to Unraid's PHP version if necessary
+        extensions: mbstring, json, curl
+        coverage: none
+
+    - name: PHP Lint
+      run: |
+        find . -name "*.php" -print0 | xargs -0 -n1 php -l
+
+    - name: Install PHPStan
+      run: composer global require phpstan/phpstan
+
+    - name: Run PHPStan
+      run: |
+        # Use a high enough level to catch real problems, but low enough to avoid too many baseline issues
+        /home/runner/.composer/vendor/bin/phpstan analyse api.php include --level 5 --no-progress --error-format=github
