@@ -2260,7 +2260,7 @@ function renderDeployVersions(files) {
     const packImg = (selectedModpack && (selectedModpack.img || selectedModpack.logo || selectedModpack.icon))
         || (document.getElementById('deploy_icon_url')?.value)
         || fallbackIcon;
-    const safePackImg = String(packImg || '').replace(/'/g, "\\'");
+    const safePackImg = String(packImg || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
     if (!files || files.length === 0) {
         list.innerHTML = '<div style="color: var(--text-secondary);">No specific versions found. Using latest available.</div>';
