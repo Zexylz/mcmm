@@ -405,31 +405,45 @@ if (!function_exists('write_ini_file')) {
     function write_ini_file($assoc_arr, $path, $has_sections = false)
     {
         $content = "";
+
+        $formatValue = function ($val) {
+            if (is_bool($val)) {
+                return $val ? 'true' : 'false';
+            }
+            if (is_numeric($val)) {
+                return $val;
+            }
+            if ($val === 'true' || $val === 'false') {
+                return $val;
+            }
+            return '"' . str_replace('"', '\"', (string) $val) . '"';
+        };
+
         if ($has_sections) {
             foreach ($assoc_arr as $key => $elem) {
                 $content .= "[" . $key . "]\n";
                 foreach ($elem as $key2 => $elem2) {
                     if (is_array($elem2)) {
-                        for ($i = 0; $i < count($elem2); $i++) {
-                            $content .= $key2 . "[] = \"" . $elem2[$i] . "\"\n";
+                        foreach ($elem2 as $val) {
+                            $content .= $key2 . "[] = " . $formatValue($val) . "\n";
                         }
-                    } elseif ($elem2 == "") {
+                    } elseif ($elem2 === "") {
                         $content .= $key2 . " = \n";
                     } else {
-                        $content .= $key2 . " = \"" . $elem2 . "\"\n";
+                        $content .= $key2 . " = " . $formatValue($elem2) . "\n";
                     }
                 }
             }
         } else {
             foreach ($assoc_arr as $key => $elem) {
                 if (is_array($elem)) {
-                    for ($i = 0; $i < count($elem); $i++) {
-                        $content .= $key . "[] = \"" . $elem[$i] . "\"\n";
+                    foreach ($elem as $val) {
+                        $content .= $key . "[] = " . $formatValue($val) . "\n";
                     }
-                } elseif ($elem == "") {
+                } elseif ($elem === "") {
                     $content .= $key . " = \n";
                 } else {
-                    $content .= $key . " = \"" . $elem . "\"\n";
+                    $content .= $key . " = " . $formatValue($elem) . "\n";
                 }
             }
         }
@@ -510,10 +524,16 @@ function mcmm_cache_get($key)
 function getRequestData()
 {
     $input = file_get_contents('php://input');
-    $data = json_decode($input, true);
-    if (!$data) {
+    $data = [];
+    if (!empty($input)) {
+        $data = json_decode($input, true) ?: [];
+    }
+
+    // Merge with $_POST if JSON was empty or partial
+    if (empty($data) && !empty($_POST)) {
         $data = $_POST;
     }
+
     return $data;
 }
 
@@ -2027,6 +2047,7 @@ function cfRequest(string $path, string $apiKey, bool $isFullUrl = false, string
 
     $headers = [
         'Accept: application/json',
+        'User-Agent: MCMM/1.0 (mcmm@v-severe.com)',
         'x-api-key: ' . $apiKey
     ];
 

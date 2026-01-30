@@ -3680,7 +3680,7 @@ async function openServerSettings(id) {
     });
 
     try {
-        const res = await fetch('/plugins/mcmm/api.php?action=server_details&id=' + id);
+        const res = await fetch('/plugins/mcmm/api.php?action=server_get&id=' + id);
         const data = await res.json();
 
         if (!data.success) throw new Error(data.error);
@@ -3709,8 +3709,12 @@ async function openServerSettings(id) {
             }
         }
 
-        // Toggles (Env string 'TRUE' -> bool)
-        const isTrue = val => val && val.toUpperCase() === 'TRUE';
+        // Toggles (Handles both 'TRUE' string and actual boolean)
+        const isTrue = val => {
+            if (typeof val === 'boolean') return val;
+            if (typeof val === 'string') return val.toUpperCase() === 'TRUE';
+            return !!val;
+        };
 
         setChecked('edit_pvp', isTrue(env.PVP));
         setChecked('edit_hardcore', isTrue(env.HARDCORE));

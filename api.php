@@ -164,7 +164,8 @@ try {
             dbg("Action: save_settings");
 
             $data = getRequestData();
-            if (!$data) {
+            // If strictly empty (missing/invalid), return error.
+            if ($data === null || (is_array($data) && empty($data) && empty($_POST))) {
                 dbg("Error: No input data found");
                 jsonResponse(['success' => false, 'error' => 'No input data received'], 400);
             }
@@ -199,11 +200,7 @@ try {
 
             foreach ($fields as $field) {
                 if (array_key_exists($field, $data)) {
-                    $val = $data[$field];
-                    if (is_bool($val)) {
-                        $val = $val ? "true" : "false";
-                    }
-                    $existing[$field] = $val;
+                    $existing[$field] = boolInput($data[$field], isset($existing[$field]) ? boolInput($existing[$field]) : false);
                 }
             }
 
@@ -1138,6 +1135,7 @@ try {
             handleDeploy($config, $defaults);
             break;
 
+        case 'server_get':
         case 'server_details':
             $id = $_GET['id'] ?? '';
             if (!$id) {

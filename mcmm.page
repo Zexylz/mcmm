@@ -28,8 +28,13 @@ $docroot = $_SERVER['DOCUMENT_ROOT'] ?? '/usr/local/emhttp';
 if (file_exists("$docroot/plugins/$plugin/include/helpers.php")) {
     require_once "$docroot/plugins/$plugin/include/helpers.php";
 } elseif (file_exists(__DIR__ . '/include/helpers.php')) {
-    // Development fallback
     require_once __DIR__ . '/include/helpers.php';
+}
+
+if (file_exists("$docroot/plugins/$plugin/include/lib.php")) {
+    require_once "$docroot/plugins/$plugin/include/lib.php";
+} elseif (file_exists(__DIR__ . '/include/lib.php')) {
+    require_once __DIR__ . '/include/lib.php';
 }
 
 // Default config values (mirrored in default.cfg, but good to have fallback)
@@ -492,7 +497,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                                 <span class="mcmm-toggle-desc">Balanced JVM tuning for Minecraft</span>
                                             </div>
                                             <label class="mcmm-switch">
-                                                <input type="checkbox" id="default_aikar_flags" <?php echo $config['default_aikar_flags'] ? 'checked' : ''; ?> />
+                                                <input type="checkbox" id="default_aikar_flags" <?php echo boolInput($config['default_aikar_flags']) ? 'checked' : ''; ?> />
                                                 <span class="mcmm-slider"></span>
                                             </label>
                                         </div>
@@ -502,7 +507,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                                 <span class="mcmm-toggle-desc">Aggressive performance tweaks</span>
                                             </div>
                                             <label class="mcmm-switch">
-                                                <input type="checkbox" id="default_meowice_flags" <?php echo $config['default_meowice_flags'] ? 'checked' : ''; ?> />
+                                                <input type="checkbox" id="default_meowice_flags" <?php echo boolInput($config['default_meowice_flags']) ? 'checked' : ''; ?> />
                                                 <span class="mcmm-slider"></span>
                                             </label>
                                         </div>
@@ -512,7 +517,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                                 <span class="mcmm-toggle-desc">Optimize for GraalVM/Quarkus</span>
                                             </div>
                                             <label class="mcmm-switch">
-                                                <input type="checkbox" id="default_graalvm_flags" <?php echo $config['default_graalvm_flags'] ? 'checked' : ''; ?> />
+                                                <input type="checkbox" id="default_graalvm_flags" <?php echo boolInput($config['default_graalvm_flags']) ? 'checked' : ''; ?> />
                                                 <span class="mcmm-slider"></span>
                                             </label>
                                         </div>
@@ -533,7 +538,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                             <span class="mcmm-toggle-desc">Enable permanent death by default</span>
                                         </div>
                                         <label class="mcmm-switch">
-                                            <input type="checkbox" id="default_hardcore" <?php echo $config['default_hardcore'] ? 'checked' : ''; ?> />
+                                            <input type="checkbox" id="default_hardcore" <?php echo boolInput($config['default_hardcore']) ? 'checked' : ''; ?> />
                                             <span class="mcmm-slider"></span>
                                         </label>
                                     </div>
@@ -543,7 +548,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                             <span class="mcmm-toggle-desc">Allow combat between players</span>
                                         </div>
                                         <label class="mcmm-switch">
-                                            <input type="checkbox" id="default_pvp" <?php echo $config['default_pvp'] ? 'checked' : ''; ?> />
+                                            <input type="checkbox" id="default_pvp" <?php echo boolInput($config['default_pvp']) ? 'checked' : ''; ?> />
                                             <span class="mcmm-slider"></span>
                                         </label>
                                     </div>
@@ -553,7 +558,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                             <span class="mcmm-toggle-desc">Allow command block execution</span>
                                         </div>
                                         <label class="mcmm-switch">
-                                            <input type="checkbox" id="default_command_blocks" <?php echo $config['default_command_blocks'] ? 'checked' : ''; ?> />
+                                            <input type="checkbox" id="default_command_blocks" <?php echo boolInput($config['default_command_blocks']) ? 'checked' : ''; ?> />
                                             <span class="mcmm-slider"></span>
                                         </label>
                                     </div>
@@ -563,7 +568,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                             <span class="mcmm-toggle-desc">Permit flying in survival</span>
                                         </div>
                                         <label class="mcmm-switch">
-                                            <input type="checkbox" id="default_allow_flight" <?php echo $config['default_allow_flight'] ? 'checked' : ''; ?> />
+                                            <input type="checkbox" id="default_allow_flight" <?php echo boolInput($config['default_allow_flight']) ? 'checked' : ''; ?> />
                                             <span class="mcmm-slider"></span>
                                         </label>
                                     </div>
@@ -574,7 +579,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                             <span class="mcmm-toggle-desc">Rotate console logs daily</span>
                                         </div>
                                         <label class="mcmm-switch">
-                                            <input type="checkbox" id="default_rolling_logs" <?php echo $config['default_rolling_logs'] ? 'checked' : ''; ?> />
+                                            <input type="checkbox" id="default_rolling_logs" <?php echo boolInput($config['default_rolling_logs']) ? 'checked' : ''; ?> />
                                             <span class="mcmm-slider"></span>
                                         </label>
                                     </div>
@@ -584,7 +589,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                             <span class="mcmm-toggle-desc">Add time to logs</span>
                                         </div>
                                         <label class="mcmm-switch">
-                                            <input type="checkbox" id="default_log_timestamp" <?php echo $config['default_log_timestamp'] ? 'checked' : ''; ?> />
+                                            <input type="checkbox" id="default_log_timestamp" <?php echo boolInput($config['default_log_timestamp']) ? 'checked' : ''; ?> />
                                             <span class="mcmm-slider"></span>
                                         </label>
                                     </div>
@@ -594,7 +599,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                             <span class="mcmm-toggle-desc">Enable direct TTY attach</span>
                                         </div>
                                         <label class="mcmm-switch">
-                                            <input type="checkbox" id="default_direct_console" <?php echo $config['default_direct_console'] ? 'checked' : ''; ?> />
+                                            <input type="checkbox" id="default_direct_console" <?php echo boolInput($config['default_direct_console']) ? 'checked' : ''; ?> />
                                             <span class="mcmm-slider"></span>
                                         </label>
                                     </div>
