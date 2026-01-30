@@ -29,12 +29,12 @@ configuration, and deployment documentation may be added as the project matures.
 ## Latest Release
 
 <!-- START_RELEASE -->
-# v0.0.3 Release Notes
+## Release Notes for v0.0.4
 
-We're excited to announce the release of v0.0.3! This update focuses on foundational content to get things rolling.
+We're pleased to announce the release of v0.0.4! This update brings internal enhancements focused on improving the clarity and maintainability of our codebase.
 
-## 🚀 New Features
-- Initial content and features have been uploaded, setting the stage for future enhancements.
+### 🛠 Improvements & Refinement
+*   **Enhanced Code Comments**: We've added more comprehensive code comments to improve readability and maintainability for future development.
 <!-- END_RELEASE -->
 
 ---
