@@ -29,16 +29,13 @@ configuration, and deployment documentation may be added as the project matures.
 ## Latest Release
 
 <!-- START_RELEASE -->
-# Release Notes for v0.0.1
+# 🚀 v0.0.3 Release Notes
 
-We're pleased to announce the release of v0.0.1! This foundational version marks the initial setup and internal structuring of the project.
+We're thrilled to announce the release of **v0.0.3**! This update focuses on establishing foundational elements crucial for the project's ongoing development.
 
-### 🛠 Improvements & Refinement
+### 🚀 New Features
 
-*   **Initial Versioning Established:** Implemented the core versioning infrastructure, setting the stage for future development cycles.
-*   **Internal Repository Synchronization:** Conducted essential internal merges and repository synchronization activities to ensure a consistent and stable codebase.
-
-This release primarily focuses on behind-the-scenes preparations, laying a solid groundwork for upcoming features and enhancements.
+*   **Initial Content & Foundations:** A core set of files and foundational content has been added to the project, laying the groundwork for upcoming features and functionality.
 <!-- END_RELEASE -->
 
 ---
@@ -98,6 +95,7 @@ still leveraging best-in-class container images for Minecraft server execution.
 ├── mcmm-plugin.zip
 ├── package.json
 ├── release_notes.md
+├── SECURITY.md
 ```
 <!-- END_TREE -->
 
