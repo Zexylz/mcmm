@@ -38,6 +38,7 @@ $defaults = [
     'default_server_name' => 'My Modpack Server',
     'default_port' => 25565,
     'default_memory' => '4G',
+    'default_max_players' => 20,
     'default_whitelist' => '',
     'default_icon_url' => '',
     'default_pvp' => true,
@@ -50,7 +51,7 @@ $defaults = [
     'default_aikar_flags' => true,
     'default_meowice_flags' => false,
     'default_graalvm_flags' => false,
-    'default_ip' => '',
+    'default_ip' => '0.0.0.0',
     'jvm_flags' => ''
 ];
 
@@ -184,8 +185,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                         <span class="mcmm-badge"><?php echo htmlspecialchars($mcVersion); ?></span>
                                         <span class="mcmm-badge secondary"><?php echo htmlspecialchars($loader); ?></span>
                                         <?php if (!empty($server['modpackVersion'])): ?>
-                                            <span class="mcmm-badge info"
-                                                style="background: rgb(14 165 233 / 15%); color: rgb(14 165 233 / 1%); border-color: rgb(14 165 233 / 30%);"><?php echo htmlspecialchars($server['modpackVersion']); ?></span>
+                                            <span class="mcmm-badge" style="background: rgba(139, 92, 246, 0.15); color: rgb(167 139 250 / 100%); border: 1px solid rgba(139, 92, 246, 0.25);" title="Modpack Version"><?php echo htmlspecialchars((string) $server['modpackVersion']); ?></span>
                                         <?php endif; ?>
                                     </div>
                                     <div class="mcmm-server-subtitle">
@@ -412,7 +412,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                     <div class="mcmm-form-group">
                                         <label class="mcmm-label">Default Port</label>
                                         <input type="number" id="default_port" class="mcmm-input"
-                                            value="<?php echo $config['default_port']; ?>" />
+                                            value="<?php echo htmlspecialchars((string) $config['default_port']); ?>" />
                                     </div>
                                     <div class="mcmm-form-group">
                                         <label class="mcmm-label">Default Max Players</label>

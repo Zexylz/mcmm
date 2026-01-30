@@ -2430,20 +2430,24 @@ function renderServerRow(server) {
                         ${server.isRunning ? `${playersOnline} / ${playersMax > 0 ? playersMax : '?'} players` : ''}
                     </span>
                 </div>
-                <div class="mcmm-server-metrics">
-                    <div class="mcmm-metric">
-                        <div class="mcmm-metric-header">
-                            <span>RAM</span>
-                            <span class="mcmm-val-ram">${ramUsedLabel} / ${ramCapLabel}</span>
-                        </div>
-                        <div class="mcmm-progress-bar"><div class="mcmm-bar-ram" style="width: ${ramPercent}%;"></div></div>
+            </div>
+            <div class="mcmm-server-metrics">
+                <div class="mcmm-metric">
+                    <div class="mcmm-metric-label">
+                        <span>RAM</span>
+                        <span class="mcmm-val-ram">${ramUsedLabel} / ${ramCapLabel}</span>
                     </div>
-                    <div class="mcmm-metric">
-                        <div class="mcmm-metric-header">
-                            <span>CPU</span>
-                            <span class="mcmm-val-cpu">${Number(cpuUsage).toFixed(1)}%</span>
-                        </div>
-                        <div class="mcmm-progress-bar"><div class="mcmm-bar-cpu" style="width: ${Math.min(Math.max(cpuUsage, 0), 100)}%;"></div></div>
+                    <div class="mcmm-metric-bar">
+                        <div class="mcmm-metric-fill mcmm-bar-ram" style="width: ${ramPercent}%; background: linear-gradient(90deg, #a855f7, #ec4899);"></div>
+                    </div>
+                </div>
+                <div class="mcmm-metric">
+                    <div class="mcmm-metric-label">
+                        <span>CPU</span>
+                        <span class="mcmm-val-cpu">${Number(cpuUsage).toFixed(1)}%</span>
+                    </div>
+                    <div class="mcmm-metric-bar">
+                        <div class="mcmm-metric-fill mcmm-bar-cpu" style="width: ${Math.min(Math.max(cpuUsage, 0), 100)}%; background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
                     </div>
                 </div>
             </div>
