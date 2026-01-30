@@ -4,7 +4,7 @@
 <PLUGIN 
   name="mcmm"
   author="Zexylz"
-  version="0.0.3"
+  version="0.0.4"
   launch="Tools/MCMM"
   pluginURL="https://raw.githubusercontent.com/Zexylz/mcmm/main/plugin/mcmm.plg"
   support="https://github.com/Zexylz/mcmm/issues"
@@ -15,15 +15,15 @@
 
 <CHANGES>
 <![CDATA[
-Release notes: https://github.com/Zexylz/mcmm/releases/tag/v0.0.3
+Release notes: https://github.com/Zexylz/mcmm/releases/tag/v0.0.4
 
 For older releases, see https://github.com/Zexylz/mcmm/releases
 ]]>
 </CHANGES>
 
-<FILE Name="/boot/config/plugins/mcmm/mcmm-plugin-0.0.3-noarch-1.txz">
-<URL>https://github.com/Zexylz/mcmm/releases/download/v0.0.3/mcmm-plugin-0.0.3-noarch-1.txz</URL>
-<SHA256>c6ebf6ae7eca48d2ba7e78818cccdce8b791764ae492d371283dfcc6fde43852</SHA256>
+<FILE Name="/boot/config/plugins/mcmm/mcmm-plugin-0.0.4-noarch-1.txz">
+<URL>https://github.com/Zexylz/mcmm/releases/download/v0.0.4/mcmm-plugin-0.0.4-noarch-1.txz</URL>
+<SHA256>899f5f1358e8849825ed89b8028c0965866722bf4e10dc869b193b00f687dea9</SHA256>
 </FILE>
 
 <!--
@@ -32,15 +32,15 @@ The 'install' script.
 <FILE Run="/bin/bash">
 <INLINE>
 <![CDATA[
-upgradepkg --install-new /boot/config/plugins/mcmm/mcmm-plugin-0.0.3-noarch-1.txz
+upgradepkg --install-new /boot/config/plugins/mcmm/mcmm-plugin-0.0.4-noarch-1.txz
 
 # cleanup old versions
-rm -f $(ls /boot/config/plugins/mcmm/mcmm-plugin-*.txz 2>/dev/null | grep -v '0.0.3')
+rm -f $(ls /boot/config/plugins/mcmm/mcmm-plugin-*.txz 2>/dev/null | grep -v '0.0.4')
 
 echo ""
 echo "----------------------------------------------------"
 echo " MCMM - Modpack Manager has been installed."
-echo " Version: 0.0.3"
+echo " Version: 0.0.4"
 echo "----------------------------------------------------"
 echo ""
 ]]>
