@@ -197,6 +197,13 @@ jobs:
           echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
           echo "package_file=release/$PACKAGE_FILE" >> "$GITHUB_OUTPUT"
 
+      - name: Prepare Git for PLG update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout main
+
       - name: Generate PLG file
         uses: dkaser/jinja2-action@v1.4.0
         with:
@@ -211,20 +218,14 @@ jobs:
           PLUGIN_TAG: ${{ github.event.release.tag_name }}
           GITHUB_CONTEXT: ${{ toJson(github) }}
           
-      - name: Commit PLG file
+      - name: Commit and Push PLG file
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          git reset --hard origin/main
-          # Re-generate PLG based on latest main to be safe
-          # (The files from previous steps are still in the workspace)
-          git checkout HEAD -- plugin/mcmm.plg || true
           git add plugin/mcmm.plg
           if ! git diff --cached --quiet; then
             git commit -m "chore: update plugin file for release ${{ github.event.release.tag_name }}" || echo "No changes"
             git push origin HEAD:main
           fi
+
           
       - name: Upload Package Asset
         uses: softprops/action-gh-release@v2.5.0
