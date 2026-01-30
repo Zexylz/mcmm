@@ -65,6 +65,11 @@ window.openGlobalSettings = openGlobalSettings;
 window.closeGlobalSettings = closeGlobalSettings;
 window.switchSettingsCategory = switchSettingsCategory;
 
+/**
+ * Opens the global settings modal and activates the first tab.
+ *
+ * @remarks Logs opening to console and initializes internal state.
+ */
 function openGlobalSettings() {
     console.log("MCMM: Opening Global Settings Modal...");
     const modal = document.getElementById('globalSettingsModal');
@@ -77,11 +82,20 @@ function openGlobalSettings() {
     if (firstTab) switchSettingsCategory('general', firstTab);
 }
 
+/**
+ * Closes the global settings modal.
+ */
 function closeGlobalSettings() {
     const modal = document.getElementById('globalSettingsModal');
     if (modal) modal.classList.remove('open');
 }
 
+/**
+ * Switches the active settings category in the global settings modal.
+ *
+ * @param {string} categoryId - The ID of the category to switch to.
+ * @param {HTMLElement} btn - The button element that was clicked.
+ */
 function switchSettingsCategory(categoryId, btn) {
     document.querySelectorAll('.mcmm-side-link').forEach(l => l.classList.remove('active'));
     btn.classList.add('active');
@@ -202,6 +216,9 @@ var consoleInterval = null;
 var deployLogInterval = null;
 // let deployLogContainerId = null;
 
+/**
+ * Starts the global polling for server status updates.
+ */
 function startGlobalPolling() {
     if (!serverRefreshInterval) {
         // Initial load
@@ -211,6 +228,12 @@ function startGlobalPolling() {
 }
 
 // Tab Switching
+/**
+ * Switches between main application tabs.
+ *
+ * @param {string} tabId - The ID of the tab to switch to.
+ * @param {HTMLElement} [element] - Optional element that triggered the switch.
+ */
 function switchTab(tabId, element) {
     const tabElement = element || document.getElementById('tab-main-' + tabId);
     if (tabElement) {
@@ -249,6 +272,11 @@ function switchTab(tabId, element) {
 
 // --- Modpack Logic ---
 
+/**
+ * Renders the list of modpacks into the catalog grid.
+ *
+ * @param {Array} data - The modpack data objects to render.
+ */
 function renderModpacks(data) {
     const grid = document.getElementById('modpackGrid');
     if (!grid) return;
@@ -304,7 +332,7 @@ function renderModpacks(data) {
                  <div class="mcmm-modpack-meta">
                      <span>Standard Server</span>
                      <span class="mcmm-tag" style="background: var(--primary-dim); color: var(--primary-hover);">Official</span>
-                 </div>
+                  </div>
                  <div class="mcmm-modpack-desc" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">Pure Minecraft experience. No mods, just blocks.</div>
             </div>
         `;
@@ -341,6 +369,12 @@ function renderModpacks(data) {
     if (nextBtn) nextBtn.disabled = data.length < modpackState.limit;
 }
 
+/**
+ * Switches the source provider for modpacks (e.g., CurseForge, FTB, Modrinth).
+ *
+ * @param {string} source - The source provider name.
+ * @param {HTMLElement} btn - The button element that was clicked.
+ */
 function switchModpackSource(source, btn) {
     modpackState.source = source;
     modpackState.page = 1;
@@ -355,6 +389,11 @@ function switchModpackSource(source, btn) {
     loadModpacks(document.getElementById('modpackSearch').value);
 }
 
+/**
+ * Changes the current page of the modpack catalog.
+ *
+ * @param {number} delta - The number of pages to move (positive or negative).
+ */
 function changeModpackPage(delta) {
     modpackState.page = Math.max(1, modpackState.page + delta);
     loadModpacks(document.getElementById('modpackSearch').value);
@@ -363,6 +402,12 @@ function changeModpackPage(delta) {
     document.getElementById('modpackGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+/**
+ * Loads modpacks from the API based on current state (source, search, page).
+ *
+ * @param {string} [query=''] - Optional search query.
+ * @returns {Promise<void>}
+ */
 async function loadModpacks(query = '') {
     // If not FTB, we check for API key (Modrinth also doesn't need key)
     if (modpackState.source === 'curseforge' && (typeof mcmmConfig !== 'undefined' && !mcmmConfig.has_api_key)) {
@@ -393,6 +438,9 @@ async function loadModpacks(query = '') {
     }
 }
 
+/**
+ * Filters the modpack catalog based on search input with debouncing.
+ */
 function filterModpacks() {
     const query = document.getElementById('modpackSearch').value;
     clearTimeout(modpackSearchTimer);
@@ -404,6 +452,13 @@ function filterModpacks() {
 
 // --- Mod Manager Logic ---
 
+/**
+ * Opens the mod manager modal for a specific server.
+ *
+ * @param {string} serverId - The unique ID of the server.
+ * @param {string} serverName - The display name of the server.
+ * @returns {Promise<void>}
+ */
 async function openModManager(serverId, serverName) {
     currentServerId = serverId;
     document.getElementById('modManagerSubtitle').textContent = 'Managing: ' + serverName;
@@ -500,11 +555,20 @@ async function openModManager(serverId, serverName) {
     loadMods(''); // Initial search
 }
 
+/**
+ * Closes the mod manager modal.
+ */
 function closeModManager() {
     document.getElementById('modManagerModal').classList.remove('open');
     currentServerId = null;
 }
 
+/**
+ * Switches the active view/tab in the mod manager.
+ *
+ * @param {string} view - The view to switch to ('all', 'installed', 'updates').
+ * @param {HTMLElement} btn - The button element that was clicked.
+ */
 function switchModTab(view, btn) {
     modState.view = view;
     document.querySelectorAll('#modManagerModal .mcmm-tab').forEach(b => b.classList.remove('active'));
@@ -516,6 +580,12 @@ function switchModTab(view, btn) {
     }
 }
 
+/**
+ * Switches the mod source provider in the mod manager.
+ *
+ * @param {string} source - The source provider name ('curseforge', 'modrinth').
+ * @param {HTMLElement} btn - The button element that was clicked.
+ */
 function switchSource(source, btn) {
     modState.source = source;
     document.querySelectorAll('.mcmm-source-btn').forEach(b => b.classList.remove('active'));
@@ -530,11 +600,19 @@ function switchSource(source, btn) {
     }
 }
 
+/**
+ * Clears the active version filter in the mod manager.
+ */
 function clearModFilters() {
     modState.mcVersion = '';
     loadMods(modState.search);
 }
 
+/**
+ * Sets the sort order for search results in the mod manager.
+ *
+ * @param {string} value - The sort field/order.
+ */
 function setModSort(value) {
     modState.sort = value || 'popular';
     modState.page = 1;
@@ -564,6 +642,9 @@ function setModSort(value) {
     renderMods();
 }
 
+/**
+ * Filters the mod list or triggers a new search based on current search input.
+ */
 function filterMods() {
     const query = document.getElementById('modSearchInput').value;
     modState.search = query;
@@ -577,6 +658,12 @@ function filterMods() {
     }
 }
 
+/**
+ * Loads mods from the API based on current search, filters, and pagination.
+ *
+ * @param {string} query - The search query term.
+ * @returns {Promise<void>}
+ */
 async function loadMods(query) {
     if (modState.view !== 'all') return;
 
@@ -690,6 +777,11 @@ async function loadMods(query) {
     }
 }
 
+/**
+ * Checks for available updates for installed mods on the current server.
+ *
+ * @returns {Promise<void>}
+ */
 async function checkForUpdates() {
     if (!currentServerId) return;
     modState.loading = true;
@@ -731,6 +823,12 @@ async function checkForUpdates() {
     }
 }
 
+/**
+ * Loads the list of installed mods for the current server.
+ *
+ * @remarks Triggers identification for unknown mods in parallel batches.
+ * @returns {Promise<void>}
+ */
 async function loadInstalledMods() {
     if (!currentServerId) return;
     try {
@@ -780,6 +878,12 @@ async function loadInstalledMods() {
     }
 }
 
+/**
+ * Renders or updates the mod scanning progress badge.
+ *
+ * @param {number} current - The number of mods currently scanned.
+ * @param {number} total - The total number of mods to scan.
+ */
 function renderScanningBadge(current, total) {
     let badge = document.getElementById('mcmm-scan-badge');
     if (!badge) {
@@ -831,6 +935,12 @@ function renderScanningBadge(current, total) {
     updateScanningBadge(current, total);
 }
 
+/**
+ * Updates the scanning progress bar and text.
+ *
+ * @param {number} current - Number of items processed.
+ * @param {number} total - Total items to process.
+ */
 function updateScanningBadge(current, total) {
     const badge = document.getElementById('mcmm-scan-badge');
     if (!badge) return;
@@ -845,6 +955,9 @@ function updateScanningBadge(current, total) {
     if (barEl) barEl.style.width = `${percent}%`;
 }
 
+/**
+ * Removes the scanning progress badge from the UI with an animation.
+ */
 function removeScanningBadge() {
     const badge = document.getElementById('mcmm-scan-badge');
     if (badge) {
@@ -854,6 +967,12 @@ function removeScanningBadge() {
     }
 }
 
+/**
+ * Identifies a batch of mod filenames by calling the API.
+ *
+ * @param {Array<string>} filenames - List of filenames to identify.
+ * @returns {Promise<void>}
+ */
 async function identifyModsBatch(filenames) {
     if (!currentServerId || !filenames.length) return;
     try {
@@ -884,6 +1003,9 @@ async function identifyModsBatch(filenames) {
 }
 
 
+/**
+ * Renders the current list of mods based on the active view and filters.
+ */
 function renderMods() {
     const container = document.getElementById('modList');
     if (!container) return;
@@ -1068,6 +1190,12 @@ function renderMods() {
     }).join('');
 }
 
+/**
+ * Sorts a list of mods based on the current sort state.
+ *
+ * @param {Array} list - The list of mods to sort.
+ * @returns {Array} The sorted list.
+ */
 function sortMods(list) {
     const items = Array.isArray(list) ? [...list] : [];
     const downloadsVal = (m) => {
@@ -1096,6 +1224,9 @@ function sortMods(list) {
     return items.sort((a, b) => downloadsVal(b) - downloadsVal(a));
 }
 
+/**
+ * Renders the pagination bar for the mod list.
+ */
 function renderModsPagination() {
     const bar = document.getElementById('modsPaginationBar');
     if (!bar) return;
@@ -1138,6 +1269,11 @@ function renderModsPagination() {
     bar.innerHTML = buttons.join('');
 }
 
+/**
+ * Changes the active page for mod search results.
+ *
+ * @param {number|string} page - The target page number.
+ */
 function changeModsPage(page) {
     if (modState.loading) return;
     const target = parseInt(page, 10);
@@ -1159,6 +1295,13 @@ var versionState = {
     modIcon: ''
 };
 
+/**
+ * Opens the version selection modal for a mod.
+ *
+ * @param {string} modId - The ID of the mod.
+ * @param {string} modName - The name of the mod.
+ * @param {HTMLElement} btnElement - The button that triggered the selection.
+ */
 function openVersionSelect(modId, modName, btnElement) {
     versionState.modId = modId;
     versionState.btnElement = btnElement;
@@ -1192,6 +1335,9 @@ function openVersionSelect(modId, modName, btnElement) {
     fetchVersions(modId);
 }
 
+/**
+ * Closes the version selection modal.
+ */
 function closeVersionSelect() {
     document.getElementById('versionSelectModal').classList.remove('open');
     versionState.modId = null;
@@ -1199,6 +1345,12 @@ function closeVersionSelect() {
     versionState.btnElement = null;
 }
 
+/**
+ * Fetches available versions (files) for a specific mod.
+ *
+ * @param {string} modId - The ID of the mod to fetch versions for.
+ * @returns {Promise<void>}
+ */
 async function fetchVersions(modId) {
     try {
         // If MC version/loader are still unknown, fetch fresh server_details once more
@@ -1273,6 +1425,9 @@ async function fetchVersions(modId) {
     }
 }
 
+/**
+ * Renders the available versions of a mod in the selection modal.
+ */
 function renderVersionList() {
     const container = document.getElementById('versionListContainer');
     if (!versionState.files.length) {
@@ -1341,18 +1496,34 @@ function renderVersionList() {
     }).join('');
 }
 
+/**
+ * Updates the selected version file in the state.
+ *
+ * @param {string} fileId - The ID of the file to select.
+ */
 function selectVersionFile(fileId) {
     versionState.selectedFileId = fileId;
     renderVersionList();
     document.getElementById('btnConfirmVersion').disabled = false;
 }
 
+/**
+ * Confirms the selected version and initiates installation.
+ */
 function confirmVersionInstall() {
     if (!versionState.selectedFileId || !versionState.modId) return;
     performModInstall(versionState.modId, versionState.selectedFileId, versionState.btnElement);
     closeVersionSelect();
 }
 
+/**
+ * Triggers the mod installation process by opening the version selection modal.
+ *
+ * @param {string} modId - The ID of the mod to install.
+ * @param {string|HTMLElement} modNameOrBtn - The mod name or the button element.
+ * @param {HTMLElement} [btnElement] - Optional button element.
+ * @returns {Promise<void>}
+ */
 async function installMod(modId, modNameOrBtn, btnElement) {
     if (!currentServerId) return;
 
@@ -1382,6 +1553,14 @@ async function installMod(modId, modNameOrBtn, btnElement) {
     openVersionSelect(modId, name, btn);
 }
 
+/**
+ * Performs the actual mod installation by calling the API.
+ *
+ * @param {string} modId - The ID of the mod to install.
+ * @param {string} fileId - The ID of the specific file to install.
+ * @param {HTMLElement} btnElement - The button element that triggered the install.
+ * @returns {Promise<void>}
+ */
 async function performModInstall(modId, fileId, btnElement) {
     if (!currentServerId) return;
     const btn = btnElement;
@@ -1422,11 +1601,8 @@ async function performModInstall(modId, fileId, btnElement) {
                 btn.textContent = 'Installed';
                 btn.style.background = 'var(--success)';
                 // Don't revert originalText instantly if we want it to stay "Installed"
-                // But renderMods will handle the actual persistent state when called below
+                // But renderMods will handle the actual persistence...
             }
-            await loadInstalledMods(); // Refresh installed list
-            // Force a re-render of the current view to show metadata/installed state
-            renderMods();
         } else {
             alert('Error: ' + data.error);
             if (btn) {
@@ -1448,6 +1624,12 @@ async function performModInstall(modId, fileId, btnElement) {
     }
 }
 
+/**
+ * Deletes a mod from the current server.
+ *
+ * @param {string} fileName - The filename of the mod to delete.
+ * @returns {Promise<void>}
+ */
 async function deleteMod(fileName) {
     if (!currentServerId || !confirm('Delete ' + fileName + '?')) return;
 
@@ -1466,6 +1648,12 @@ async function deleteMod(fileName) {
 
 // --- Deploy Logic ---
 
+/**
+ * Opens the deployment modal for a specific modpack.
+ *
+ * @param {Object} pack - The modpack data object.
+ * @returns {Promise<void>}
+ */
 async function openDeployModal(pack) {
     if (!pack) return;
     selectedModpack = pack;
@@ -1536,6 +1724,12 @@ async function openDeployModal(pack) {
     }
 }
 
+/**
+ * Opens the deployment modal for a vanilla server.
+ *
+ * @remarks Fetches official versions dynamically from Mojang's manifest.
+ * @returns {Promise<void>}
+ */
 async function openVanillaDeploy() {
     const pack = {
         id: -1,
@@ -1624,17 +1818,32 @@ async function openVanillaDeploy() {
     document.getElementById('deployModal').classList.add('open');
 }
 
+/**
+ * Closes the deployment modal.
+ */
 function closeDeploy() {
     document.getElementById('deployModal').classList.remove('open');
     selectedModpack = null;
     setDeployStatus('');
 }
 
+/**
+ * Sets the checked state of a checkbox safely.
+ *
+ * @param {string} id - The ID of the checkbox element.
+ * @param {any} value - The value to set (coerced to boolean).
+ */
 function setChecked(id, value) {
     const el = document.getElementById(id);
     if (el) el.checked = !!value;
 }
 
+/**
+ * Loads default settings from the API.
+ *
+ * @remarks Normalizes boolean-ish strings to real booleans.
+ * @returns {Promise<Object|null>}
+ */
 async function loadSettingsDefaults() {
     if (settingsCache) return settingsCache;
     try {
@@ -1674,6 +1883,12 @@ async function loadSettingsDefaults() {
     return null;
 }
 
+/**
+ * Sets the deployment status message in the UI.
+ *
+ * @param {string} message - The message to display.
+ * @param {boolean} [isError=false] - Whether the message is an error.
+ */
 function setDeployStatus(message, isError = false) {
     const el = document.getElementById('deployStatus');
     if (!el) return;
@@ -1686,6 +1901,12 @@ function setDeployStatus(message, isError = false) {
     el.textContent = message;
 }
 
+/**
+ * Formats console log text into HTML with highlighting and grouping.
+ *
+ * @param {string} text - The raw console log text.
+ * @returns {string} The formatted HTML string.
+ */
 function formatConsoleLog(text) {
     if (!text) return '';
     const lines = String(text).split('\n');
@@ -1784,6 +2005,12 @@ function formatConsoleLog(text) {
     return output;
 }
 
+/**
+ * Handles the context menu (right-click) on console logs to copy text.
+ *
+ * @param {MouseEvent} e - The mouse event.
+ * @param {HTMLElement} el - The log element.
+ */
 function handleLogContextMenu(e, el) {
     e.preventDefault();
     const text = el.innerText;
@@ -1820,6 +2047,11 @@ function handleLogContextMenu(e, el) {
     });
 }
 
+/**
+ * Displays a temporary toast notification message.
+ *
+ * @param {string} message - The message to display.
+ */
 function showToast(message) {
     let toast = document.getElementById('mcmm-toast');
     if (!toast) {
@@ -1834,6 +2066,11 @@ function showToast(message) {
     }, 3000);
 }
 
+/**
+ * Updates the deployment console output with logs.
+ *
+ * @param {string|string[]} lines - The log lines to display.
+ */
 function setDeployConsole(lines) {
     const wrapper = document.getElementById('deployConsole');
     const textEl = document.getElementById('deployConsoleText');
@@ -1849,6 +2086,11 @@ function setDeployConsole(lines) {
 }
 
 // Deploy Progress helpers
+/**
+ * Opens the deployment progress modal.
+ *
+ * @param {string} [subtitle='Starting...'] - The subtitle message to display.
+ */
 function openDeployProgress(subtitle = 'Starting...') {
     document.getElementById('deployProgressSubtitle').textContent = subtitle;
     const steps = document.querySelectorAll('#deploySteps .deploy-step');
@@ -1870,11 +2112,19 @@ function openDeployProgress(subtitle = 'Starting...') {
     document.getElementById('deployProgressModal').classList.add('open');
 }
 
+/**
+ * Closes the deployment progress modal and stops log polling.
+ */
 function closeDeployProgress() {
     stopDeployLogPolling();
     document.getElementById('deployProgressModal').classList.remove('open');
 }
 
+/**
+ * Updates the console output inside the deployment progress modal.
+ *
+ * @param {string} text - The log text to display.
+ */
 function setDeployProgressConsole(text) {
     const el = document.getElementById('deployProgressConsoleText');
     const box = document.getElementById('deployProgressConsole');
@@ -1883,6 +2133,13 @@ function setDeployProgressConsole(text) {
     box.scrollTop = box.scrollHeight;
 }
 
+/**
+ * Updates the state and description of a specific deployment step.
+ *
+ * @param {string} stepKey - The unique key identifying the step.
+ * @param {'active'|'success'|'error'|'pending'} state - The new state of the step.
+ * @param {string} [desc] - Optional description update for the step.
+ */
 function updateDeployStep(stepKey, state, desc) {
     const step = document.querySelector(`#deploySteps .deploy-step[data-step="${stepKey}"]`);
     if (!step) return;
@@ -1911,6 +2168,11 @@ function updateDeployStep(stepKey, state, desc) {
     }
 }
 
+/**
+ * Starts polling deployment logs for a specific container.
+ *
+ * @param {string} containerId - The ID of the container to poll.
+ */
 function startDeployLogPolling(containerId) {
     // deployLogContainerId = containerId;
     if (!containerId) return;
@@ -1929,11 +2191,17 @@ function startDeployLogPolling(containerId) {
     }, 2000);
 }
 
+/**
+ * Stops polling deployment logs.
+ */
 function stopDeployLogPolling() {
     if (deployLogInterval) clearInterval(deployLogInterval);
     deployLogInterval = null;
 }
 
+/**
+ * Finalizes the deployment, closes the progress modal, and switches to the servers tab.
+ */
 function finishDeployAndView() {
     stopDeployLogPolling();
     closeDeployProgress();
@@ -1942,6 +2210,12 @@ function finishDeployAndView() {
     loadServers();
 }
 
+/**
+ * Fetches the list of servers from the API and updates the UI.
+ *
+ * @remarks Handles incremental DOM updates and sorting to maintain a smooth experience.
+ * @returns {Promise<void>}
+ */
 async function loadServers() {
     const container = document.getElementById('tab-servers');
     if (!container) return;
@@ -2103,7 +2377,10 @@ async function loadServers() {
 }
 
 /**
- * Render a single server row (HTML snippet)
+ * Renders a single server row as an HTML snippet.
+ *
+ * @param {Object} server - The server data object.
+ * @returns {string} The HTML string for the server row.
  */
 function renderServerRow(server) {
     const icon = server.icon || "https://media.forgecdn.net/avatars/855/527/638260492657788102.png";
@@ -2149,33 +2426,27 @@ function renderServerRow(server) {
                     <span style="opacity:0.5;">|</span>
                     <span>Port: ${server.ports}</span>
                     <span style="opacity:0.5; ${server.isRunning ? '' : 'display:none;'}">|</span>
-                    <span class="mcmm-val-players" id="players-${server.id}" data-server-id="${server.id}" data-port="${server.ports}" style="${server.isRunning ? '' : 'display:none;'}">
-                        ${playersOnline} / ${playersMax > 0 ? playersMax : '?'} players
+                    <span class="mcmm-val-players" id="players-${server.id}" data-server-id="${server.id}">
+                        ${server.isRunning ? `${playersOnline} / ${playersMax > 0 ? playersMax : '?'} players` : ''}
                     </span>
                 </div>
-            </div>
-            
-            <div class="mcmm-server-metrics">
-                <div class="mcmm-metric">
-                    <div class="mcmm-metric-label">
-                        <span>RAM</span>
-                        <span class="mcmm-val-ram">${ramUsedLabel} / ${ramCapLabel}</span>
+                <div class="mcmm-server-metrics">
+                    <div class="mcmm-metric">
+                        <div class="mcmm-metric-header">
+                            <span>RAM</span>
+                            <span class="mcmm-val-ram">${ramUsedLabel} / ${ramCapLabel}</span>
+                        </div>
+                        <div class="mcmm-progress-bar"><div class="mcmm-bar-ram" style="width: ${ramPercent}%;"></div></div>
                     </div>
-                    <div class="mcmm-metric-bar">
-                        <div class="mcmm-metric-fill mcmm-bar-ram" style="width: ${ramPercent}%; background: linear-gradient(90deg, #a855f7, #ec4899);"></div>
-                    </div>
-                </div>
-                <div class="mcmm-metric">
-                    <div class="mcmm-metric-label">
-                        <span>CPU</span>
-                        <span class="mcmm-val-cpu">${Number(cpuUsage).toFixed(1)}%</span>
-                    </div>
-                    <div class="mcmm-metric-bar">
-                        <div class="mcmm-metric-fill mcmm-bar-cpu" style="width: ${Math.min(Math.max(cpuUsage, 0), 100)}%; background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
+                    <div class="mcmm-metric">
+                        <div class="mcmm-metric-header">
+                            <span>CPU</span>
+                            <span class="mcmm-val-cpu">${Number(cpuUsage).toFixed(1)}%</span>
+                        </div>
+                        <div class="mcmm-progress-bar"><div class="mcmm-bar-cpu" style="width: ${Math.min(Math.max(cpuUsage, 0), 100)}%;"></div></div>
                     </div>
                 </div>
             </div>
-            
             <div class="mcmm-server-actions">
                 ${server.isRunning ? `
                     <button class="mcmm-btn-icon danger" title="Stop Server" onclick="controlServer('${server.id}', 'stop', true)"><span class="material-symbols-outlined">stop</span></button>
@@ -2188,45 +2459,51 @@ function renderServerRow(server) {
                 `}
                 ${loaderRaw.toLowerCase() !== 'vanilla' ? `
                     <button class="mcmm-btn-icon" title="Mods" onclick="openModManager('${server.id}', '${server.name}')"><span class="material-symbols-outlined">extension</span></button>
-                ` : ''}
+                ` : ''
+        }
                 <button class="mcmm-btn-icon" title="Backup" onclick="createBackup('${server.id}')"><span class="material-symbols-outlined">cloud_upload</span></button>
                 <button class="mcmm-btn-icon" title="Settings" onclick="openServerSettings('${server.id}')"><span class="material-symbols-outlined">settings</span></button>
                 <button class="mcmm-btn-icon danger" title="Delete Server" onclick="deleteServer('${server.id}')"><span class="material-symbols-outlined">delete</span></button>
-            </div>
-        </div>
-    `;
+            </div >
+        </div >
+        `;
 }
 
+/**
+ * Renders the server status dashboard view.
+ *
+ * @param {Object[]} servers - Array of server data objects.
+ */
 function renderServers(servers) {
     const container = document.getElementById('tab-servers');
     if (!container) return;
 
     if (!servers || servers.length === 0) {
         container.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <h2 style="font-size: 1.25rem;">Servers Status</h2>
                 <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog')">
                     Deploy New Server
                 </button>
             </div>
-            <div class="mcmm-empty">
-                <span class="material-symbols-outlined" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;">dns</span>
-                <h3>No servers found</h3>
-                <p>Get started by deploying your first modpack server.</p>
-                <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog')">Browse Catalog</button>
-            </div>
-        `;
+        <div class="mcmm-empty">
+            <span class="material-symbols-outlined" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;">dns</span>
+            <h3>No servers found</h3>
+            <p>Get started by deploying your first modpack server.</p>
+            <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog')">Browse Catalog</button>
+        </div>
+    `;
         return;
     }
 
     let html = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 style="font-size: 1.25rem;">Servers Status</h2>
-            <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog')">
-                Deploy New Server
-            </button>
-        </div>
-        <div class="mcmm-server-list" id="serverListContainer">
+                <h2 style="font-size: 1.25rem;">Servers Status</h2>
+                <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog')">
+                    Deploy New Server
+                </button>
+            </div>
+            <div class="mcmm-server-list" id="serverListContainer">
     `;
 
     const sortedServers = [...servers].sort((a, b) => {
@@ -2250,6 +2527,11 @@ function renderServers(servers) {
 }
 
 // Render Modpack version buttons in deploy modal
+/**
+ * Renders modpack version buttons inside the deployment modal.
+ *
+ * @param {Object[]} files - Array of modpack version/file objects.
+ */
 function renderDeployVersions(files) {
     const list = document.getElementById('deployVersionList');
     const status = document.getElementById('deployVersionStatus');
@@ -2285,7 +2567,7 @@ function renderDeployVersions(files) {
         const javaVer = pickJavaVersionLocal(firstMcVersion);
 
         return `
-            <button class="mcmm-version-card ${typeClass} ${isSelected ? 'selected' : ''}" data-file-id="${file.id}" onclick="setDeployVersion('${file.id}', this)">
+        <button class="mcmm-version-card ${typeClass} ${isSelected ? 'selected' : ''}" data-file-id="${file.id}" onclick="setDeployVersion('${file.id}', this)">
                 <div class="mcmm-version-thumb" style="background-image: url('${safePackImg}');"></div>
                 <div class="mcmm-version-main">
                     <div class="mcmm-version-name">${file.displayName}</div>
@@ -2312,6 +2594,12 @@ function renderDeployVersions(files) {
     }
 }
 
+/**
+ * Picks the recommended Java version based on the Minecraft version.
+ *
+ * @param {string} mcVersion - The Minecraft version string.
+ * @returns {string} The Java version (e.g., '8', '11', '17', '21').
+ */
 function pickJavaVersionLocal(mcVersion) {
     if (!mcVersion || mcVersion === 'LATEST' || mcVersion === 'SNAPSHOT') return '21';
     const v = mcVersion.split('.').map(Number);
@@ -2323,6 +2611,12 @@ function pickJavaVersionLocal(mcVersion) {
     return '8';
 }
 
+/**
+ * Sets the selected deployment version and updates hidden fields.
+ *
+ * @param {string} fileId - The ID of the version/file.
+ * @param {HTMLElement} buttonEl - The button element that was clicked.
+ */
 function setDeployVersion(fileId, buttonEl) {
     const hidden = document.getElementById('deploy_version');
     const javaHidden = document.getElementById('deploy_java_version');
@@ -2368,6 +2662,12 @@ function setDeployVersion(fileId, buttonEl) {
     }
 }
 
+/**
+ * Submits the deployment request to the API.
+ * 
+ * @remarks Handles both jQuery.ajax (for Unraid compatibility) and fetch fallback.
+ * @returns {Promise<void>}
+ */
 async function submitDeploy() {
     if (!selectedModpack) return;
     setDeployStatus('Deploying server...', false);
@@ -2511,6 +2811,12 @@ async function submitDeploy() {
 var currentConsoleId = null;
 var currentConsoleName = null;
 
+/**
+ * Opens the console modal for a specific server and starts log polling.
+ *
+ * @param {string} serverId - The ID of the server.
+ * @param {string} serverName - The name of the server.
+ */
 function openConsole(serverId, serverName) {
     const modal = document.getElementById('consoleModal');
     const output = document.getElementById('consoleOutput');
@@ -2530,6 +2836,11 @@ function openConsole(serverId, serverName) {
     document.getElementById('consoleInput').focus();
 }
 
+/**
+ * Fetches server console logs from the API and updates the UI.
+ *
+ * @returns {Promise<void>}
+ */
 async function fetchLogs() {
     if (!currentConsoleId) return;
     try {
@@ -2543,7 +2854,7 @@ async function fetchLogs() {
             let cleanLogs = (data.logs || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, ''); // eslint-disable-line no-control-regex
 
             // Prepend Server Header
-            const headerLine = `[ Server Console ] - ${currentConsoleName || 'Minecraft Server'}\n`;
+            const headerLine = `[Server Console ]- ${currentConsoleName || 'Minecraft Server'} \n`;
             output.innerHTML = formatConsoleLog(headerLine + cleanLogs);
 
             if (wasAtBottom) {
@@ -2555,14 +2866,14 @@ async function fetchLogs() {
     }
 }
 
+/**
+ * Closes the console modal and stops log polling.
+ */
 function closeConsole() {
-    document.getElementById('consoleModal').classList.remove('open');
-    document.getElementById('consoleModal').classList.remove('open');
-    if (consoleInterval) {
-        clearInterval(consoleInterval);
-        consoleInterval = null;
-    }
+    if (consoleInterval) clearInterval(consoleInterval);
+    consoleInterval = null;
     currentConsoleId = null;
+    document.getElementById('consoleModal').classList.remove('open');
 }
 
 // --- Players Modal ---
@@ -2570,49 +2881,68 @@ var localCurrentPlayers = [];
 var localCurrentServerId = null;
 var currentPlayersTab = 'active';
 
-async function openPlayersModal(serverId, serverName, port) {
+/**
+ * Opens the players management modal and fetches player data.
+ *
+ * @param {string} serverId - The ID of the server.
+ * @param {string} serverName - The name of the server.
+ * @param {string} port - The server port.
+ */
+function openPlayersModal(serverId, serverName, port) {
     const modal = document.getElementById('playersModal');
-    const searchInput = document.getElementById('playerSearch');
-    const titleEl = modal?.querySelector('.mcmm-modal-title');
+    document.getElementById('playersTitle').textContent = serverName + ' - Players';
+    currentPlayersId = serverId;
+    currentPlayersName = serverName;
+    currentPlayersPort = port;
 
-    if (!modal) return;
     modal.classList.add('open');
-    if (searchInput) searchInput.value = '';
-
-    localCurrentServerId = serverId;
-    currentPlayersTab = 'active';
-
-    if (titleEl) {
-        const displayTitle = serverName || (port ? `Server (Port ${port})` : "Scanning Players...");
-        titleEl.textContent = displayTitle;
-    }
-
-    updatePlayerTabIndicator();
+    currentPlayerTab = 'online';
     fetchTabPlayers();
 }
 
-function updatePlayerTabIndicator() {
-    const activeTab = document.getElementById('tab-active');
-    const bannedTab = document.getElementById('tab-banned');
-    if (!activeTab || !bannedTab) return;
+/**
+ * Updates the UI highlights and counts for player management tabs.
+ *
+ * @param {Object} [data] - The player data containing counts.
+ */
+function updatePlayerTabIndicator(data) {
+    const tabs = document.querySelectorAll('.mcmm-player-tab');
+    tabs.forEach(tab => {
+        const type = tab.getAttribute('data-tab');
+        tab.classList.toggle('active', type === currentPlayerTab);
 
-    if (currentPlayersTab === 'active') {
-        activeTab.classList.add('active');
-        activeTab.style.borderBottomColor = 'var(--accent-primary)';
-        activeTab.style.color = 'var(--text-main)';
-        bannedTab.classList.remove('active');
-        bannedTab.style.borderBottomColor = 'transparent';
-        bannedTab.style.color = 'var(--text-muted)';
+        if (data) {
+            const countEl = tab.querySelector('.mcmm-tab-count');
+            if (countEl) {
+                if (type === 'online') {
+                    countEl.textContent = data.online ? data.online.length : 0;
+                    countEl.style.display = 'inline-flex';
+                } else if (type === 'banned') {
+                    countEl.textContent = data.banned ? data.banned.length : 0;
+                    countEl.style.display = 'inline-flex';
+                } else {
+                    countEl.style.display = 'none';
+                }
+            }
+        }
+    });
+
+    const searchInput = document.getElementById('playerSearchInput');
+    if (currentPlayerTab === 'online') {
+        searchInput.placeholder = "Search online players...";
+    } else if (currentPlayerTab === 'banned') {
+        searchInput.placeholder = "Search banned players...";
     } else {
-        bannedTab.classList.add('active');
-        bannedTab.style.borderBottomColor = 'var(--accent-primary)';
-        bannedTab.style.color = 'var(--text-main)';
-        activeTab.classList.remove('active');
-        activeTab.style.borderBottomColor = 'transparent';
-        activeTab.style.color = 'var(--text-muted)';
+        searchInput.placeholder = "Search history...";
     }
 }
 
+/**
+ * Switches the active player tab (online, banned, history).
+ *
+ * @param {'online'|'banned'|'history'} tab - The tab to switch to.
+ * @returns {Promise<void>}
+ */
 async function switchPlayerTab(tab) {
     if (currentPlayersTab === tab) return;
     currentPlayersTab = tab;
@@ -2620,155 +2950,165 @@ async function switchPlayerTab(tab) {
     fetchTabPlayers();
 }
 
-async function fetchTabPlayers(quiet = false) {
-    const body = document.getElementById('playersBody');
-    const serverId = localCurrentServerId;
-    if (!body || !serverId) return;
-
-    // Only show spinner if not quiet update
-    if (!quiet) {
-        body.innerHTML = `
-            <div style="text-align:center; padding: 4rem 2rem; color: var(--text-secondary);">
-                <div class="mcmm-spinner" style="width: 24px; height: 24px;"></div>
-                <div style="margin-top: 1rem; font-weight: 500; font-size: 0.85rem; opacity: 0.8;">FETCHING DATA...</div>
-            </div>
-        `;
-    }
+/**
+ * Fetches player data for the currently active tab from the API.
+ *
+ * @returns {Promise<void>}
+ */
+async function fetchTabPlayers() {
+    const container = document.getElementById('playersList');
+    container.innerHTML = '<div style="color: var(--text-secondary); padding: 1rem;">Scanning players...</div>';
+    updatePlayerTabIndicator();
 
     try {
-        const action = currentPlayersTab === 'active' ? 'server_players' : 'server_banned_players';
-        const res = await fetch(`/plugins/mcmm/api.php?action=${action}&id=${encodeURIComponent(serverId)}`);
+        const res = await fetch(`/plugins/mcmm/api.php?action=players&id=${currentPlayersId}&port=${currentPlayersPort}`);
         const data = await res.json();
-
         if (data.success) {
-            if (currentPlayersTab === 'active') {
-                localCurrentPlayers = data.data.players || [];
-                renderPlayers(localCurrentPlayers, data.data.online, data.data.max);
-            } else {
-                localCurrentPlayers = data.data || [];
-                renderPlayers(localCurrentPlayers);
-            }
+            lastPlayersData = data.data;
+            renderPlayers();
+            updatePlayerTabIndicator(data.data);
         } else {
-            body.innerHTML = `<div style="padding: 3rem; text-align:center; color: var(--danger); font-weight:600;">ERROR: ${data.error}</div>`;
+            container.innerHTML = '<div class="mcmm-error">Failed to fetch player data</div>';
         }
     } catch (e) {
-        body.innerHTML = `<div style="padding: 3rem; text-align:center; color: var(--danger);">ERROR: ${e.message}</div>`;
+        container.innerHTML = '<div class="mcmm-error">Connection error</div>';
     }
 }
 
+/**
+ * Reloads player data for the current server.
+ */
 function refreshPlayers() {
-    if (localCurrentServerId) {
-        openPlayersModal(localCurrentServerId, null);
-        fetchTabPlayers(false); // Force reload with spinner
-    }
+    fetchTabPlayers();
 }
 
+/**
+ * Filters the displayed players based on search input.
+ */
 function filterPlayers() {
-    const q = document.getElementById('playerSearch').value.toLowerCase();
-    const filtered = localCurrentPlayers.filter(p => {
-        const name = (p.name || p).toLowerCase();
-        return name.includes(q);
-    });
-    renderPlayers(filtered);
+    const query = document.getElementById('playerSearchInput').value.toLowerCase();
+
+    // The filter applies whenever the user types, but we only re-render if we have data
+    if (lastPlayersData) {
+        renderPlayers(query);
+    }
 }
 
-function renderPlayers(players, onlineCount = null, maxCount = null) {
-    const body = document.getElementById('playersBody');
-    const badge = document.getElementById('playerTotalBadge');
-    const serverId = localCurrentServerId;
+/**
+ * Renders the player list based on the active tab and search query.
+ *
+ * @param {string} [query=''] - The search filter query.
+ */
+function renderPlayers(query = '') {
+    const container = document.getElementById('playersList');
+    if (!lastPlayersData) return;
 
-    if (currentPlayersTab === 'active' && onlineCount !== null && badge) {
-        badge.textContent = `${onlineCount} / ${maxCount || '?'}`;
-        badge.style.opacity = '1';
-    } else if (badge) {
-        badge.style.opacity = '0';
+    let players = [];
+    if (currentPlayerTab === 'online') players = lastPlayersData.online || [];
+    else if (currentPlayerTab === 'banned') players = lastPlayersData.banned || [];
+    else players = lastPlayersData.history || [];
+
+    if (query) {
+        players = players.filter(p => p.name.toLowerCase().includes(query));
     }
 
-    if (!players || players.length === 0) {
-        const msg = currentPlayersTab === 'active' ? 'SERVER IS EMPTY' : 'NO BANNED PLAYERS';
-        body.innerHTML = `<div style="padding: 4rem 2rem; text-align:center; color: var(--text-muted); font-weight: 500; font-size: 0.85rem; opacity: 0.5;">${msg}</div>`;
+    if (players.length === 0) {
+        container.innerHTML = `
+            <div class="mcmm-empty-players">
+                <span class="material-symbols-outlined">person_off</span>
+                <p>No players found in this category.</p>
+            </div>
+        `;
         return;
     }
 
-    const items = players.map(p => {
-        const name = p.name || p;
-        const headUrl = `https://cravatar.eu/helmavatar/${encodeURIComponent(name)}/96.png`;
-        const isOp = !!p.isOp;
-        const opAction = isOp ? 'deop' : 'op';
-        const opLabel = isOp ? 'Deop' : 'Op';
-
-        let buttons = '';
-        if (currentPlayersTab === 'active') {
-            buttons = `
-                <button class="mcmm-btn-minimal" onclick="whisperPlayer('${serverId}', '${name}')">Chat</button>
-                <button class="mcmm-btn-minimal" onclick="playerAction('${serverId}', '${name}', '${opAction}')">${opLabel}</button>
-                <button class="mcmm-btn-minimal danger" onclick="playerAction('${serverId}', '${name}', 'kick')">Kick</button>
-                <button class="mcmm-btn-minimal danger" onclick="playerAction('${serverId}', '${name}', 'ban')">Ban</button>
-            `;
-        } else {
-            buttons = `
-                <button class="mcmm-btn-minimal" onclick="playerAction('${serverId}', '${name}', 'unban')">Unban</button>
-            `;
-        }
+    container.innerHTML = players.map(p => {
+        const isBanned = currentPlayerTab === 'banned';
+        const isOnline = currentPlayerTab === 'online';
 
         return `
-            <div class="mcmm-player-item">
-                <img src="${headUrl}" class="mcmm-player-avatar" alt="">
-                <div class="mcmm-player-details">
-                    <div class="mcmm-player-name-text" onclick="copyToClipboard('${name}', 'Name copied')" style="cursor: pointer;" title="Click to copy">${name}</div>
-                    <div class="mcmm-player-status-row">
-                        <div class="mcmm-dot-static" style="background: ${currentPlayersTab === 'active' ? '#50fa7b' : '#ff5555'}"></div>
-                        <div class="mcmm-player-role-label ${isOp ? 'is-op' : ''}">${currentPlayersTab === 'active' ? (isOp ? 'Operator' : 'Member') : 'Banned'}</div>
+            <div class="mcmm-player-row">
+                <div class="mcmm-player-avatar">
+                   <img src="https://mc-heads.net/avatar/${p.name}/40" alt="${p.name}">
+                </div>
+                <div class="mcmm-player-info">
+                    <div class="mcmm-player-name">
+                        ${p.name}
+                        ${isOnline ? '<span class="mcmm-player-status-dot online"></span>' : ''}
+                    </div>
+                    <div class="mcmm-player-meta">
+                        ${isBanned ? `Banned on: ${p.date || 'Unknown'}` : (p.lastSeen ? `Last seen: ${p.lastSeen}` : 'Player')}
                     </div>
                 </div>
-                <div class="mcmm-player-actions-minimal">
-                    ${buttons}
+                <div class="mcmm-player-actions">
+                    ${isOnline ? `
+                        <button class="mcmm-btn-icon" title="Whisper" onclick="whisperPlayer('${p.name}')"><span class="material-symbols-outlined">chat</span></button>
+                        <button class="mcmm-btn-icon danger" title="Kick" onclick="playerAction('kick', '${p.name}')"><span class="material-symbols-outlined">logout</span></button>
+                    ` : ''}
+                    
+                    ${isBanned ? `
+                        <button class="mcmm-btn-icon success" title="Unban" onclick="playerAction('unban', '${p.name}')"><span class="material-symbols-outlined">gavel</span></button>
+                    ` : `
+                        <button class="mcmm-btn-icon danger" title="Ban" onclick="playerAction('ban', '${p.name}')"><span class="material-symbols-outlined">gavel</span></button>
+                    `}
                 </div>
             </div>
         `;
     }).join('');
-
-    body.innerHTML = `<div class="mcmm-player-list">${items}</div>`;
 }
 
+/**
+ * Closes the players management modal.
+ */
 function closePlayersModal() {
-    const modal = document.getElementById('playersModal');
-    if (modal) modal.classList.remove('open');
-    localCurrentPlayers = [];
-    localCurrentServerId = null;
-    const badge = document.getElementById('playerTotalBadge');
-    if (badge) badge.style.opacity = '0';
+    currentPlayersId = null;
+    document.getElementById('playersModal').classList.remove('open');
 }
 
-async function playerAction(serverId, playerName, action) {
+/**
+ * Performs an action on a player (kick, ban, unban).
+ *
+ * @param {'kick'|'ban'|'unban'} action - The action to perform.
+ * @param {string} playerName - The name of the player.
+ * @returns {Promise<void>}
+ */
+async function playerAction(action, playerName) {
+    if (!currentPlayersId) return;
+
+    if (action === 'ban' && !confirm(`Are you sure you want to ban ${playerName}?`)) return;
+
     try {
-        const res = await fetch(`/plugins/mcmm/api.php?action=server_player_action&id=${encodeURIComponent(serverId)}&player=${encodeURIComponent(playerName)}&player_action=${encodeURIComponent(action)}`);
+        const res = await fetch(`/plugins/mcmm/api.php?action=player_action&id=${currentPlayersId}&type=${action}&player=${playerName}`);
         const data = await res.json();
-        if (!data.success) {
-            alert('Error: ' + (data.error || 'command failed'));
+        if (data.success) {
+            showToast(`Player ${playerName} ${action}ed`);
+            fetchTabPlayers();
         } else {
-            showToast(`${action.toUpperCase()} command executed`);
-            refreshPlayers();
+            alert('Error: ' + data.error);
         }
     } catch (e) {
-        alert('Error: ' + e.message);
+        alert('Action failed');
     }
 }
 
-async function whisperPlayer(serverId, playerName) {
-    const msg = prompt(`Message to ${playerName}:`);
+/**
+ * Prompts the user to whisper a message to a player.
+ *
+ * @param {string} playerName - The name of the player.
+ */
+function whisperPlayer(playerName) {
+    const msg = prompt(`Enter message for ${playerName}: `);
     if (msg) {
-        try {
-            const res = await fetch(`/plugins/mcmm/api.php?action=server_player_action&id=${encodeURIComponent(serverId)}&player=${encodeURIComponent(playerName)}&player_action=whisper&message=${encodeURIComponent(msg)}`);
-            const data = await res.json();
-            if (data.success) showToast(`Message sent`);
-            else alert('Error: ' + data.error);
-        } catch (e) {
-            alert('Error: ' + e.message);
-        }
+        playerAction('whisper', playerName + ' ' + msg);
     }
 }
 
+/**
+ * Copies the specified text to the clipboard and shows a toast notification.
+ * 
+ * @param {string} text - The text to copy.
+ * @param {string} [successMsg] - Optional message to show in the toast on success.
+ */
 function copyToClipboard(text, successMsg) {
     if (navigator.clipboard) {
         navigator.clipboard.writeText(text).then(() => showToast(successMsg || 'Copied!'));
@@ -2784,6 +3124,13 @@ function copyToClipboard(text, successMsg) {
 }
 
 // --- Server Control ---
+/**
+ * Sends a control command (start, stop, etc.) to a server.
+ * 
+ * @param {string} id - The ID of the server to control.
+ * @param {string} action - The action command (e.g., 'start', 'stop').
+ * @param {boolean} [skipConfirm=false] - Whether to skip the confirmation prompt.
+ */
 function controlServer(id, action, skipConfirm = false) {
     if (!skipConfirm && !confirm(`Are you sure you want to ${action} this server?`)) {
         return;
@@ -2805,6 +3152,11 @@ function controlServer(id, action, skipConfirm = false) {
         .catch(err => alert('Error: ' + err.message));
 }
 
+/**
+ * Permanently deletes a server container and its data.
+ * 
+ * @param {string} id - The ID of the server to delete.
+ */
 function deleteServer(id) {
     if (!confirm('EXTREMELY IMPORTANT: This will PERMANENTLY delete this server container.\n\nAre you sure you want to proceed?')) return;
 
@@ -2823,6 +3175,11 @@ function deleteServer(id) {
 
 // --- Settings ---
 
+/**
+ * Collects settings from the UI and submits them to the API.
+ * 
+ * @param {Event} e - The form submission event.
+ */
 function saveSettings(e) {
     e.preventDefault();
 
@@ -2910,6 +3267,12 @@ function saveSettings(e) {
     }
 }
 
+/**
+ * Toggles the visibility of a password/key input field.
+ * 
+ * @param {string} id - The ID of the input element.
+ * @param {HTMLElement} btn - The toggle button element.
+ */
 function togglePasswordVisibility(id, btn) {
     const input = document.getElementById(id);
     if (input.type === 'password') {
@@ -2923,6 +3286,12 @@ function togglePasswordVisibility(id, btn) {
     }
 }
 
+/**
+ * Processes a successful settings save response.
+ * 
+ * @param {Object|string} result - The API response object or an error string.
+ * @param {HTMLElement} statusEl - The status message element.
+ */
 function handleSaveSuccess(result, statusEl) {
     if (typeof result === 'string') {
         console.error("API returned string instead of JSON:", result.substring(0, 200));
@@ -2954,6 +3323,12 @@ function handleSaveSuccess(result, statusEl) {
     }
 }
 
+/**
+ * Processes an error during settings save.
+ * 
+ * @param {Error} err - The error object.
+ * @param {HTMLElement} statusEl - The status message element.
+ */
 function handleSaveError(err, statusEl) {
     statusEl.style.display = 'block';
     statusEl.className = 'mcmm-status error';
@@ -2969,6 +3344,11 @@ function handleSaveError(err, statusEl) {
 
 // --- Mod Selection Queue ---
 
+/**
+ * Toggles the selection of a mod for the installation queue.
+ * 
+ * @param {string} modId - The ID of the mod to toggle.
+ */
 function toggleModSelection(modId) {
     // Find mod object in current lists
     // This is inefficient but functional for small lists. 
@@ -2995,6 +3375,9 @@ function toggleModSelection(modId) {
     renderQueue();
 }
 
+/**
+ * Renders the mod installation queue panel.
+ */
 function renderQueue() {
     const panel = document.getElementById('modQueuePanel');
     const list = document.getElementById('queueList');
@@ -3018,8 +3401,8 @@ function renderQueue() {
         panel.classList.remove('open');
     }
 
-    count.textContent = `${modState.selected.size} item${modState.selected.size !== 1 ? 's' : ''}`;
-    btn.textContent = `Install ${modState.selected.size} Mod${modState.selected.size !== 1 ? 's' : ''}`;
+    count.textContent = `${modState.selected.size} item${modState.selected.size !== 1 ? 's' : ''} `;
+    btn.textContent = `Install ${modState.selected.size} Mod${modState.selected.size !== 1 ? 's' : ''} `;
 
     list.innerHTML = Array.from(modState.selected.values()).map(mod => `
         <div class="mcmm-queue-item">
@@ -3032,9 +3415,14 @@ function renderQueue() {
             </div>
             <button class="mcmm-queue-remove" onclick="removeModFromQueue('${mod.id}')" title="Remove">×</button>
         </div>
-    `).join('');
+        `).join('');
 }
 
+/**
+ * Removes a specific mod from the installation queue.
+ * 
+ * @param {string} modId - The ID of the mod to remove.
+ */
 function removeModFromQueue(modId) {
     const key = String(modId);
     if (modState.selected.has(key)) {
@@ -3044,12 +3432,20 @@ function removeModFromQueue(modId) {
     }
 }
 
+/**
+ * Clears all mods from the installation queue.
+ */
 function clearQueue() {
     modState.selected.clear();
     renderMods();
     renderQueue();
 }
 
+/**
+ * Restarts the metrics agents for all running servers.
+ * 
+ * @returns {Promise<void>}
+ */
 async function startAgents() {
     try {
         const res = await fetch('/plugins/mcmm/api.php?action=start_agents');
@@ -3074,6 +3470,11 @@ async function startAgents() {
     }
 }
 
+/**
+ * Fetches and logs detailed RAM and metrics information for clinical debugging.
+ * 
+ * @returns {Promise<void>}
+ */
 async function logRamDebug() {
     try {
         const res = await fetch('/plugins/mcmm/api.php?action=servers&_=' + Date.now());
@@ -3094,7 +3495,7 @@ async function logRamDebug() {
             const a = d.agent || {};
             const cg = d.cgroup || {};
             console.log(
-                `[RAM DEBUG] ${s.name}: used=${s.ramUsedMb || 0} MB limit=${s.ramLimitMb || 0} MB pct=${s.ram || 0}% source=${d.source || 'n/a'} | agent exists=${a.exists ? 'yes' : 'no'} ageSec=${a.ageSec ?? 'n/a'} ts=${a.ts ?? 'n/a'} | cgroup used=${cg.memUsedMb ?? 'n/a'} cap=${cg.memCapMb ?? 'n/a'} cpu=${cg.cpuPercent ?? 'n/a'}`,
+                `[RAM DEBUG] ${s.name}: used = ${s.ramUsedMb || 0} MB limit = ${s.ramLimitMb || 0} MB pct = ${s.ram || 0}% source=${d.source || 'n/a'} | agent exists = ${a.exists ? 'yes' : 'no'} ageSec = ${a.ageSec ?? 'n/a'} ts = ${a.ts ?? 'n/a'} | cgroup used = ${cg.memUsedMb ?? 'n/a'} cap = ${cg.memCapMb ?? 'n/a'} cpu = ${cg.cpuPercent ?? 'n/a'} `,
                 d
             );
         });
@@ -3103,6 +3504,11 @@ async function logRamDebug() {
     }
 }
 
+/**
+ * Initiates installation of all mods currently in the selection queue.
+ * 
+ * @returns {Promise<void>}
+ */
 async function installSelectedMods() {
     if (modState.selected.size === 0) return;
     if (!currentServerId) return;
@@ -3164,6 +3570,11 @@ async function installSelectedMods() {
 }
 
 
+/**
+ * Sets the RAM limit value in the global and deployment settings.
+ *
+ * @param {string} amount - The RAM amount string (e.g., '2G', '4G').
+ */
 function setRam(amount) {
     const defaultInput = document.getElementById('default_memory');
     if (defaultInput) defaultInput.value = amount;
@@ -3174,6 +3585,11 @@ function setRam(amount) {
     if (deployInput) deployInput.value = amount;
 }
 
+/**
+ * Toggles the open state of a custom dropdown select.
+ *
+ * @param {string} id - The ID of the select element.
+ */
 function toggleSelect(id) {
     const select = document.getElementById(id);
     document.querySelectorAll('.mcmm-select').forEach(s => {
@@ -3182,13 +3598,21 @@ function toggleSelect(id) {
     select.classList.toggle('open');
 }
 
+/**
+ * Selects an option from a custom dropdown select and updates the hidden target.
+ *
+ * @param {string} selectId - The ID of the select element.
+ * @param {string} value - The value of the selected option.
+ * @param {string} text - The display text of the selected option.
+ */
 function selectOption(selectId, value, text) {
     const select = document.getElementById(selectId);
+    if (!select) return;
     const trigger = select.querySelector('.mcmm-select-trigger');
     const targetId = select.dataset.target;
     const hidden = targetId ? document.getElementById(targetId) : (select.parentElement.querySelector('input[type="hidden"]') || select.querySelector('input[type="hidden"]'));
 
-    trigger.textContent = text;
+    if (trigger) trigger.textContent = text;
     if (hidden) hidden.value = value;
 
     select.querySelectorAll('.mcmm-option').forEach(o => o.classList.remove('selected'));
@@ -3429,6 +3853,11 @@ document.addEventListener('DOMContentLoaded', function () {
     initServerPlayerCounts();
 });
 
+/**
+ * Initializes player count polling for all running servers.
+ *
+ * @returns {Promise<void>}
+ */
 async function initServerPlayerCounts() {
     const spans = document.querySelectorAll('span[id^="players-"][data-server-id]');
     spans.forEach((span, idx) => {
@@ -3441,6 +3870,14 @@ async function initServerPlayerCounts() {
     });
 }
 
+/**
+ * Refreshes the player count for a specific server.
+ *
+ * @param {HTMLElement} span - The span element to update.
+ * @param {string} serverId - The ID of the server.
+ * @param {string} port - The server port.
+ * @returns {Promise<void>}
+ */
 async function refreshServerPlayerCount(span, serverId, port) {
     try {
         const res = await fetch(`/plugins/mcmm/api.php?action=server_players&id=${encodeURIComponent(serverId)}&port=${encodeURIComponent(port)}`);
@@ -3455,6 +3892,11 @@ async function refreshServerPlayerCount(span, serverId, port) {
     }
 }
 
+/**
+ * Fetches the list of backups from the API and updates the UI.
+ *
+ * @returns {Promise<void>}
+ */
 async function loadBackups() {
     const container = document.getElementById('backups-list-container');
     if (!container) return;
@@ -3470,6 +3912,11 @@ async function loadBackups() {
     }
 }
 
+/**
+ * Renders the list of backups in the UI.
+ *
+ * @param {Object[]} backups - Array of backup data objects.
+ */
 function renderBackups(backups) {
     const container = document.getElementById('backups-list-container');
     if (!container) return;
@@ -3574,6 +4021,12 @@ function renderBackups(backups) {
     container.innerHTML = html;
 }
 
+/**
+ * Creates a backup for a specific server.
+ *
+ * @param {string} serverId - The ID of the server to backup.
+ * @returns {Promise<void>}
+ */
 async function createBackup(serverId) {
     // Show backup status indicator
     const statusEl = document.getElementById(`backup-status-${serverId}`);
@@ -3618,6 +4071,12 @@ async function createBackup(serverId) {
     }
 }
 
+/**
+ * Deletes a specific backup by name.
+ *
+ * @param {string} name - The name of the backup archive.
+ * @returns {Promise<void>}
+ */
 async function deleteBackup(name) {
     if (!confirm(`Are you sure you want to delete backup ${name}?`)) return;
     try {
@@ -3633,6 +4092,12 @@ async function deleteBackup(name) {
     }
 }
 
+/**
+ * Reinstalls a server from a specific backup archive.
+ *
+ * @param {string} name - The name of the backup archive.
+ * @returns {Promise<void>}
+ */
 async function reinstallFromBackup(name) {
     if (!confirm(`WARNING: This will replace the CURRENT server data with this backup. The existing data will be moved to a .reinstall_old folder. Proceed?`)) return;
 

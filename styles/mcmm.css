@@ -33,7 +33,12 @@ div.title {
     box-sizing: border-box;
 }
 
-/* ===== THEME VARIABLES ===== */
+/*
+Theme Variables
+Global design tokens and scaling variables.
+
+Styleguide 1.0.0
+*/
 :root {
     /* =========================================================
       UI SCALE (single knob)
@@ -196,7 +201,17 @@ body {
     margin: 0;
 }
 
-/* ===== LAYOUT: CANONICAL CONTAINER (no end-overrides needed) ===== */
+/*
+Container
+Canonical layout container with dynamic side padding and content max-width.
+
+Markup:
+<div class="mcmm-header">Header Content</div>
+<div class="mcmm-tabs">Tabs List</div>
+<div class="mcmm-main">Main Application View</div>
+
+Styleguide 2.0.0
+*/
 .mcmm-app :is(.mcmm-header, .mcmm-tabs, .mcmm-main) {
     width: 100%;
     max-width: var(--content-max-width);
@@ -453,7 +468,23 @@ body {
     gap: 1rem;
 }
 
-/* Core row (UNRAID-SAFE BORDER + layout polish + perf) */
+/*
+Server Row
+A responsive item representing a Minecraft server instance.
+
+Markup:
+<div class="mcmm-server-row {{modifier_class}}">
+    <div class="mcmm-server-icon" style="background-image: url('icon.png');"></div>
+    <div class="mcmm-server-info">...</div>
+    <div class="mcmm-server-actions">...</div>
+</div>
+
+Modifiers:
+.running - Server is active (green tint)
+.stopped - Server is inactive (red tint)
+
+Styleguide 3.0.0
+*/
 .mcmm-server-row {
     align-items: center;
     background: var(--bg-surface);
@@ -1025,6 +1056,25 @@ body {
 }
 
 /* ===== PREMIUM MOD CARDS (Redesigned) ===== */
+/*
+Modpack Card
+A card component representing a Minecraft modpack.
+
+Markup:
+<div class="mcmm-modpack-card {{modifier_class}}">
+    <div class="mcmm-modpack-thumb"></div>
+    <div class="mcmm-modpack-info">
+        <div class="mcmm-modpack-name">All the Mods 9</div>
+        <div class="mcmm-modpack-meta">...</div>
+    </div>
+</div>
+
+Modifiers:
+.vanilla-card - Special styling for vanilla Minecraft
+.selected - Highlights the card as selected
+
+Styleguide 4.0.0
+*/
 .mcmm-modpack-card {
     background: linear-gradient(135deg, rgb(30 32 45 / 60%), rgb(22 24 35 / 80%));
     backdrop-filter: blur(12px);
@@ -1195,6 +1245,24 @@ body {
 }
 
 /* ===== PREMIUM VERSION SELECTION (DAZZLE) ===== */
+/*
+Version Card
+A detailed card for selecting specific modpack versions.
+
+Markup:
+<button class="mcmm-version-card {{modifier_class}}">
+    <div class="mcmm-version-thumb"></div>
+    <div class="mcmm-version-main">
+        <div class="mcmm-version-name">1.0.0</div>
+        <div class="mcmm-version-meta">...</div>
+    </div>
+</button>
+
+Modifiers:
+.selected - Highlights the version as selected (neon pulse effect)
+
+Styleguide 5.0.0
+*/
 .mcmm-version-card {
     align-items: center;
     backdrop-filter: blur(10px);
@@ -2958,4 +3026,3 @@ body {
     cursor: not-allowed;
     filter: grayscale(1);
 }
-

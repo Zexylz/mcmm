@@ -1,3 +1,12 @@
+/**
+ * Opens the players modal for a specific server and fetches the current player list.
+ * Identifies online players, their head avatars, and operator status.
+ *
+ * @param {string} serverId - The ID of the server.
+ * @param {string} serverName - The display name of the server.
+ * @param {string} [port='25565'] - The server query port.
+ * @returns {Promise<void>}
+ */
 export async function openPlayersModal(serverId, serverName, port) {
     const modal = document.getElementById('playersModal');
     const body = document.getElementById('playersBody');
@@ -52,11 +61,22 @@ export async function openPlayersModal(serverId, serverName, port) {
     }
 }
 
+/**
+ * Closes the players modal.
+ */
 export function closePlayersModal() {
     const modal = document.getElementById('playersModal');
     if (modal) modal.classList.remove('open');
 }
 
+/**
+ * Executes a player management action (kick, ban, op, deop) for a specific player.
+ *
+ * @param {string} serverId - The ID of the server.
+ * @param {string} playerName - The name of the player.
+ * @param {string} action - The action to perform.
+ * @returns {Promise<void>}
+ */
 export async function playerAction(serverId, playerName, action) {
     try {
         const res = await fetch(`/plugins/mcmm/api.php?action=server_player_action&id=${encodeURIComponent(serverId)}&player=${encodeURIComponent(playerName)}&action=${encodeURIComponent(action)}`);

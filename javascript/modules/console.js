@@ -1,6 +1,12 @@
 let consoleInterval;
 let currentConsoleId = null;
 
+/**
+ * Opens the console modal for a specific server and starts log polling.
+ *
+ * @param {string} serverId - The ID of the server to view logs for.
+ * @param {string} serverName - The display name of the server.
+ */
 export function openConsole(serverId, serverName) {
     const modal = document.getElementById('consoleModal');
     const output = document.getElementById('consoleOutput');
@@ -16,6 +22,12 @@ export function openConsole(serverId, serverName) {
     document.getElementById('consoleInput').focus();
 }
 
+/**
+ * Fetches the latest console logs for the current server from the API.
+ * Strips ANSI color codes and handles auto-scrolling to the bottom.
+ *
+ * @returns {Promise<void>}
+ */
 export async function fetchLogs() {
     if (!currentConsoleId) return;
     try {
@@ -39,6 +51,9 @@ export async function fetchLogs() {
     }
 }
 
+/**
+ * Closes the console modal and stops the log polling interval.
+ */
 export function closeConsole() {
     document.getElementById('consoleModal').classList.remove('open');
     if (consoleInterval) clearInterval(consoleInterval);
@@ -53,6 +68,10 @@ export function closeConsole() {
 // Since `mcmm.js` had it at top level, it runs on load.
 // I'll export an `initConsole` function.
 
+/**
+ * Initializes the console input listener to handle command submission on Enter.
+ * Commands are displayed immediately in the output and sent to the API.
+ */
 export function initConsole() {
     const input = document.getElementById('consoleInput');
     if (input) {

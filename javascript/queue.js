@@ -6,6 +6,13 @@ window.installSelectedMods = installSelectedMods;
 
 // --- Mod Selection Queue ---
 
+/**
+ * Toggles the selection of a mod in the mod state.
+ * If the mod is already selected, it is removed; otherwise, it is added.
+ * Updates the mods grid and the queue panel.
+ *
+ * @param {string|number} modId - The ID of the mod to toggle.
+ */
 function toggleModSelection(modId) {
     // Find mod object in current lists
     // This is inefficient but functional for small lists. 
@@ -32,6 +39,10 @@ function toggleModSelection(modId) {
     renderQueue();
 }
 
+/**
+ * Renders the mod selection queue panel based on the current selection.
+ * Controls the visibility of the queue panel and updates the list of items.
+ */
 function renderQueue() {
     const panel = document.getElementById('modQueuePanel');
     const list = document.getElementById('queueList');
@@ -71,6 +82,11 @@ function renderQueue() {
     `).join('');
 }
 
+/**
+ * Removes a specific mod from the installment queue.
+ *
+ * @param {string|number} modId - The ID of the mod to remove.
+ */
 function removeModFromQueue(modId) {
     const key = String(modId);
     if (modState.selected.has(key)) {
@@ -80,6 +96,13 @@ function removeModFromQueue(modId) {
     }
 }
 
+/**
+ * Installs all mods currently in the selection queue for the active server.
+ * Processing is performed sequentially to avoid overwhelming the server.
+ * Automatically clears the queue and refreshes the mod lists upon completion.
+ *
+ * @returns {Promise<void>}
+ */
 async function installSelectedMods() {
     if (modState.selected.size === 0) return;
     if (!currentServerId) return;

@@ -3,7 +3,16 @@ Title="Modpack Manager"
 Icon="cubes"
 ---
 <?php
-/* Minecraft Modpack Manager for Unraid */
+/**
+ * Minecraft Modpack Manager for Unraid
+ * 
+ * Main UI page for the MCMM plugin. This file integrates with the 
+ * Unraid webGui system, providing the primary dashboard for 
+ * server management and configuration.
+ * 
+ * It handles the initial page load, pulls server statuses, 
+ * and injects the required CSS/JS assets into the document.
+ */
 
 // Debug visibility
 @ini_set('display_errors', '1');

@@ -2,6 +2,12 @@
 
 declare(strict_types=1);
 
+/**
+ * Append file modification time to path for cache busting.
+ *
+ * @param string $path The relative path to the file.
+ * @return string The path with a version query parameter.
+ */
 function mcmm_autov(string $path): string
 {
     $docroot = $_SERVER['DOCUMENT_ROOT'] ?? '/usr/local/emhttp';
@@ -15,6 +21,13 @@ function mcmm_autov(string $path): string
     return $path . '?v=' . $v;
 }
 
+/**
+ * Retrieve a list of Minecraft servers from Docker containers and internal configuration.
+ *
+ * Scans Docker for containers matching 'itzg' or 'mcmm' and merges with local config.
+ *
+ * @return array List of servers with status, ports, and metadata.
+ */
 function getMinecraftServers()
 {
     global $config;
@@ -180,7 +193,15 @@ function getMinecraftServers()
 }
 
 /**
- * Backfill server icon for existing containers (page version) - simplified to avoid timeouts
+ * Attempt to backfill server icon from Docker environment variables.
+ *
+ * Simplified version for page load to avoid timeouts.
+ *
+ * @param string $containerId   Docker container ID.
+ * @param string $containerName Target container name.
+ * @param string $serversDir    Base directory for server configs.
+ * @param array  $config        Global plugin configuration.
+ * @return string The resolved icon URL or empty string if not found.
  */
 function backfillServerIconPage($containerId, $containerName, $serversDir, $config)
 {

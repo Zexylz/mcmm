@@ -1,8 +1,20 @@
 <?php
 
 /**
- * MCMM API Handler v43
- * Handles all API requests for the Minecraft Modpack Manager
+ * MCMM API Handler
+ * 
+ * This file serves as the central entry point for all AJAX requests 
+ * from the Minecraft Modpack Manager (MCMM) web interface.
+ * 
+ * It handles:
+ * - Server lifecycle management (start, stop, delete)
+ * - Modpack and mod installation logic
+ * - Global and per-server settings persistence
+ * - Console log streaming and player management
+ * - Backup and restore operations
+ * 
+ * @version 43
+ * @package MCMm
  */
 
 // MCMM API Handler - Force Reload
@@ -95,9 +107,9 @@ try {
     switch ($action) {
         case 'ping':
             jsonResponse([
-            'success' => true,
-            'message' => 'API is working!',
-            'time' => date('Y-m-d H:i:s')
+                'success' => true,
+                'message' => 'API is working!',
+                'time' => date('Y-m-d H:i:s')
             ]);
             break;
 
@@ -136,8 +148,8 @@ try {
             $response = $config;
             $response['has_curseforge_key'] = !empty($response['curseforge_api_key']);
             $response['curseforge_api_key_masked'] = !empty($response['curseforge_api_key'])
-            ? substr($response['curseforge_api_key'], 0, 8) . '...'
-            : '';
+                ? substr($response['curseforge_api_key'], 0, 8) . '...'
+                : '';
             unset($response['curseforge_api_key']);
 
             jsonResponse(['success' => true, 'data' => $response]);
@@ -165,24 +177,24 @@ try {
 
             // ... existing field mapping logic ...
             $fields = [
-            'default_server_name',
-            'default_port',
-            'default_memory',
-            'default_max_players',
-            'default_ip',
-            'default_whitelist',
-            'default_icon_url',
-            'default_pvp',
-            'default_hardcore',
-            'default_allow_flight',
-            'default_command_blocks',
-            'default_rolling_logs',
-            'default_log_timestamp',
-            'default_direct_console',
-            'default_aikar_flags',
-            'default_meowice_flags',
-            'default_graalvm_flags',
-            'jvm_flags'
+                'default_server_name',
+                'default_port',
+                'default_memory',
+                'default_max_players',
+                'default_ip',
+                'default_whitelist',
+                'default_icon_url',
+                'default_pvp',
+                'default_hardcore',
+                'default_allow_flight',
+                'default_command_blocks',
+                'default_rolling_logs',
+                'default_log_timestamp',
+                'default_direct_console',
+                'default_aikar_flags',
+                'default_meowice_flags',
+                'default_graalvm_flags',
+                'jvm_flags'
             ];
 
             foreach ($fields as $field) {
@@ -241,8 +253,8 @@ try {
             $output = shell_exec("docker logs --tail 200 " . escapeshellarg($id) . " 2>&1");
 
             jsonResponse([
-            'success' => true,
-            'logs' => $output ?: ''
+                'success' => true,
+                'logs' => $output ?: ''
             ]);
             break;
 
@@ -260,8 +272,8 @@ try {
             exec($execCmd . ' 2>&1', $output, $exitCode);
 
             jsonResponse([
-            'success' => $exitCode === 0,
-            'message' => implode("\n", $output)
+                'success' => $exitCode === 0,
+                'message' => implode("\n", $output)
             ]);
             break;
 
@@ -280,9 +292,9 @@ try {
             $output = shell_exec("docker $cmd " . escapeshellarg($id) . " 2>&1");
 
             jsonResponse([
-            'success' => true,
-            'message' => "Server $cmd command executed",
-            'output' => $output
+                'success' => true,
+                'message' => "Server $cmd command executed",
+                'output' => $output
             ]);
             break;
 
@@ -413,9 +425,9 @@ try {
                         }
                         if ($targetFile) {
                             $updates[$mod['id']] = [
-                            'latestFileId' => $targetFile['id'],
-                            'latestFileName' => $targetFile['fileName'] ?? ($targetFile['displayName'] ?? ''),
-                            'name' => $mod['name']
+                                'latestFileId' => $targetFile['id'],
+                                'latestFileName' => $targetFile['fileName'] ?? ($targetFile['displayName'] ?? ''),
+                                'name' => $mod['name']
                             ];
                         }
                     }
@@ -456,9 +468,9 @@ try {
 
                             if ($primaryFile) {
                                 $updates[$proj['id']] = [
-                                'latestFileId' => $latest['id'],
-                                'latestFileName' => $primaryFile['filename'],
-                                'name' => $proj['title']
+                                    'latestFileId' => $latest['id'],
+                                    'latestFileName' => $primaryFile['filename'],
+                                    'name' => $proj['title']
                                 ];
                             }
                         }
@@ -527,9 +539,9 @@ try {
                         $sCapMb = isset($sMemParts[1]) ? parseMemoryToMB($sMemParts[1]) : 0;
 
                         $statsData = [
-                        'cpu_percent' => floatval($sCpuStr) / getSystemCpuCount(),
-                        'mem_used_mb' => $sUsedMb,
-                        'mem_cap_mb' => $sCapMb
+                            'cpu_percent' => floatval($sCpuStr) / getSystemCpuCount(),
+                            'mem_used_mb' => $sUsedMb,
+                            'mem_cap_mb' => $sCapMb
                         ];
                         $allStats[$sId] = $statsData;
                         $allStats[$sName] = $statsData;
@@ -539,7 +551,7 @@ try {
 
             // Batch gather docker inspect for ALL containers (extremely fast compared to loop)
             $allInspect = [];
-            $inspectIds = trim((string)shell_exec('/usr/bin/docker ps -a -q | tr "\n" " "'));
+            $inspectIds = trim((string) shell_exec('/usr/bin/docker ps -a -q | tr "\n" " "'));
             if (!empty($inspectIds)) {
                 $inspectOutput = shell_exec("/usr/bin/docker inspect $inspectIds 2>/dev/null");
                 if ($inspectOutput) {
@@ -610,7 +622,7 @@ try {
                                 $containerName,
                                 $config['curseforge_api_key'] ?? '',
                                 $image,
-                                (int)$port,
+                                (int) $port,
                                 $containerId
                             );
                             $mcVer = $metadata['mcVersion'];
@@ -714,28 +726,28 @@ try {
                             }
 
                             $ramUsagePercent = ($ramLimitMb > 0 && $ramUsedMb >= 0)
-                            ? (($ramUsedMb / $ramLimitMb) * 100)
-                            : 0;
+                                ? (($ramUsedMb / $ramLimitMb) * 100)
+                                : 0;
 
                             $ramDetails = [
-                            'usedMb' => $ramUsedMb,
-                            'rssMb' => $metrics['rss_mb'] ?? ($cg['mem_used_mb'] ?? 0),
-                            'heapUsedMb' => $metrics['heap_used_mb'] ?? $javaHeapUsedMb,
-                            'limitMb' => $ramLimitMb,
-                            'cpuPercent' => $cpuUsage,
-                            'source' => $ramSource,
-                            'agent' => [
-                            'exists' => $agentExists,
-                            'mtime' => $agentMtime,
-                            'ageSec' => $agentAgeSec,
-                            'ts' => $agentTs
-                            ],
-                            'cgroup' => [
-                                'memUsedMb' => $cg['mem_used_mb'] ?? null,
-                                'memCapMb' => $cg['mem_cap_mb'] ?? null,
-                                'cpuPercent' => $cg['cpu_percent'] ?? null
-                            ],
-                            'configMemMb' => $configMem
+                                'usedMb' => $ramUsedMb,
+                                'rssMb' => $metrics['rss_mb'] ?? ($cg['mem_used_mb'] ?? 0),
+                                'heapUsedMb' => $metrics['heap_used_mb'] ?? $javaHeapUsedMb,
+                                'limitMb' => $ramLimitMb,
+                                'cpuPercent' => $cpuUsage,
+                                'source' => $ramSource,
+                                'agent' => [
+                                    'exists' => $agentExists,
+                                    'mtime' => $agentMtime,
+                                    'ageSec' => $agentAgeSec,
+                                    'ts' => $agentTs
+                                ],
+                                'cgroup' => [
+                                    'memUsedMb' => $cg['mem_used_mb'] ?? null,
+                                    'memCapMb' => $cg['mem_cap_mb'] ?? null,
+                                    'cpuPercent' => $cg['cpu_percent'] ?? null
+                                ],
+                                'configMemMb' => $configMem
                             ];
 
                             $updateAvailable = false;
@@ -751,37 +763,37 @@ try {
                             }
 
                             $servers[] = [
-                            'containerUpdate' => $updateAvailable,
-                            'id' => $containerId,
-                            'name' => $containerName,
-                            'status' => $isRunning ? 'Running' : 'Stopped',
-                            'isRunning' => $isRunning,
-                            'ports' => $port,
-                            'image' => $image,
-                            'icon' => $icon,
-                            'ram' => round(min(max((float)$ramUsagePercent, 0), 100), 1),
-                            'ramUsedMb' => round($ramUsedMb, 1),
-                            'ramLimitMb' => $ramLimitMb,
-                            'ramConfigMb' => $configMem,
-                            'cpu' => round($cpuUsage, 2),
-                            'ramDetails' => $ramDetails,
-                            'debug' => [
-                            'dataDir' => $dataDir,
-                            'agentPath' => $agentPath,
-                            'agentExists' => $agentExists,
-                            'agentTs' => $agentTs,
-                            'cgroupStats' => $cg,
-                            'javaHeapUsedMb' => $javaHeapUsedMb,
-                            'envMemoryMb' => $envMemoryMb,
-                            'configMemMb' => $configMem
-                            ],
-                            'players' => [
-                                'online' => $playersOnline,
-                                'max' => $playersMax
-                            ],
-                            'mcVersion' => $mcVer,
-                            'loader' => $loaderVer,
-                            'modpackVersion' => $modpackVer
+                                'containerUpdate' => $updateAvailable,
+                                'id' => $containerId,
+                                'name' => $containerName,
+                                'status' => $isRunning ? 'Running' : 'Stopped',
+                                'isRunning' => $isRunning,
+                                'ports' => $port,
+                                'image' => $image,
+                                'icon' => $icon,
+                                'ram' => round(min(max((float) $ramUsagePercent, 0), 100), 1),
+                                'ramUsedMb' => round($ramUsedMb, 1),
+                                'ramLimitMb' => $ramLimitMb,
+                                'ramConfigMb' => $configMem,
+                                'cpu' => round($cpuUsage, 2),
+                                'ramDetails' => $ramDetails,
+                                'debug' => [
+                                    'dataDir' => $dataDir,
+                                    'agentPath' => $agentPath,
+                                    'agentExists' => $agentExists,
+                                    'agentTs' => $agentTs,
+                                    'cgroupStats' => $cg,
+                                    'javaHeapUsedMb' => $javaHeapUsedMb,
+                                    'envMemoryMb' => $envMemoryMb,
+                                    'configMemMb' => $configMem
+                                ],
+                                'players' => [
+                                    'online' => $playersOnline,
+                                    'max' => $playersMax
+                                ],
+                                'mcVersion' => $mcVer,
+                                'loader' => $loaderVer,
+                                'modpackVersion' => $modpackVer
                             ];
 
                             // Persistent metadata cache for helpers.php (Initial Page Load)
@@ -791,11 +803,11 @@ try {
                             }
                             $metaFile = $metaDir . '/metadata_v11.json';
                             $metadataCache = [
-                            'mcVersion' => $mcVer ?: 'Unknown',
-                            'loader' => $loaderVer ?: 'Vanilla',
-                            'modpackVersion' => $modpackVer ?? '',
-                            'cache_ver' => $metadata['cache_ver'] ?? 'v11',
-                            'lastUpdated' => time()
+                                'mcVersion' => $mcVer ?: 'Unknown',
+                                'loader' => $loaderVer ?: 'Vanilla',
+                                'modpackVersion' => $modpackVer ?? '',
+                                'cache_ver' => $metadata['cache_ver'] ?? 'v11',
+                                'lastUpdated' => time()
                             ];
                             @file_put_contents($metaFile, json_encode($metadataCache));
                         }
@@ -1046,12 +1058,12 @@ try {
 
             // Build command
             $cmdMap = [
-            'kick' => "kick " . escapeshellarg($player),
-            'ban' => "ban " . escapeshellarg($player),
-            'unban' => "pardon " . escapeshellarg($player),
-            'op' => "op " . escapeshellarg($player),
-            'deop' => "deop " . escapeshellarg($player),
-            'whisper' => "tell " . escapeshellarg($player) . " " . ($_GET['message'] ?? ''),
+                'kick' => "kick " . escapeshellarg($player),
+                'ban' => "ban " . escapeshellarg($player),
+                'unban' => "pardon " . escapeshellarg($player),
+                'op' => "op " . escapeshellarg($player),
+                'deop' => "deop " . escapeshellarg($player),
+                'whisper' => "tell " . escapeshellarg($player) . " " . ($_GET['message'] ?? ''),
             ];
             if (!isset($cmdMap[$player_action])) {
                 jsonResponse(['success' => false, 'error' => 'Unsupported action: ' . $player_action], 400);
@@ -1117,8 +1129,8 @@ try {
             }
 
             jsonResponse([
-            'success' => true,
-            'javaVersion' => $javaVersion
+                'success' => true,
+                'javaVersion' => $javaVersion
             ]);
             break;
 
@@ -1174,18 +1186,18 @@ try {
             }
 
             jsonResponse([
-            'success' => true,
-            'data' => [
-            'id' => $c['Id'],
-            'name' => $containerName,
-            'env' => $env,
-            'mcVersion' => $mcVersion,
-            'loader' => $loader,
-            'maxPlayers' => $maxPlayers,
-            'port' => $port,
-            'image' => $c['Config']['Image'],
-            'metadata_debug' => $metadata['_debug'] ?? []
-            ]
+                'success' => true,
+                'data' => [
+                    'id' => $c['Id'],
+                    'name' => $containerName,
+                    'env' => $env,
+                    'mcVersion' => $mcVersion,
+                    'loader' => $loader,
+                    'maxPlayers' => $maxPlayers,
+                    'port' => $port,
+                    'image' => $c['Config']['Image'],
+                    'metadata_debug' => $metadata['_debug'] ?? []
+                ]
             ]);
             break;
 
@@ -1285,9 +1297,9 @@ try {
 
             // Labels similar to deploy
             $labels = [
-            'mcmm' => '1',
-            'net.unraid.docker.managed' => 'dockerman',
-            'net.unraid.docker.repository' => $image
+                'mcmm' => '1',
+                'net.unraid.docker.managed' => 'dockerman',
+                'net.unraid.docker.repository' => $image
             ];
             if (!empty($currentEnv['ICON'])) {
                 $labels['net.unraid.docker.icon'] = $currentEnv['ICON'];
@@ -1432,11 +1444,11 @@ try {
             $testDocker = @shell_exec($dockerBin . ' ps --format "{{.ID}}" 2>&1 | head -n 1');
             $whoami = trim((string) @shell_exec('whoami 2>&1'));
             $data = [
-            'agent_read_logs' => file_exists($logFile) ? file_get_contents($logFile) : "No agent debug logs found at $logFile.",
-            'plugin_debug_logs' => file_exists($mainFile) ? file_get_contents($mainFile) : "No main debug logs found at $mainFile.",
-            'docker_test' => $testDocker ? "Output: $testDocker" : "FAIL (No output or error)",
-            'php_user' => $whoami ?: 'Unknown',
-            'env' => $_SERVER['PATH'] ?? 'No PATH'
+                'agent_read_logs' => file_exists($logFile) ? file_get_contents($logFile) : "No agent debug logs found at $logFile.",
+                'plugin_debug_logs' => file_exists($mainFile) ? file_get_contents($mainFile) : "No main debug logs found at $mainFile.",
+                'docker_test' => $testDocker ? "Output: $testDocker" : "FAIL (No output or error)",
+                'php_user' => $whoami ?: 'Unknown',
+                'env' => $_SERVER['PATH'] ?? 'No PATH'
             ];
             jsonResponse(['success' => true, 'logs' => $data]);
             break;
@@ -1445,10 +1457,10 @@ try {
             $backupDir = '/mnt/user/appdata/backups';
             $files = glob($backupDir . '/*.zip');
             jsonResponse([
-            'dir' => $backupDir,
-            'exists' => is_dir($backupDir),
-            'files' => $files,
-            'files_count' => count($files ?: [])
+                'dir' => $backupDir,
+                'exists' => is_dir($backupDir),
+                'files' => $files,
+                'files_count' => count($files ?: [])
             ]);
             break;
 
@@ -1521,9 +1533,9 @@ try {
 
                     // Use batched configs
                     $cfg = $allConfigsByContainer[$serverName] ??
-                       $allConfigsBySlug[$slugCandidate] ??
-                       $allConfigsByName[safeContainerName($serverName)] ??
-                       [];
+                        $allConfigsBySlug[$slugCandidate] ??
+                        $allConfigsByName[safeContainerName($serverName)] ??
+                        [];
 
                     $icon = $cfg['icon'] ?? $cfg['logo'] ?? $cfg['icon_url'] ?? '';
                     if (!$icon && isset($liveMetadata[$serverName])) {
@@ -1531,15 +1543,15 @@ try {
                     }
 
                     $backups[] = [
-                    'name' => $name,
-                    'size' => $stat['size'],
-                    'date' => (int)$timestamp ?: $stat['mtime'],
-                    'server' => $serverName,
-                    'icon' => $icon,
-                    'author' => $cfg['author'] ?? 'Unknown',
-                    'modpack' => $cfg['modpackName'] ?? $cfg['modpack'] ?? $cfg['name'] ?? $serverName,
-                    'mc_version' => $cfg['mc_version'] ?? '',
-                    'loader' => $cfg['loader'] ?? ''
+                        'name' => $name,
+                        'size' => $stat['size'],
+                        'date' => (int) $timestamp ?: $stat['mtime'],
+                        'server' => $serverName,
+                        'icon' => $icon,
+                        'author' => $cfg['author'] ?? 'Unknown',
+                        'modpack' => $cfg['modpackName'] ?? $cfg['modpack'] ?? $cfg['name'] ?? $serverName,
+                        'mc_version' => $cfg['mc_version'] ?? '',
+                        'loader' => $cfg['loader'] ?? ''
                     ];
                 }
             }
@@ -1567,7 +1579,7 @@ try {
             $c = $containers[0];
             $serverName = ltrim($c['Name'], '/');
 
-// 2. Locate data directory
+            // 2. Locate data directory
             $dataDir = "";
             if (isset($c['Mounts'])) {
                 foreach ($c['Mounts'] as $m) {
@@ -1581,7 +1593,7 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Could not locate /data mount for this server'], 500);
             }
 
-// 3. Prepare backup
+            // 3. Prepare backup
             $backupDir = '/mnt/user/appdata/backups';
             if (!is_dir($backupDir)) {
                 @mkdir($backupDir, 0755, true);
@@ -1590,17 +1602,17 @@ try {
             $backupName = "backup_{$serverName}_{$ts}.zip";
             $backupPath = $backupDir . '/' . $backupName;
 
-// 4. Create metadata
+            // 4. Create metadata
             $meta = [
-            'serverName' => $serverName,
-            'timestamp' => $ts,
-            'containerConfig' => $c['Config'],
-            'hostConfig' => $c['HostConfig']
+                'serverName' => $serverName,
+                'timestamp' => $ts,
+                'containerConfig' => $c['Config'],
+                'hostConfig' => $c['HostConfig']
             ];
             $metaPath = $dataDir . '/mcmm_backup_meta.json';
             @file_put_contents($metaPath, json_encode($meta, JSON_PRETTY_PRINT));
 
-// 5. ZIP it
+            // 5. ZIP it
             $cmd = "cd " . escapeshellarg($dataDir) . " && zip -r " . escapeshellarg($backupPath) . " . -x \"*.log\" \"*.lck\" \"mcmm_metrics.json\"";
             $output = shell_exec($cmd . " 2>&1");
             @unlink($metaPath);
@@ -1639,7 +1651,7 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Backup file not found'], 404);
             }
 
-// 1. Peek into ZIP for metadata
+            // 1. Peek into ZIP for metadata
             $tempDir = '/tmp/mcmm_restore_' . uniqid();
             @mkdir($tempDir, 0755, true);
             $cmd = "unzip -p " . escapeshellarg($backupPath) . " mcmm_backup_meta.json > " . escapeshellarg($tempDir . '/meta.json');
@@ -1654,24 +1666,24 @@ try {
             $serverName = ltrim($meta['serverName'], '/');
             $dataDir = "/mnt/user/appdata/{$serverName}";
 
-// 2. Stop/Remove existing container if exists
+            // 2. Stop/Remove existing container if exists
             $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
             @shell_exec("$dockerBin stop " . escapeshellarg($serverName));
             @shell_exec("$dockerBin rm " . escapeshellarg($serverName));
 
-// 3. Cycle the data directory
+            // 3. Cycle the data directory
             if (is_dir($dataDir)) {
                 $oldDir = $dataDir . '.reinstall_old_' . time();
                 @rename($dataDir, $oldDir);
             }
             @mkdir($dataDir, 0775, true);
 
-// 4. Extract backup
+            // 4. Extract backup
             $cmd = "unzip " . escapeshellarg($backupPath) . " -d " . escapeshellarg($dataDir);
             $output = shell_exec($cmd . " 2>&1");
             @unlink($dataDir . '/mcmm_backup_meta.json');
 
-// 5. Re-create container (Build docker run command from meta)
+            // 5. Re-create container (Build docker run command from meta)
 // We use the raw meta to reconstruct the env, ports, and volumes.
             $envArgs = "";
             if (isset($meta['containerConfig']['Env'])) {
@@ -1698,9 +1710,9 @@ try {
 
             $image = $meta['containerConfig']['Image'] ?? 'itzg/minecraft-server';
             $runCmd = "$dockerBin run -d --name " . escapeshellarg($serverName) .
-            $envArgs . $portArgs . $labelsArgs .
-            " -v " . escapeshellarg($dataDir . ":/data") .
-            " --restart unless-stopped " . escapeshellarg($image);
+                $envArgs . $portArgs . $labelsArgs .
+                " -v " . escapeshellarg($dataDir . ":/data") .
+                " --restart unless-stopped " . escapeshellarg($image);
 
             dbg("Reinstalling server: $serverName");
             dbg("Run CMD: $runCmd");
@@ -1786,11 +1798,11 @@ try {
                     $needsIdentification = empty($modInfo['author']) || empty($modInfo['logo']);
 
                     $mods[] = array_merge([
-                    'id' => $modInfo['modId'] ?? md5($file),
-                    'name' => $file,
-                    'file' => $file,
-                    'size' => formatBytes(filesize("$modsDir/$file")),
-                    'needsIdentification' => $needsIdentification
+                        'id' => $modInfo['modId'] ?? md5($file),
+                        'name' => $file,
+                        'file' => $file,
+                        'size' => formatBytes(filesize("$modsDir/$file")),
+                        'needsIdentification' => $needsIdentification
                     ], $modInfo);
                 }
             }
@@ -1821,7 +1833,7 @@ try {
                             $hasLoader = false;
                             $loaderMap = ['forge' => 1, 'fabric' => 4, 'quilt' => 5, 'neoforge' => 6];
                             $li = $loaderMap[strtolower($loader)] ?? 0;
-                            if (isset($f['modLoaderType']) && (int)$f['modLoaderType'] === $li) {
+                            if (isset($f['modLoaderType']) && (int) $f['modLoaderType'] === $li) {
                                 $hasLoader = true;
                             }
                             if ($hasVer && $hasLoader) {
@@ -1831,9 +1843,9 @@ try {
                         }
                         if ($targetFile) {
                             $updates['curseforge_' . $cfMod['id']] = [
-                            'latestFileId' => $targetFile['id'],
-                            'latestFileName' => $targetFile['fileName'],
-                            'latestVersion' => $targetFile['displayName']
+                                'latestFileId' => $targetFile['id'],
+                                'latestFileName' => $targetFile['fileName'],
+                                'latestVersion' => $targetFile['displayName']
                             ];
                         }
                     }
@@ -1846,7 +1858,7 @@ try {
                     $key = ($m['platform'] ?? '') . '_' . ($m['modId'] ?? '');
                     if (isset($updates[$key])) {
                         $up = $updates[$key];
-                        $m['update_available'] = (string)$up['latestFileId'] !== (string)($m['fileId'] ?? '');
+                        $m['update_available'] = (string) $up['latestFileId'] !== (string) ($m['fileId'] ?? '');
                         $m['latest_version'] = $up['latestVersion'] ?? '';
                         $m['latest_file_id'] = $up['latestFileId'];
                     }
@@ -1866,7 +1878,7 @@ try {
                     $decoded = urldecode($_GET['files']);
                     $files = json_decode($decoded, true);
                     if (!$files) {
-                         $files = json_decode($_GET['files'], true);
+                        $files = json_decode($_GET['files'], true);
                     }
                 }
 
@@ -1897,7 +1909,7 @@ try {
 
                 // Pass 1: Categorize files
                 foreach ($files as $filename) {
-                     // Check existing metadata first to verify validity but we usually only send unknown ones
+                    // Check existing metadata first to verify validity but we usually only send unknown ones
 
                     $foundId = null;
                     foreach ($manifestMetadata as $mid => $info) {
@@ -1924,7 +1936,7 @@ try {
                     }
 
                     if ($foundId) {
-                        $manifestMap[$filename] = (int)$foundId;
+                        $manifestMap[$filename] = (int) $foundId;
                     } else {
                         $unknownFiles[] = $filename;
                     }
@@ -1972,7 +1984,7 @@ try {
                             }
                         }
                     } catch (\Throwable $e) {
-                         // Non-fatal, just log if possible
+                        // Non-fatal, just log if possible
                     }
                 }
 
@@ -2024,7 +2036,7 @@ try {
                         }
 
                         if (!$found) {
-                             [$mrData, $total] = fetchModrinthMods($query, '', '', 1, 1);
+                            [$mrData, $total] = fetchModrinthMods($query, '', '', 1, 1);
                             if (!empty($mrData)) {
                                 $found = $mrData[0];
                                 $source = 'modrinth';
@@ -2032,17 +2044,17 @@ try {
                         }
 
                         if ($found) {
-                             $extra = [
+                            $extra = [
                                 'author' => $found['author'] ?? 'Unknown',
                                 'summary' => $found['summary'] ?? '',
                                 'downloads' => $found['downloads'] ?? '',
                                 'mcVersion' => $found['mcVersion'] ?? ''
-                             ];
-                             $pid = $found['id'];
+                            ];
+                            $pid = $found['id'];
 
-                             $results[$filename] = array_merge($found, ['platform' => $source]);
+                            $results[$filename] = array_merge($found, ['platform' => $source]);
 
-                             $metadata[$pid] = array_merge([
+                            $metadata[$pid] = array_merge([
                                 'modId' => $pid,
                                 'name' => $found['name'],
                                 'platform' => $source,
@@ -2053,7 +2065,7 @@ try {
                                 'summary' => $extra['summary'],
                                 'mcVersion' => $extra['mcVersion'],
                                 'installedAt' => time()
-                             ], $metadata[$pid] ?? []);
+                            ], $metadata[$pid] ?? []);
                         }
                     } catch (\Throwable $e) {
                         // heuristic error
@@ -2111,7 +2123,7 @@ try {
             }
 
             if ($source === 'ftb') {
-                $files = fetchFTBModpackFiles((int)$modId);
+                $files = fetchFTBModpackFiles((int) $modId);
                 jsonResponse(['success' => true, 'data' => $files]);
             } elseif ($source === 'modrinth') {
                 $files = fetchModrinthFiles($modId, $mcVersion, $loader);
@@ -2144,7 +2156,7 @@ try {
                 @mkdir($modsDir, 0775, true);
             }
 
-// Get download URL
+            // Get download URL
             if ($source === 'modrinth') {
                 if (!$fileId) {
                     $mrFiles = fetchModrinthFiles($modId, '', '');
@@ -2166,7 +2178,7 @@ try {
                 }
             }
 
-// Download
+            // Download
             $fileName = basename(parse_url($fileUrl, PHP_URL_PATH));
             if (!$fileName) {
                 $fileName = "mod-$modId" . ($fileId ? "-$fileId" : "") . ".jar";
@@ -2193,10 +2205,10 @@ try {
 
                 // Save Metadata
                 $extra = [
-                'author' => $_REQUEST['author'] ?? 'Unknown',
-                'summary' => $_REQUEST['summary'] ?? '',
-                'downloads' => $_REQUEST['downloads'] ?? '',
-                'mcVersion' => $_REQUEST['mc_version'] ?? ''
+                    'author' => $_REQUEST['author'] ?? 'Unknown',
+                    'summary' => $_REQUEST['summary'] ?? '',
+                    'downloads' => $_REQUEST['downloads'] ?? '',
+                    'mcVersion' => $_REQUEST['mc_version'] ?? ''
                 ];
                 saveModMetadata(
                     $id,
@@ -2222,7 +2234,7 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Missing parameters'], 400);
             }
 
-    // Cache Check
+            // Cache Check
             $cacheKey = 'identify_mod_' . md5($filename);
             $cached = mcmm_cache_get($cacheKey);
             if ($cached) {
@@ -2251,8 +2263,8 @@ try {
                 jsonResponse(['success' => true, 'data' => $found]);
             }
 
-    // Clean filename to search query
-    // Strip .jar, version strings, common prefixes/suffixes
+            // Clean filename to search query
+            // Strip .jar, version strings, common prefixes/suffixes
             $query = preg_replace('/\.jar$/i', '', $filename);
             $query = preg_replace('/[-_][vV]?\d+\.?\d+.*$/', '', $query); // Strip -1.20.1 etc
             $query = preg_replace('/[-_]\d{4,}.*$/', '', $query); // Strip long numbers
@@ -2260,21 +2272,21 @@ try {
 
             dbg("Identifying mod from filename '$filename' -> Query: '$query'");
 
-    // Try CurseForge first
+            // Try CurseForge first
             $cfResult = [];
             if (!empty($config['curseforge_api_key'])) {
                 $cfData = fetchCurseForgeMods($query, '', '', 1, 1, $config['curseforge_api_key']);
                 $cfResult = $cfData[0] ?? [];
             }
 
-    // Try Modrinth
+            // Try Modrinth
             $mrData = fetchModrinthMods($query, '', '', 1, 1);
             $mrResult = $mrData[0] ?? [];
 
             $found = null;
             $source = '';
 
-    // Heuristic: prefer CurseForge if it's an exact or high-quality match
+            // Heuristic: prefer CurseForge if it's an exact or high-quality match
             if (!empty($cfResult)) {
                 $found = $cfResult[0];
                 $source = 'curseforge';
@@ -2320,7 +2332,7 @@ try {
 
             // Handle raw POST body if param is missing
             if (!$json) {
-                 $input = json_decode(file_get_contents('php://input'), true);
+                $input = json_decode(file_get_contents('php://input'), true);
                 if (is_array($input)) {
                     $id = $input['id'] ?? $id;
                     $json = $input['manifest_json'] ?? ($input['json'] ?? '');
@@ -2336,7 +2348,7 @@ try {
 
             $data = json_decode($json, true);
             if (!$data) {
-                 jsonResponse(['success' => false, 'error' => 'Invalid JSON'], 400);
+                jsonResponse(['success' => false, 'error' => 'Invalid JSON'], 400);
             }
 
             // Extract mods
@@ -2347,8 +2359,8 @@ try {
             if (isset($data['files']) && is_array($data['files'])) {
                 foreach ($data['files'] as $f) {
                     if (isset($f['projectID'])) {
-                        $pid = (int)$f['projectID'];
-                        $fid = (int)($f['fileID'] ?? 0);
+                        $pid = (int) $f['projectID'];
+                        $fid = (int) ($f['fileID'] ?? 0);
                         $modsToFetch[] = $pid;
                         $manifestMap[$pid] = $fid;
                     }
@@ -2358,8 +2370,8 @@ try {
             elseif (isset($data['installedAddons']) && is_array($data['installedAddons'])) {
                 foreach ($data['installedAddons'] as $addon) {
                     if (isset($addon['addonID'])) {
-                        $pid = (int)$addon['addonID'];
-                        $fid = (int)($addon['installedFile']['id'] ?? 0);
+                        $pid = (int) $addon['addonID'];
+                        $fid = (int) ($addon['installedFile']['id'] ?? 0);
                         $modsToFetch[] = $pid;
                         $manifestMap[$pid] = $fid;
                     }
@@ -2371,7 +2383,7 @@ try {
             }
 
             if (empty($config['curseforge_api_key'])) {
-                 jsonResponse(['success' => false, 'error' => 'CurseForge API Key required'], 400);
+                jsonResponse(['success' => false, 'error' => 'CurseForge API Key required'], 400);
             }
 
             // Batch Fetch details
@@ -2389,7 +2401,7 @@ try {
             $doDownload = isset($_REQUEST['download']) && ($_REQUEST['download'] === 'true' || $_REQUEST['download'] === '1');
             $modsDir = $doDownload ? getContainerModsDir($id) : null;
             if ($doDownload && !$modsDir) {
-                 $doDownload = false;
+                $doDownload = false;
             }
             if ($doDownload && !is_dir($modsDir)) {
                 @mkdir($modsDir, 0775, true);
@@ -2399,14 +2411,14 @@ try {
             $downloaded = 0;
 
             foreach ($cfMods as $mod) {
-                 $pid = $mod['id'];
-                 $fid = $manifestMap[$pid] ?? null;
+                $pid = $mod['id'];
+                $fid = $manifestMap[$pid] ?? null;
 
-                 $author = !empty($mod['authors']) ? $mod['authors'][0]['name'] : 'Unknown';
-                 $logo = $mod['logo']['thumbnailUrl'] ?? $mod['logo']['url'] ?? '';
+                $author = !empty($mod['authors']) ? $mod['authors'][0]['name'] : 'Unknown';
+                $logo = $mod['logo']['thumbnailUrl'] ?? $mod['logo']['url'] ?? '';
 
-                 // Try to resolve filename from fileID
-                 $fileName = $mod['slug'] . '.jar';
+                // Try to resolve filename from fileID
+                $fileName = $mod['slug'] . '.jar';
                 if ($fid && !empty($mod['latestFiles'])) {
                     foreach ($mod['latestFiles'] as $lf) {
                         if ($lf['id'] == $fid) {
@@ -2416,11 +2428,11 @@ try {
                     }
                 }
 
-                 // Download if requested
+                // Download if requested
                 if ($doDownload && $fid) {
                     $targetPath = "$modsDir/$fileName";
                     if (!file_exists($targetPath)) {
-                        $dUrl = getModDownloadUrl((int)$pid, (string)$fid, $config['curseforge_api_key']);
+                        $dUrl = getModDownloadUrl((int) $pid, (string) $fid, $config['curseforge_api_key']);
                         if ($dUrl) {
                             if (downloadMod($dUrl, $targetPath)) {
                                 @chown($targetPath, 99);
@@ -2435,7 +2447,7 @@ try {
                     }
                 }
 
-                 $metadata[$pid] = array_merge([
+                $metadata[$pid] = array_merge([
                     'modId' => $pid,
                     'name' => $mod['name'],
                     'platform' => 'curseforge',
@@ -2445,8 +2457,8 @@ try {
                     'author' => $author,
                     'summary' => $mod['summary'] ?? '',
                     'installedAt' => time()
-                 ], $metadata[$pid] ?? []);
-                 $count++;
+                ], $metadata[$pid] ?? []);
+                $count++;
             }
 
             // Make dir if needed
@@ -2520,9 +2532,9 @@ try {
 
             $cacheFile = "$cacheDir/mods_cache.json";
             file_put_contents($cacheFile, json_encode([
-            'timestamp' => time(),
-            'serverId' => $id,
-            'mods' => $mods
+                'timestamp' => time(),
+                'serverId' => $id,
+                'mods' => $mods
             ], JSON_PRETTY_PRINT));
 
             jsonResponse([
@@ -2580,7 +2592,7 @@ try {
                 }
 
                 if (file_exists($globalFile)) {
-                     $globalData = json_decode(file_get_contents($globalFile), true) ?: [];
+                    $globalData = json_decode(file_get_contents($globalFile), true) ?: [];
                 }
 
                 // Collect missing IDs for batch fetch
@@ -2594,17 +2606,17 @@ try {
                         $mod['description'] = $g['description'] ?? '';
                         $mod['source'] = $g['source'] ?? 'curseforge';
                     } elseif (!empty($mod['modId']) && is_numeric($mod['modId'])) {
-                        $missingIds[] = (int)$mod['modId'];
+                        $missingIds[] = (int) $mod['modId'];
                     }
                 }
                 unset($mod); // break reference
 
                 // Batch fetch from API if we have missing IDs and an API key
                 if (!empty($missingIds) && !empty($config['curseforge_api_key'])) {
-                     $missingIds = array_unique($missingIds);
-                     $fetched = fetchCurseForgeModsBatch($missingIds, $config['curseforge_api_key']);
+                    $missingIds = array_unique($missingIds);
+                    $fetched = fetchCurseForgeModsBatch($missingIds, $config['curseforge_api_key']);
 
-                     // Update mods array and global dictionary
+                    // Update mods array and global dictionary
                     foreach ($fetched as $f) {
                         $fid = $f['id'];
                         // Add to global
@@ -2617,7 +2629,7 @@ try {
 
                         // Update current list
                         foreach ($mods as &$m) {
-                            if (isset($m['modId']) && (int)$m['modId'] === $fid) {
+                            if (isset($m['modId']) && (int) $m['modId'] === $fid) {
                                 $m['name'] = $f['name'];
                                 $m['icon'] = $f['logo']['thumbnailUrl'] ?? $f['logo']['url'] ?? '';
                                 $m['description'] = $f['summary'] ?? '';
@@ -2625,8 +2637,8 @@ try {
                             }
                         }
                     }
-                     // Save updated global dictionary
-                     file_put_contents($globalFile, json_encode($globalData, JSON_PRETTY_PRINT));
+                    // Save updated global dictionary
+                    file_put_contents($globalFile, json_encode($globalData, JSON_PRETTY_PRINT));
                 }
 
                 // Update cache
@@ -2635,17 +2647,17 @@ try {
                     @mkdir($cacheDir, 0755, true);
                 }
                 file_put_contents($cacheFile, json_encode([
-                'timestamp' => time(),
-                'serverId' => $id,
-                'mods' => $mods
+                    'timestamp' => time(),
+                    'serverId' => $id,
+                    'mods' => $mods
                 ], JSON_PRETTY_PRINT));
             }
 
             jsonResponse([
-            'success' => true,
-            'data' => $mods,
-            'count' => count($mods),
-            'cached' => $cached
+                'success' => true,
+                'data' => $mods,
+                'count' => count($mods),
+                'cached' => $cached
             ]);
             break;
 
@@ -2686,8 +2698,8 @@ try {
             // Cache the results
             $cacheFile = "/boot/config/plugins/mcmm/servers/$serverHash/mods_updates.json";
             file_put_contents($cacheFile, json_encode([
-            'timestamp' => time(),
-            'mods' => $modsWithUpdates
+                'timestamp' => time(),
+                'mods' => $modsWithUpdates
             ], JSON_PRETTY_PRINT));
 
             $updatesAvailable = array_filter($modsWithUpdates, function ($m) {
@@ -2762,10 +2774,10 @@ try {
             @unlink("/boot/config/plugins/mcmm/servers/$serverHash/mods_updates.json");
 
             jsonResponse([
-            'success' => true,
-            'message' => 'Mod updated successfully',
-            'oldFile' => basename($modFile),
-            'newFile' => $newModName
+                'success' => true,
+                'message' => 'Mod updated successfully',
+                'oldFile' => basename($modFile),
+                'newFile' => $newModName
             ]);
             break;
 

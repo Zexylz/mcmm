@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * Scan a directory for Minecraft mod files (.jar) and extract metadata.
+ *
+ * @param string $dataDir The base directory containing the mods folder.
+ * @return array List of mods with metadata.
+ */
 function scanServerMods(string $dataDir): array
 {
     $modsDir = rtrim($dataDir, '/') . '/mods';
@@ -10,14 +16,15 @@ function scanServerMods(string $dataDir): array
     $mods = [];
     $cmd = 'find -L ' . escapeshellarg($modsDir) . ' -type f -name "*.jar"';
     exec($cmd, $files);
-    
+
     foreach ($files as $jarPath) {
-        if (substr($jarPath, -4) !== '.jar') continue;
+        if (substr($jarPath, -4) !== '.jar')
+            continue;
 
         $fileName = basename($jarPath);
         $fileSize = filesize($jarPath);
         $modInfo = extractModInfo($jarPath);
-        
+
         if (strpos($fileName, 'forge-') === 0 || strpos($fileName, 'fabric-loader') === 0) {
             continue;
         }
@@ -43,6 +50,14 @@ function scanServerMods(string $dataDir): array
     return $mods;
 }
 
+/**
+ * Extract mod metadata from a JAR file.
+ *
+ * Checks mods.toml, mcmod.info, fabric.mod.json, and quilt.mod.json.
+ *
+ * @param string $jarPath Path to the JAR file.
+ * @return array Extracted mod information.
+ */
 function extractModInfo(string $jarPath): array
 {
     $info = [
@@ -96,26 +111,32 @@ function extractModInfo(string $jarPath): array
 }
 
 
+/**
+ * Parse Forge/NeoForge mods.toml content.
+ *
+ * @param string $content The raw content of mods.toml.
+ * @return array Extracted metadata.
+ */
 function parseModsToml(string $content): array
 {
     $info = [];
-    
+
     if (preg_match('/modId\s*=\s*["\']([^"\']+)["\']/', $content, $m)) {
         $info['modId'] = $m[1];
     }
-    
+
     if (preg_match('/version\s*=\s*["\']([^"\']+)["\']/', $content, $m)) {
         $info['version'] = $m[1];
     }
-    
+
     if (preg_match('/displayName\s*=\s*["\']([^"\']+)["\']/', $content, $m)) {
         $info['name'] = $m[1];
     }
-    
+
     if (preg_match('/description\s*=\s*["\']([^"\']+)["\']/', $content, $m)) {
         $info['description'] = $m[1];
     }
-    
+
     if (preg_match('/authors\s*=\s*["\']([^"\']+)["\']/', $content, $m)) {
         $info['authors'] = [$m[1]];
     }
@@ -123,17 +144,23 @@ function parseModsToml(string $content): array
     return $info;
 }
 
+/**
+ * Parse legacy Forge mcmod.info content.
+ *
+ * @param string $content The raw JSON content of mcmod.info.
+ * @return array Extracted metadata.
+ */
 function parseMcmodInfo(string $content): array
 {
     $info = [];
     $data = @json_decode($content, true);
-    
+
     if (!$data) {
         return $info;
     }
 
     $modData = is_array($data) && isset($data[0]) ? $data[0] : $data;
-    
+
     if (isset($modData['modid'])) {
         $info['modId'] = $modData['modid'];
     }
@@ -155,11 +182,17 @@ function parseMcmodInfo(string $content): array
 
     return $info;
 }
+/**
+ * Parse Fabric fabric.mod.json content.
+ *
+ * @param string $content The raw JSON content of fabric.mod.json.
+ * @return array Extracted metadata.
+ */
 function parseFabricModJson(string $content): array
 {
     $info = [];
     $data = @json_decode($content, true);
-    
+
     if (!$data) {
         return $info;
     }
@@ -184,17 +217,23 @@ function parseFabricModJson(string $content): array
 
     return $info;
 }
+/**
+ * Parse Quilt quilt.mod.json content.
+ *
+ * @param string $content The raw JSON content of quilt.mod.json.
+ * @return array Extracted metadata.
+ */
 function parseQuiltModJson(string $content): array
 {
     $info = [];
     $data = @json_decode($content, true);
-    
+
     if (!$data || !isset($data['quilt_loader'])) {
         return $info;
     }
 
     $loader = $data['quilt_loader'];
-    
+
     if (isset($loader['id'])) {
         $info['modId'] = $loader['id'];
     }
@@ -211,6 +250,12 @@ function parseQuiltModJson(string $content): array
     return $info;
 }
 
+/**
+ * Extract version number from a mod filename as a fallback.
+ *
+ * @param string $filename The filename to parse.
+ * @return string The extracted version or 'Unknown'.
+ */
 function extractVersionFromFilename(string $filename): string
 {
     $name = preg_replace('/\.jar$/i', '', $filename);
@@ -221,9 +266,17 @@ function extractVersionFromFilename(string $filename): string
     if (preg_match('/_(\d+\.\d+(?:\.\d+)?(?:\.\d+)?)(?:_|$)/', $name, $m)) {
         return $m[1];
     }
-    
+
     return 'Unknown';
 }
+/**
+ * Check for updates for a list of mods via CurseForge.
+ *
+ * @param array  $mods      List of mod data with hashes.
+ * @param string $apiKey    CurseForge API Key.
+ * @param string $mcVersion Minecraft version for filtering.
+ * @return array Updated mod list with update status.
+ */
 function checkModUpdates(array $mods, string $apiKey, string $mcVersion = ''): array
 {
     if (!$apiKey) {
@@ -231,18 +284,18 @@ function checkModUpdates(array $mods, string $apiKey, string $mcVersion = ''): a
     }
 
     $hashes = array_filter(array_column($mods, 'hash'));
-    
+
     if (empty($hashes)) {
         return $mods;
     }
 
     $fingerprintData = queryCurseForgeFingerprintAPI($hashes, $apiKey);
-    
+
     foreach ($mods as &$mod) {
         if (!$mod['hash']) {
             continue;
         }
-        
+
         if (isset($fingerprintData[$mod['hash']])) {
             $cfData = $fingerprintData[$mod['hash']];
             $mod['curseforgeId'] = $cfData['id'];
@@ -254,10 +307,17 @@ function checkModUpdates(array $mods, string $apiKey, string $mcVersion = ''): a
 
     return $mods;
 }
+/**
+ * Query CurseForge Fingerprint API to identify mods by hash.
+ *
+ * @param array  $hashes List of SHA1 hashes.
+ * @param string $apiKey CurseForge API Key.
+ * @return array Mapping of hashes to mod data.
+ */
 function queryCurseForgeFingerprintAPI(array $hashes, string $apiKey): array
 {
     $url = 'https://api.curseforge.com/v1/fingerprints';
-    
+
     $postData = json_encode([
         'fingerprints' => array_map('intval', $hashes)
     ]);
@@ -291,7 +351,7 @@ function queryCurseForgeFingerprintAPI(array $hashes, string $apiKey): array
             $results[$hash] = [
                 'id' => $match['id'],
                 'name' => $match['name'],
-                'hasUpdate' => false, 
+                'hasUpdate' => false,
             ];
         }
     }
@@ -300,18 +360,26 @@ function queryCurseForgeFingerprintAPI(array $hashes, string $apiKey): array
 }
 
 
+/**
+ * Download a mod file from a URL.
+ *
+ * @param string $downloadUrl  The URL to download from.
+ * @param string $targetPath   Where to save the file.
+ * @param string $expectedHash Optional SHA1 hash for verification.
+ * @return bool True on success.
+ */
 function downloadMod(string $downloadUrl, string $targetPath, string $expectedHash = ''): bool
 {
     $ch = curl_init($downloadUrl);
     $fp = fopen($targetPath, 'w');
-    
+
     curl_setopt($ch, CURLOPT_FILE, $fp);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_setopt($ch, CURLOPT_TIMEOUT, 300);
-    
+
     $success = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    
+
     curl_close($ch);
     fclose($fp);
 

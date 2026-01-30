@@ -2,10 +2,14 @@
 
 /**
  * MCMM API Library
- * Contains all helper functions for the MCMM API.
+ *
+ * Core library containing helper functions for configuration, Docker interaction,
+ * metrics gathering, and caching.
  */
 /**
  * Get the total number of logical CPU cores on the system.
+ *
+ * @return int Number of logical CPU cores.
  */
 function getSystemCpuCount(): int
 {
@@ -24,8 +28,15 @@ function getSystemCpuCount(): int
     return $cpuCount;
 }
 
-// Resolve host data directory for a container by inspecting the /data mount.
-// Falls back to /mnt/user/appdata/<name> if not found.
+/**
+ * Resolve the host data directory for a container.
+ *
+ * Inspects Docker mounts for the /data destination or falls back to standard paths.
+ *
+ * @param string $containerName The name of the container.
+ * @param string $containerId   Optional container ID for more accurate inspection.
+ * @return string|null The resolved host-side path or null if not found.
+ */
 function getContainerDataDir(string $containerName, string $containerId = '')
 {
     $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
@@ -44,7 +55,10 @@ function getContainerDataDir(string $containerName, string $containerId = '')
 }
 
 /**
- * Resolve host data directory by ID only.
+ * Resolve host data directory using only the container ID.
+ *
+ * @param string $id The container ID (short or long).
+ * @return string|null The resolved host-side path or null if not found.
  */
 function getContainerDataDirById(string $id): ?string
 {
@@ -70,7 +84,12 @@ function getContainerDataDirById(string $id): ?string
 }
 
 /**
- * Load mod metadata from modpack manifest (minecraftinstance.json or manifest.json)
+ * Load mod metadata from modpack manifest files.
+ *
+ * Supports minecraftinstance.json (CurseForge/FTB) and manifest.json.
+ *
+ * @param string $dataDir The directory containing the manifest files.
+ * @return array Mapping of mod IDs to metadata.
  */
 function loadModsFromManifest(string $dataDir): array
 {
@@ -103,7 +122,7 @@ function loadModsFromManifest(string $dataDir): array
     // 2. Try CurseForge manifest.json (Export format, less likely in running server but possible)
     $manFile = rtrim($dataDir, '/') . '/manifest.json';
     if (file_exists($manFile)) {
-         $data = json_decode(file_get_contents($manFile), true);
+        $data = json_decode(file_get_contents($manFile), true);
         if ($data && !empty($data['files'])) {
             $mcVersion = $data['minecraft']['version'] ?? 'Unknown';
             foreach ($data['files'] as $file) {
@@ -125,7 +144,10 @@ function loadModsFromManifest(string $dataDir): array
 }
 
 /**
- * Get the full 64-character container ID from a short ID or name.
+ * Get the full 64-character container ID.
+ *
+ * @param string $idOrName Short ID or container name.
+ * @return string|null The full container ID or null on failure.
  */
 function getContainerLongId(string $idOrName): ?string
 {
@@ -135,7 +157,12 @@ function getContainerLongId(string $idOrName): ?string
     return !empty($longId) ? $longId : null;
 }
 
-// Get container stats from docker stats command as a fallback.
+/**
+ * Retrieve container stats using the 'docker stats' command as a fallback.
+ *
+ * @param string $containerId The container ID.
+ * @return array Array containing cpu_percent, mem_used_mb, and mem_cap_mb.
+ */
 function getContainerCgroupStats(string $containerId)
 {
     $cmd = '/usr/bin/docker stats --no-stream --format "{{.CPUPerc}}|{{.MemUsage}}" ' . escapeshellarg($containerId);
@@ -163,7 +190,16 @@ function getContainerCgroupStats(string $containerId)
     ];
 }
 
-// Read agent metrics from mcmm_metrics.json in the container data dir.
+/**
+ * Read agent metrics from the local metrics JSON file.
+ *
+ * Tries the host filesystem first, then falls back to direct container access.
+ *
+ * @param string $containerName Container name.
+ * @param string $containerId   Optional container ID.
+ * @param string $dataDir       Optional data directory path.
+ * @return array|null Decoded metrics or null if not found or stale.
+ */
 function readAgentMetrics(string $containerName, string $containerId = '', string $dataDir = '')
 {
     $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
@@ -191,7 +227,7 @@ function readAgentMetrics(string $containerName, string $containerId = '', strin
     // Attempt 2: Container Direct (Most reliable, fallback)
     if (!$data && $containerId) {
         $cmd = "$dockerBin exec " . escapeshellarg($containerId) . " cat /tmp/mcmm_metrics.json 2>/dev/null";
-        $content = trim((string)@shell_exec($cmd));
+        $content = trim((string) @shell_exec($cmd));
         if ($content && strpos($content, '{') === 0) {
             $decoded = json_decode($content, true);
             if ($decoded && isset($decoded['ts'])) {
@@ -206,7 +242,13 @@ function readAgentMetrics(string $containerName, string $containerId = '', strin
     return $data;
 }
 
-// Ensure metrics agent script exists in data dir and start it inside container
+/**
+ * Ensure the metrics agent script exists and is running inside the container.
+ *
+ * @param string $containerName Container name.
+ * @param string $containerId   Full container ID.
+ * @param string $dataDir       Host data directory.
+ */
 function ensureMetricsAgent(string $containerName, string $containerId, string $dataDir)
 {
     $scriptPath = rtrim($dataDir, '/') . '/mcmm_agent.sh';
@@ -352,6 +394,14 @@ BASH;
 
 // Helper to write INI file
 if (!function_exists('write_ini_file')) {
+    /**
+     * Write an associative array to an INI file.
+     *
+     * @param array  $assoc_arr    The data to write.
+     * @param string $path         The target file path.
+     * @param bool   $has_sections Whether to support sections.
+     * @return int|bool Number of bytes written or false on failure.
+     */
     function write_ini_file($assoc_arr, $path, $has_sections = false)
     {
         $content = "";
@@ -395,7 +445,11 @@ if (!function_exists('write_ini_file')) {
     }
 }
 
-// Debug log function
+/**
+ * Log a message to the internal debug log.
+ *
+ * @param string $msg The message to log.
+ */
 function dbg($msg)
 {
     $logFile = dirname(__DIR__) . '/debug.log';
@@ -404,7 +458,11 @@ function dbg($msg)
 }
 
 /**
- * Cache data to /tmp/mcmm_cache for speed
+ * Cache data to the local temporary cache.
+ *
+ * @param string $key  Cache key.
+ * @param mixed  $data Data to cache.
+ * @param int    $ttl  Time-to-live in seconds.
  */
 function mcmm_cache_set($key, $data, $ttl = 3600)
 {
@@ -420,6 +478,12 @@ function mcmm_cache_set($key, $data, $ttl = 3600)
     @file_put_contents($file, json_encode($cacheData));
 }
 
+/**
+ * Retrieve data from the local temporary cache.
+ *
+ * @param string $key Cache key.
+ * @return mixed|null Cached data or null if not found or expired.
+ */
 function mcmm_cache_get($key)
 {
     $cacheDir = '/tmp/mcmm_cache';
@@ -436,6 +500,13 @@ function mcmm_cache_get($key)
     return null;
 }
 
+/**
+ * Parse data from the current request.
+ *
+ * Supports JSON input and standard POST.
+ *
+ * @return array The request data.
+ */
 function getRequestData()
 {
     $input = file_get_contents('php://input');
@@ -446,6 +517,13 @@ function getRequestData()
     return $data;
 }
 
+/**
+ * Format bytes into a human-readable string.
+ *
+ * @param int $bytes     Number of bytes.
+ * @param int $precision Number of decimal places.
+ * @return string Formatted string (e.g., "1.5 GB").
+ */
 function formatBytes($bytes, $precision = 2)
 {
     $units = array('B', 'KB', 'MB', 'GB', 'TB');
@@ -456,6 +534,12 @@ function formatBytes($bytes, $precision = 2)
     return round($bytes, $precision) . ' ' . $units[$pow];
 }
 
+/**
+ * Sanitize a string for use as a Docker container name.
+ *
+ * @param string $name The original name.
+ * @return string Sanitized name.
+ */
 function safeContainerName(string $name): string
 {
     $sanitized = strtolower(preg_replace('/[^a-zA-Z0-9_-]/', '-', $name));
@@ -466,6 +550,12 @@ function safeContainerName(string $name): string
     return $sanitized;
 }
 
+/**
+ * Check if a Docker container exists by name.
+ *
+ * @param string $name The container name to check.
+ * @return bool True if the container exists.
+ */
 function dockerExists(string $name): bool
 {
     $out = [];
@@ -474,6 +564,12 @@ function dockerExists(string $name): bool
     return $exitCode === 0;
 }
 
+/**
+ * Get the path to the mods directory for a container.
+ *
+ * @param string $containerId The container ID.
+ * @return string|null Path to the mods directory or null if not found.
+ */
 function getContainerModsDir(string $containerId): ?string
 {
     // Get the /data mount point
@@ -485,6 +581,20 @@ function getContainerModsDir(string $containerId): ?string
     return null;
 }
 
+/**
+ * Save metadata for an installed mod.
+ *
+ * Persists data to both server-specific and global metadata files.
+ *
+ * @param string $serverId  Unique ID for the server.
+ * @param string $modId     ID of the mod.
+ * @param string $platform  Source platform (e.g., 'curseforge').
+ * @param string $modName   Display name of the mod.
+ * @param string $fileName  The filename of the mod JAR.
+ * @param int|null $fileId  Optional file ID from the platform.
+ * @param string|null $logo Optional logo URL.
+ * @param array $extraData  Optional additional metadata.
+ */
 function saveModMetadata($serverId, $modId, $platform, $modName, $fileName, $fileId = null, $logo = null, $extraData = [])
 {
     $serversDir = '/boot/config/plugins/mcmm/servers';
@@ -556,6 +666,12 @@ function saveModMetadata($serverId, $modId, $platform, $modName, $fileName, $fil
     }
 }
 
+/**
+ * Build Docker environment arguments string from an associative array.
+ *
+ * @param array $env Key-value pairs of environment variables.
+ * @return string The formatted arguments string.
+ */
 function buildEnvArgs(array $env): string
 {
     $parts = [];
@@ -568,7 +684,15 @@ function buildEnvArgs(array $env): string
     return implode(' ', $parts);
 }
 
-// Normalize boolean-ish inputs (e.g., "false", "0", "", null) to bool
+/**
+ * Normalize boolean-ish inputs to a boolean value.
+ *
+ * Handles "true"/"false", "1"/"0", "on"/"off", "yes"/"no", and nulls.
+ *
+ * @param mixed $value   The value to normalize.
+ * @param bool  $default Default value if input is null.
+ * @return bool The normalized boolean value.
+ */
 function boolInput($value, $default = false): bool
 {
     if (is_bool($value)) {
@@ -584,7 +708,14 @@ function boolInput($value, $default = false): bool
     return (bool) $v;
 }
 
-// Parse memory strings like "8G", "512M", "1.5GiB" into MB
+/**
+ * Parse memory strings with units into MB.
+ *
+ * Supports units like G, GiB, M, MiB, K, KiB, T, TiB.
+ *
+ * @param mixed $val The memory string or number.
+ * @return float Memory in MB.
+ */
 function parseMemoryToMB($val): float
 {
     $v = trim((string) $val);
@@ -612,8 +743,12 @@ function parseMemoryToMB($val): float
 }
 
 /**
- * Get accurate 'Working Set' RAM (Usage - Inactive Cache) from Host Cgroups.
- * This is the ultimate fallback for when the agent is missing.
+ * Get accurate 'Working Set' RAM from host Cgroups.
+ *
+ * Calculates Usage - Inactive Cache for Cgroup v1 or v2.
+ *
+ * @param string $containerId The container ID.
+ * @return float|null RAM usage in MB or null if unavailable.
  */
 function getContainerCgroupRamMb(string $containerId): ?float
 {
@@ -627,18 +762,18 @@ function getContainerCgroupRamMb(string $containerId): ?float
     $v1Stat = "/sys/fs/cgroup/memory/docker/$longId/memory.stat";
 
     if (file_exists($v1Path)) {
-        $usage = (float)@file_get_contents($v1Path);
-        $statContent = (string)@file_get_contents($v1Stat);
+        $usage = (float) @file_get_contents($v1Path);
+        $statContent = (string) @file_get_contents($v1Stat);
         $cache = 0.0;
         // Search for total_cache or sum of (in)active
         if (preg_match('/total_cache\s+(\d+)/', $statContent, $m)) {
-            $cache = (float)$m[1];
+            $cache = (float) $m[1];
         } else {
             if (preg_match('/total_inactive_file\s+(\d+)/', $statContent, $m)) {
-                $cache += (float)$m[1];
+                $cache += (float) $m[1];
             }
             if (preg_match('/total_active_file\s+(\d+)/', $statContent, $m)) {
-                $cache += (float)$m[1];
+                $cache += (float) $m[1];
             }
         }
         return ($usage - $cache) / (1024 * 1024);
@@ -653,19 +788,19 @@ function getContainerCgroupRamMb(string $containerId): ?float
 
     foreach ($v2Roots as $root) {
         if (file_exists("$root/memory.current")) {
-            $usage = (float)@file_get_contents("$root/memory.current");
-            $statContent = (string)@file_get_contents("$root/memory.stat");
+            $usage = (float) @file_get_contents("$root/memory.current");
+            $statContent = (string) @file_get_contents("$root/memory.stat");
             $cache = 0.0;
             // In v2, 'file' is the general cache term
             if (preg_match('/\binactive_file\s+(\d+)/', $statContent, $m)) {
-                $cache += (float)$m[1];
+                $cache += (float) $m[1];
             }
             if (preg_match('/\bactive_file\s+(\d+)/', $statContent, $m)) {
-                $cache += (float)$m[1];
+                $cache += (float) $m[1];
             }
             // If still high, subtract anything marked as 'file' cache
             if (preg_match('/\bfile\s+(\d+)/', $statContent, $m)) {
-                $fileCache = (float)$m[1];
+                $fileCache = (float) $m[1];
                 if ($fileCache > $cache) {
                     $cache = $fileCache;
                 }
@@ -678,8 +813,11 @@ function getContainerCgroupRamMb(string $containerId): ?float
 }
 
 /**
- * Get Java heap used (MB) via jcmd GC.heap_info inside the container.
- * This matches what users mean by "allocated 12G" (heap cap) and will not exceed Xmx.
+ * Get Java heap usage via jcmd inside the container.
+ *
+ * @param string $containerId The container ID.
+ * @param int    $cacheTtlSec Cache duration for the result.
+ * @return float Heap usage in MB.
  */
 function getJavaHeapUsedMb(string $containerId, int $cacheTtlSec = 4): float
 {
@@ -749,8 +887,13 @@ function getJavaHeapUsedMb(string $containerId, int $cacheTtlSec = 4): float
 }
 
 /**
- * Read cgroup stats for a container without invoking docker stats.
- * Supports cgroup v2 and v1 layouts.
+ * Read cgroup statistics for a container without using 'docker stats'.
+ *
+ * Supports both cgroup v1 and v2 layouts.
+ *
+ * @param string      $cid              Container ID.
+ * @param float|null  $configuredMemMb  Optional manually configured memory limit.
+ * @return array Memory and CPU statistics.
  */
 function getCgroupStats(string $cid, ?float $configuredMemMb = null): array
 {
@@ -867,8 +1010,12 @@ function getCgroupStats(string $cid, ?float $configuredMemMb = null): array
 }
 
 /**
- * Find the next available host port starting at $start (inclusive).
- * Checks docker ps for any mapping to 25565/tcp and avoids those host ports.
+ * Find the next available host port starting from a baseline.
+ *
+ * Checks existing Docker port mappings to avoid collisions.
+ *
+ * @param int $start Starting port number (default 25565).
+ * @return int The first available port found.
  */
 function findAvailablePort(int $start = 25565): int
 {
@@ -897,7 +1044,13 @@ function findAvailablePort(int $start = 25565): int
     return $start;
 }
 
-// Parse label value from docker ps labels string: key1=val1,key2=val2
+/**
+ * Extract a specific value from a Docker labels string.
+ *
+ * @param string $labels Comma-separated labels (key=value).
+ * @param string $key    The key to look for.
+ * @return string|null The value or null if not found.
+ */
 function getLabelValue(string $labels, string $key): ?string
 {
     if ($labels === '') {
@@ -912,7 +1065,17 @@ function getLabelValue(string $labels, string $key): ?string
     return null;
 }
 
-// Backfill server icon for existing containers without config files
+/**
+ * Backfill server icon for existing containers without config.
+ *
+ * Scans container environment for modpack info and queries CurseForge.
+ *
+ * @param string $containerId   Container ID.
+ * @param string $containerName Container name.
+ * @param string $serversDir    Path to server configurations.
+ * @param array  $config        Global plugin configuration.
+ * @return string The resolved icon URL.
+ */
 function backfillServerIcon(string $containerId, string $containerName, string $serversDir, array $config): string
 {
     // Inspect container to get environment variables
@@ -1008,6 +1171,12 @@ function backfillServerIcon(string $containerId, string $containerName, string $
     return $icon;
 }
 
+/**
+ * Send a JSON response and terminate execution.
+ *
+ * @param mixed $data       The data to encode.
+ * @param int   $statusCode HTTP status code.
+ */
 function jsonResponse($data, int $statusCode = 200): void
 {
     http_response_code($statusCode);
@@ -1015,6 +1184,16 @@ function jsonResponse($data, int $statusCode = 200): void
     exit;
 }
 
+/**
+ * Fetch modpacks from CurseForge.
+ *
+ * @param string $search   Search filter.
+ * @param string $apiKey   CurseForge API Key.
+ * @param string $sort     Sort field (popularity, newest, updated, name, downloads).
+ * @param int    $page     Page number.
+ * @param int    $pageSize Number of results per page.
+ * @return array|null List of modpacks or null on failure.
+ */
 function fetchCurseForgeModpacks(string $search, string $apiKey, string $sort = 'popularity', int $page = 1, int $pageSize = 20): ?array
 {
     $sortMap = [
@@ -1059,6 +1238,15 @@ function fetchCurseForgeModpacks(string $search, string $apiKey, string $sort = 
     return $modpacks;
 }
 
+/**
+ * Fetch modpacks from Modrinth.
+ *
+ * @param string $search   Search query.
+ * @param string $sort     Sort algorithm.
+ * @param int    $page     Page number.
+ * @param int    $pageSize Number of results per page.
+ * @return array|null List of modpacks or null on failure.
+ */
 function fetchModrinthModpacks(string $search, string $sort = 'popularity', int $page = 1, int $pageSize = 20): ?array
 {
     $sortMap = [
@@ -1102,7 +1290,10 @@ function fetchModrinthModpacks(string $search, string $sort = 'popularity', int 
 }
 
 /**
- * Robustly extract MC version from FTB modpack data
+ * Robustly extract the Minecraft version from FTB modpack data.
+ *
+ * @param array $pack The modpack data from FTB API.
+ * @return string|null The extracted version or null if not found.
  */
 function extractFtbVersion(array $pack): ?string
 {
@@ -1116,7 +1307,7 @@ function extractFtbVersion(array $pack): ?string
         foreach ($pack['tags'] as $tag) {
             $name = $tag['name'] ?? '';
             // FTB usually uses negative IDs for Minecraft version tags
-            if (isset($tag['id']) && (int)$tag['id'] < 0) {
+            if (isset($tag['id']) && (int) $tag['id'] < 0) {
                 // Remove non-numeric/dot chars (e.g. "Minecraft 1.20.1" -> "1.20.1")
                 $v = trim(preg_replace('/[^0-9.]/', '', $name));
                 if (preg_match('/^\d+\.\d+(\.\d+)?$/', $v)) {
@@ -1135,6 +1326,14 @@ function extractFtbVersion(array $pack): ?string
     return null;
 }
 
+/**
+ * Fetch modpacks from the FTB API.
+ *
+ * @param string $search   Search term.
+ * @param int    $page     Page number.
+ * @param int    $pageSize Number of results per page.
+ * @return array|null List of modpacks or null on failure.
+ */
 function fetchFTBModpacks(string $search, int $page = 1, int $pageSize = 20): ?array
 {
     // Search endpoint: returns IDs
@@ -1257,6 +1456,12 @@ function fetchFTBModpacks(string $search, int $page = 1, int $pageSize = 20): ?a
     return $modpacks;
 }
 
+/**
+ * Fetch available versions (files) for an FTB modpack.
+ *
+ * @param int $modpackId The FTB modpack ID.
+ * @return array List of versions.
+ */
 function fetchFTBModpackFiles(int $modpackId): array
 {
     $cacheKey = "ftb_pack_vers_v3_" . $modpackId;
@@ -1299,6 +1504,17 @@ function fetchFTBModpackFiles(int $modpackId): array
     return $files;
 }
 
+/**
+ * Search for mods on CurseForge with version and loader filtering.
+ *
+ * @param string $search   Search filter.
+ * @param string $version  Minecraft version.
+ * @param string $loader   Mod loader (forge, fabric, etc.).
+ * @param int    $page     Page number.
+ * @param int    $pageSize Results per page.
+ * @param string $apiKey   CurseForge API Key.
+ * @return array [mods_list, total_count].
+ */
 function fetchCurseForgeMods(string $search, string $version, string $loader, int $page, int $pageSize, string $apiKey): array
 {
     $params = [
@@ -1386,7 +1602,11 @@ function fetchCurseForgeMods(string $search, string $version, string $loader, in
 }
 
 /**
- * Fetches multiple mods by ID in a single request (Batch)
+ * Fetch multiple CurseForge mods by their IDs in a single request.
+ *
+ * @param array  $modIds List of mod IDs.
+ * @param string $apiKey CurseForge API Key.
+ * @return array List of mod data.
  */
 function fetchCurseForgeModsBatch(array $modIds, string $apiKey): array
 {
@@ -1407,6 +1627,15 @@ function fetchCurseForgeModsBatch(array $modIds, string $apiKey): array
     return $allMods;
 }
 
+/**
+ * Fetch available files for a specific CurseForge mod.
+ *
+ * @param int    $modId   The mod ID.
+ * @param string $version Filter by Minecraft version.
+ * @param string $loader  Filter by mod loader.
+ * @param string $apiKey  CurseForge API Key.
+ * @return array List of files.
+ */
 function fetchCurseForgeFiles(int $modId, string $version, string $loader, string $apiKey): array
 {
     $url = "https://api.curseforge.com/v1/mods/$modId/files";
@@ -1496,6 +1725,16 @@ function fetchCurseForgeFiles(int $modId, string $version, string $loader, strin
     return array_values($files);
 }
 
+/**
+ * Search for mods on Modrinth.
+ *
+ * @param string $search   Search term.
+ * @param string $version  Minecraft version.
+ * @param string $loader   Mod loader.
+ * @param int    $page     Page number.
+ * @param int    $pageSize Results per page.
+ * @return array [mods_list, total_count].
+ */
 function fetchModrinthMods(string $search, string $version, string $loader, int $page, int $pageSize): array
 {
     $facets = [];
@@ -1552,6 +1791,14 @@ function fetchModrinthMods(string $search, string $version, string $loader, int 
     return [$mods, $total];
 }
 
+/**
+ * Fetch available versions for a Modrinth mod.
+ *
+ * @param string $projectId Modrinth project ID or slug.
+ * @param string $version   Filter by Minecraft version.
+ * @param string $loader    Filter by mod loader.
+ * @return array List of versions.
+ */
 function fetchModrinthFiles(string $projectId, string $version, string $loader): array
 {
     $url = "https://api.modrinth.com/v2/project/$projectId/version";
@@ -1625,6 +1872,12 @@ function fetchModrinthFiles(string $projectId, string $version, string $loader):
     return $mapped;
 }
 
+/**
+ * Get the direct download URL for a Modrinth version.
+ *
+ * @param string $versionId Modrinth version ID.
+ * @return string|null The download URL or null if not found.
+ */
 function getModrinthDownloadUrl(string $versionId): ?string
 {
     if (!$versionId) {
@@ -1656,6 +1909,13 @@ function getModrinthDownloadUrl(string $versionId): ?string
     return $primary['url'] ?? null;
 }
 
+/**
+ * Perform a request to the Modrinth API.
+ *
+ * @param string $path      API path or full URL.
+ * @param bool   $isFullUrl Whether $path is a full URL.
+ * @return array|null Decoded JSON response or null on failure.
+ */
 function mrRequest(string $path, bool $isFullUrl = false): ?array
 {
     $cacheKey = "mr_" . ($isFullUrl ? $path : $path);
@@ -1694,6 +1954,14 @@ function mrRequest(string $path, bool $isFullUrl = false): ?array
     return $json;
 }
 
+/**
+ * Get the download URL for a specific CurseForge mod file.
+ *
+ * @param int    $modId  The mod ID.
+ * @param string $fileId The file ID.
+ * @param string $apiKey CurseForge API Key.
+ * @return string|null The download URL or null if not found.
+ */
 function getModDownloadUrl(int $modId, string $fileId, string $apiKey): ?string
 {
     if ($fileId) {
@@ -1728,6 +1996,16 @@ function getModDownloadUrl(int $modId, string $fileId, string $apiKey): ?string
     return null;
 }
 
+/**
+ * Perform a request to the CurseForge API.
+ *
+ * @param string $path      API path or full URL.
+ * @param string $apiKey    CurseForge API Key.
+ * @param bool   $isFullUrl Whether $path is a full URL.
+ * @param string $method    HTTP method (GET or POST).
+ * @param mixed  $data      Optional data for POST requests.
+ * @return array|null Decoded JSON response or null on failure.
+ */
 function cfRequest(string $path, string $apiKey, bool $isFullUrl = false, string $method = 'GET', $data = null): ?array
 {
     $method = strtoupper($method);
@@ -1792,6 +2070,14 @@ function cfRequest(string $path, string $apiKey, bool $isFullUrl = false, string
     return $json;
 }
 
+/**
+ * Resolve the best download file for a modpack (server pack preferred).
+ *
+ * @param int      $modId           The modpack ID on CurseForge.
+ * @param string   $apiKey          CurseForge API Key.
+ * @param int|null $preferredFileId Optional specific file ID.
+ * @return array [download_url, filename].
+ */
 function getModpackDownload(int $modId, string $apiKey, ?int $preferredFileId = null): array
 {
     $details = cfRequest('/mods/' . $modId, $apiKey);
@@ -1865,6 +2151,12 @@ function getModpackDownload(int $modId, string $apiKey, ?int $preferredFileId = 
     return [null, null];
 }
 
+/**
+ * Format a download count into a human-readable string (e.g., 1M, 50K).
+ *
+ * @param int|float $count The raw download count.
+ * @return string The formatted count.
+ */
 function formatDownloads($count): string
 {
     if ($count >= 1000000) {
@@ -1876,6 +2168,15 @@ function formatDownloads($count): string
     return (string) $count;
 }
 
+/**
+ * Retrieve supported mod loaders for a specific modpack.
+ *
+ * @param string      $platform  Platform name ('curseforge' or 'modrinth').
+ * @param string      $slug      Modpack slug or ID.
+ * @param string      $apiKey    CurseForge API Key.
+ * @param string|null $modpackId Optional numeric modpack ID for CurseForge.
+ * @return array List of supported loaders (e.g., ['Forge', 'Fabric']).
+ */
 function getModpackLoaders(string $platform, string $slug, string $apiKey, ?string $modpackId = null): array
 {
     if ($platform === 'modrinth') {
@@ -1906,6 +2207,14 @@ function getModpackLoaders(string $platform, string $slug, string $apiKey, ?stri
     return [];
 }
 
+/**
+ * Retrieve all available versions for a modpack.
+ *
+ * @param string $platform Platform name.
+ * @param string $id       Modpack ID or slug.
+ * @param string $apiKey   Optional CurseForge API Key.
+ * @return array List of versions with metadata.
+ */
 function getModpackVersions(string $platform, string $id, string $apiKey = ''): array
 {
     if ($platform === 'modrinth') {
@@ -1963,6 +2272,15 @@ function getModpackVersions(string $platform, string $id, string $apiKey = ''): 
     return [];
 }
 
+/**
+ * Resolve the Minecraft version for a specific file/version ID of a modpack.
+ *
+ * @param string $platform  Platform name.
+ * @param string $id        Modpack ID or slug.
+ * @param string $versionId Specific version/file ID.
+ * @param string $apiKey    Optional CurseForge API Key.
+ * @return string|null The Minecraft version string or null if not found.
+ */
 function getMinecraftVersion(string $platform, string $id, string $versionId, string $apiKey = ''): ?string
 {
     if ($platform === 'curseforge') {
@@ -1982,7 +2300,7 @@ function getMinecraftVersion(string $platform, string $id, string $versionId, st
 
         // Direct File Lookup (Much faster and reliable than paging through 50 versions)
         if (is_numeric($versionId)) {
-            $file = cfRequest("/mods/" . urlencode((string)$modId) . "/files/" . urlencode((string)$versionId), $apiKey);
+            $file = cfRequest("/mods/" . urlencode((string) $modId) . "/files/" . urlencode((string) $versionId), $apiKey);
 
             if (isset($file['data']['gameVersions'])) {
                 foreach ($file['data']['gameVersions'] as $gv) {
@@ -1991,7 +2309,7 @@ function getMinecraftVersion(string $platform, string $id, string $versionId, st
                     }
                 }
             } else {
-                 file_put_contents(__DIR__ . '/debug.log', "File $versionId lookup failed for Mod $modId. Resp: " . json_encode($file) . "\n", FILE_APPEND);
+                file_put_contents(__DIR__ . '/debug.log', "File $versionId lookup failed for Mod $modId. Resp: " . json_encode($file) . "\n", FILE_APPEND);
             }
         }
     }
@@ -2011,7 +2329,12 @@ function getMinecraftVersion(string $platform, string $id, string $versionId, st
 }
 
 /**
- * Retrieves Minecraft server status using the modern 1.7+ Handshake protocol
+ * Retrieve Minecraft server status using the 1.7+ Handshake protocol.
+ *
+ * @param string $host    Server hostname or IP.
+ * @param int    $port    Server port.
+ * @param int    $timeout Connection timeout in seconds.
+ * @return array|null Online stats (players, max, version) or null on failure.
  */
 function getMinecraftStatusModern(string $host, int $port, int $timeout = 2): ?array
 {
@@ -2083,7 +2406,7 @@ function getMinecraftStatusModern(string $host, int $port, int $timeout = 2): ?a
     if ($json && isset($json['players'])) {
         return [
             'online' => intval($json['players']['online']),
-            'max'    => intval($json['players']['max']),
+            'max' => intval($json['players']['max']),
             'version' => $json['version']['name'] ?? '',
             'sample' => $json['players']['sample'] ?? []
         ];
@@ -2092,6 +2415,16 @@ function getMinecraftStatusModern(string $host, int $port, int $timeout = 2): ?a
     return null;
 }
 
+/**
+ * Get Minecraft server status with automatic protocol fallback.
+ *
+ * Tries the modern (1.7+) protocol first, then falls back to legacy (1.6.1).
+ *
+ * @param string $host    Server hostname or IP.
+ * @param int    $port    Server port.
+ * @param int    $timeout Connection timeout in seconds.
+ * @return array|null Online stats or null on failure.
+ */
 function getMinecraftStatus(string $host, int $port, int $timeout = 1): ?array
 {
     if ($port <= 0) {
@@ -2117,11 +2450,11 @@ function getMinecraftStatus(string $host, int $port, int $timeout = 1): ?array
     $protocol = 74; // 1.7.2
     // Robust 1.6.1 compatible ping payload
     $payload = "\xFE\x01\xFA" .
-               pack('n', 11) . mb_convert_encoding("MC|PingHost", "UTF-16BE") .
-               pack('n', 7 + (strlen($host) * 2)) .
-               pack('C', $protocol) .
-               pack('n', strlen($host)) . mb_convert_encoding($host, "UTF-16BE") .
-               pack('N', $port);
+        pack('n', 11) . mb_convert_encoding("MC|PingHost", "UTF-16BE") .
+        pack('n', 7 + (strlen($host) * 2)) .
+        pack('C', $protocol) .
+        pack('n', strlen($host)) . mb_convert_encoding($host, "UTF-16BE") .
+        pack('N', $port);
 
     fwrite($socket, $payload);
     $data = fread($socket, 4096);
@@ -2138,8 +2471,8 @@ function getMinecraftStatus(string $host, int $port, int $timeout = 1): ?array
         $parts = explode("\x00", $response);
         if (count($parts) >= 6) {
             return [
-                'online'  => intval($parts[4]),
-                'max'     => intval($parts[5]),
+                'online' => intval($parts[4]),
+                'max' => intval($parts[5]),
                 'version' => $parts[2]
             ];
         }
@@ -2148,6 +2481,14 @@ function getMinecraftStatus(string $host, int $port, int $timeout = 1): ?array
     return null;
 }
 
+/**
+ * Detect Minecraft version and mod loader by scanning server files.
+ *
+ * Checks common JSON manifests, libraries, and JAR filenames.
+ *
+ * @param string $dir The server's data directory.
+ * @return array ['mcVersion' => string, 'loader' => string].
+ */
 function detectVersionFromFiles(string $dir): array
 {
     $ver = '';
@@ -2165,8 +2506,8 @@ function detectVersionFromFiles(string $dir): array
                 if (is_array($mc)) {
                     $mc = $mc['version'] ?? '';
                 }
-                if ($mc && preg_match('/^\d+\.\d+(\.\d+)?$/', (string)$mc)) {
-                    $ver = (string)$mc;
+                if ($mc && preg_match('/^\d+\.\d+(\.\d+)?$/', (string) $mc)) {
+                    $ver = (string) $mc;
                     break;
                 }
             }
@@ -2225,6 +2566,21 @@ function detectVersionFromFiles(string $dir): array
     return ['mcVersion' => $ver, 'loader' => $loader];
 }
 
+/**
+ * Extract comprehensive metadata for a Minecraft server container.
+ *
+ * Resolves Minecraft version, loader type, and modpack info from env,
+ * install files, and directory scanning.
+ *
+ * @param array  $env           Container environment variables.
+ * @param array  $config        Global plugin configuration.
+ * @param string $containerName Name of the container.
+ * @param string $apiKey        CurseForge API Key.
+ * @param string $image         Optional Docker image tag.
+ * @param int    $port          Optional host port.
+ * @param string $containerId   Optional Container ID.
+ * @return array Metadata including versions, loader, and debug info.
+ */
 function getServerMetadata(array $env, array $config, string $containerName, string $apiKey, string $image = '', int $port = 0, string $containerId = ''): array
 {
     $mcVersion = '';
@@ -2305,8 +2661,14 @@ function getServerMetadata(array $env, array $config, string $containerName, str
 
         // B. Deep Scan JSON Files (Including dot-prefixed ones found in FTB)
         $jsonFiles = [
-            'version.json', 'versions.json', 'modpack.json', 'minecraftinstance.json',
-            'manifest.json', '.manifest.json', 'ftb-modpack.json', 'instance.json'
+            'version.json',
+            'versions.json',
+            'modpack.json',
+            'minecraftinstance.json',
+            'manifest.json',
+            '.manifest.json',
+            'ftb-modpack.json',
+            'instance.json'
         ];
         foreach ($jsonFiles as $jf) {
             $path = rtrim($dataDir, '/') . '/' . $jf;
@@ -2392,7 +2754,13 @@ function getServerMetadata(array $env, array $config, string $containerName, str
 }
 
 /**
- * Deployment handler for creating a new Minecraft container.
+ * Deployment handler for creating and starting a new Minecraft container.
+ *
+ * Handles directory creation, port selection, XML template generation,
+ * and docker run execution.
+ *
+ * @param array $config   Current plugin configuration.
+ * @param array $defaults Default server settings.
  */
 function handleDeploy(array $config, array $defaults): void
 {
@@ -2493,7 +2861,7 @@ function handleDeploy(array $config, array $defaults): void
 
         // AUTO-RESOLVE VERSION: If user selected "Latest" or empty, try to resolve the actual MC version from the file ID for metadata
         if (!$mcVerSelected && $modId !== -1 && $resolvedFileId) {
-             $mcVerSelected = getMinecraftVersion('curseforge', (string) $modId, (string) $resolvedFileId, $config['curseforge_api_key'] ?? '');
+            $mcVerSelected = getMinecraftVersion('curseforge', (string) $modId, (string) $resolvedFileId, $config['curseforge_api_key'] ?? '');
             if ($mcVerSelected) {
                 dbg("Resolved MC Version for Modpack $modId / File $resolvedFileId: $mcVerSelected");
             }
@@ -2737,7 +3105,14 @@ XML;
 }
 
 /**
- * Get internal players and max players using multiple check methods
+ * Get live server statistics (online players, max players, sample).
+ *
+ * Tries multiple methods in order: mc-monitor, RCON, and Host/Bridge pings.
+ *
+ * @param string $containerId The container ID or name.
+ * @param int|string $hostPort Host port for external ping fallback.
+ * @param array $env          Container environment variables (for RCON/MaxPlayers).
+ * @return array Player statistics.
  */
 function getMinecraftLiveStats($containerId, $hostPort, $env)
 {
@@ -2756,7 +3131,7 @@ function getMinecraftLiveStats($containerId, $hostPort, $env)
             @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $jd['players']['online'] . "/" . $jd['players']['max'] . "\n\n", FILE_APPEND);
             return [
                 'online' => intval($jd['players']['online']),
-                'max'    => intval($jd['players']['max']),
+                'max' => intval($jd['players']['max']),
                 'sample' => $jd['players']['sample'] ?? []
             ];
         }
@@ -2812,7 +3187,7 @@ function getMinecraftLiveStats($containerId, $hostPort, $env)
 
     // 4. Try Container IP Ping (Native PHP) - Bypass bridge mapping issues
     $inspectJson = shell_exec("docker inspect " . escapeshellarg($containerId) . " 2>/dev/null");
-    $inspect = json_decode((string)$inspectJson, true);
+    $inspect = json_decode((string) $inspectJson, true);
     if ($inspect && isset($inspect[0]['NetworkSettings'])) {
         $cIp = $inspect[0]['NetworkSettings']['IPAddress'] ?? '';
         if (!$cIp) {

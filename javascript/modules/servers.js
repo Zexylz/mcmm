@@ -1,5 +1,12 @@
 import { formatGbFromMb } from './utils.js';
 
+/**
+ * Sends a control command (start, stop) to a specific server.
+ * Displays a confirmation prompt before execution.
+ *
+ * @param {string} id - The ID of the server.
+ * @param {string} action - The control command to send ('start', 'stop').
+ */
 export function controlServer(id, action) {
     if (confirm(`Are you sure you want to ${action} this server?`)) {
         fetch('/plugins/mcmm/api.php?action=server_control&id=' + id + '&cmd=' + action)
@@ -15,6 +22,12 @@ export function controlServer(id, action) {
     }
 }
 
+/**
+ * Deletes a server container and its associated data.
+ * Displays a confirmation prompt before deletion.
+ *
+ * @param {string} id - The ID of the server to delete.
+ */
 export function deleteServer(id) {
     if (!confirm('Delete this server container?')) return;
     fetch('/plugins/mcmm/api.php?action=server_delete&id=' + id)
@@ -30,6 +43,12 @@ export function deleteServer(id) {
         .catch(err => alert('Error: ' + err.message));
 }
 
+/**
+ * Restarts the metrics agents for all running servers.
+ * Triggers a RAM debug log and reloads the page upon success.
+ *
+ * @returns {Promise<void>}
+ */
 export async function startAgents() {
     try {
         const res = await fetch('/plugins/mcmm/api.php?action=start_agents');
@@ -54,6 +73,11 @@ export async function startAgents() {
     }
 }
 
+/**
+ * Fetches server data and logs detailed RAM usage metrics to the console for debugging.
+ *
+ * @returns {Promise<void>}
+ */
 export async function logRamDebug() {
     try {
         const res = await fetch('/plugins/mcmm/api.php?action=servers&_=' + Date.now());
@@ -83,6 +107,12 @@ export async function logRamDebug() {
     }
 }
 
+/**
+ * Performs a single fetch of server metrics and updates the UI (RAM/CPU bars and text).
+ *
+ * @returns {Promise<void>}
+ * @private
+ */
 async function refreshServerMetricsOnce() {
     try {
         const res = await fetch('/plugins/mcmm/api.php?action=servers&_=' + Date.now());
@@ -122,6 +152,9 @@ async function refreshServerMetricsOnce() {
 }
 
 let serverMetricsInterval = null;
+/**
+ * Starts the periodic polling for server RAM and CPU metrics.
+ */
 export function startServerMetricsPolling() {
     // Only run if server rows exist
     if (!document.querySelector('.mcmm-server-row[data-server-id]')) return;
@@ -131,6 +164,12 @@ export function startServerMetricsPolling() {
     serverMetricsInterval = setInterval(refreshServerMetricsOnce, 5000);
 }
 
+/**
+ * Initializes player count polling for all running servers.
+ * Staggers the requests to avoid concurrent network spikes.
+ *
+ * @returns {Promise<void>}
+ */
 export async function initServerPlayerCounts() {
     const spans = document.querySelectorAll('span[id^="players-"][data-server-id]');
     spans.forEach((span, idx) => {
@@ -143,6 +182,15 @@ export async function initServerPlayerCounts() {
     });
 }
 
+/**
+ * Refreshes the player count for a specific server and updates the UI.
+ *
+ * @param {HTMLElement} span - The span element to update.
+ * @param {string} serverId - The ID of the server.
+ * @param {string} port - The server port.
+ * @returns {Promise<void>}
+ * @private
+ */
 async function refreshServerPlayerCount(span, serverId, port) {
     try {
         const res = await fetch(`/plugins/mcmm/api.php?action=server_players&id=${encodeURIComponent(serverId)}&port=${encodeURIComponent(port)}`);
