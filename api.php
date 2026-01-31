@@ -112,7 +112,10 @@ dbg("API Loaded. Action: " . ($action ? $action : 'none'));
 try {
     // Validate config loading
     // Validate config loading
-    // Config is guaranteed to be an array from array_merge above
+    if (!isset($config) || !is_array($config)) {
+        dbg("Warning: Config was not an array, resetting to empty.");
+        $config = [];
+    }
     $config = array_merge($defaults, $config);
 
     switch ($action) {

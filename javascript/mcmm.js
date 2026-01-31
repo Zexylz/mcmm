@@ -230,14 +230,12 @@ var modState = {
 var modSearchTimer;
 var serverRefreshInterval = null;
 var consoleInterval = null;
+var isServersLoading = false;
 
 // Deploy progress state
 var deployLogInterval = null;
 // let deployLogContainerId = null;
 
-/**
- * Starts the global polling for server status updates.
- */
 /**
  * Starts the global polling for server status updates.
  */
@@ -247,15 +245,16 @@ function startGlobalPolling() {
         loadServers();
         serverRefreshInterval = setInterval(() => {
             // Throttle when tab is hidden to save resources
+            // Throttle when tab is hidden to save resources
             if (document.hidden) {
-                // Poll every ~10 seconds instead of 1s in background
-                if (Date.now() % 10000 < 1000) {
+                // Poll every ~12 seconds instead of 3s in background
+                if (Date.now() % 12000 < 3000) {
                     loadServers();
                 }
             } else {
                 loadServers();
             }
-        }, 1000);
+        }, 3000);
     }
 }
 
@@ -2249,9 +2248,11 @@ function finishDeployAndView() {
  * @returns {Promise<void>}
  */
 async function loadServers() {
+    if (isServersLoading) return;
     const container = document.getElementById('tab-servers');
     if (!container) return;
 
+    isServersLoading = true;
     try {
         const res = await mcmmFetch('/plugins/mcmm/api.php?action=servers');
         const data = await res.json();
@@ -2405,6 +2406,8 @@ async function loadServers() {
         }
     } catch (e) {
         console.error('Failed to load servers:', e);
+    } finally {
+        isServersLoading = false;
     }
 }
 
