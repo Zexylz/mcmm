@@ -29,25 +29,30 @@ configuration, and deployment documentation may be added as the project matures.
 ## Latest Release
 
 <!-- START_RELEASE -->
-We're excited to announce the release of **v0.0.5**! This update brings a suite of performance enhancements and crucial bug fixes to improve stability and responsiveness.
+We're excited to announce the release of **v0.0.5**! This update focuses on significant performance enhancements, code quality improvements, and critical bug fixes to make your experience smoother and more reliable.
 
 ---
 
 ### 🚀 New Features
-*   No new features in this release, focus was on stability and performance.
+
+*(No new features in this release, focus on stability and performance.)*
 
 ### 🛠 Improvements & Refinement
-*   **Performance Optimization:** Implemented a 2-second file cache for `docker inspect` calls, significantly reducing CPU overhead and preventing redundant Docker process spawning.
-*   **Reduced Backend Load:** Increased the client-side server polling interval from 1000ms to 3000ms, leading to an approximate 66% reduction in backend load.
-*   **Codebase Streamlining:** Removed redundant checks, dead conditions, and impossible comparisons for a cleaner, more efficient codebase.
+
+*   **Performance Enhancements:**
+    *   Implemented a 2-second file cache for `docker inspect` calls, significantly reducing CPU overhead by preventing redundant Docker process spawning during concurrent requests.
+    *   Adjusted the client-side server polling interval from 1000ms to 3000ms, resulting in approximately a 66% reduction in backend server load.
+*   **Code Quality & Stability:**
+    *   Performed extensive code cleanup, removing redundant type checks, impossible strict comparisons, and unnecessary offset checks.
+    *   Eliminated dead code paths, enhancing overall code efficiency and maintainability.
+    *   Addressed a PHP 8.4+ deprecation warning by explicitly marking a parameter as nullable, ensuring future compatibility and stability.
 
 ### 🐛 Bug Fixes
-*   **PHP 8.4+ Compatibility:** Resolved a PHP 8.4+ deprecation warning by explicitly marking a nullable parameter in `getContainerCgroupRamMb`.
-*   **Global Settings Error:** Fixed an `eval()` error encountered in the Global Settings modal when the CurseForge API Key was missing.
+
+*   Resolved an `eval()` error that occurred in the Global Settings modal when the CurseForge API Key was missing.
+*   Implemented various minor bug fixes to improve general stability and reliability.
 
 ---
-
-Thank you for your continued support!
 <!-- END_RELEASE -->
 
 ---
