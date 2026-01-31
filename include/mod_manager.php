@@ -73,6 +73,12 @@ function extractModInfo(string $jarPath): array
         'hash' => '',
     ];
 
+    // Check persistent cache first
+    $key = 'mod_' . md5($jarPath . filemtime($jarPath));
+    if ($cached = mcmm_cache_get($key)) {
+        return $cached;
+    }
+
     $info['hash'] = sha1_file($jarPath);
 
     $zip = new ZipArchive;
@@ -81,6 +87,13 @@ function extractModInfo(string $jarPath): array
         if ($zip->locateName('META-INF/mods.toml') !== false) {
             $tomlContent = $zip->getFromName('META-INF/mods.toml');
             if ($tomlContent) {
+                // @phpstan-ignore-next-line
+                $info = array_merge($info, parseModsToml($tomlContent));
+            }
+        } elseif ($zip->locateName('mods.toml') !== false) { // rare but possible
+            $tomlContent = $zip->getFromName('mods.toml');
+            if ($tomlContent) {
+                // @phpstan-ignore-next-line
                 $info = array_merge($info, parseModsToml($tomlContent));
             }
         }
@@ -89,23 +102,26 @@ function extractModInfo(string $jarPath): array
         if (empty($info['modId']) && $zip->locateName('mcmod.info') !== false) {
             $mcmodContent = $zip->getFromName('mcmod.info');
             if ($mcmodContent) {
+                // @phpstan-ignore-next-line
                 $info = array_merge($info, parseMcmodInfo($mcmodContent));
             }
         }
 
         // Try fabric.mod.json
-        if (empty($info['modId']) && $zip->locateName('fabric.mod.json') !== false) {
+        if ($zip->locateName('fabric.mod.json') !== false) {
             $fabricContent = $zip->getFromName('fabric.mod.json');
             if ($fabricContent) {
+                // @phpstan-ignore-next-line
                 $info = array_merge($info, parseFabricModJson($fabricContent));
                 $info['loader'] = 'fabric';
             }
         }
 
         // Try quilt.mod.json
-        if (empty($info['modId']) && $zip->locateName('quilt.mod.json') !== false) {
+        if ($zip->locateName('quilt.mod.json') !== false) {
             $quiltContent = $zip->getFromName('quilt.mod.json');
             if ($quiltContent) {
+                // @phpstan-ignore-next-line
                 $info = array_merge($info, parseQuiltModJson($quiltContent));
                 $info['loader'] = 'quilt';
             }
@@ -114,9 +130,12 @@ function extractModInfo(string $jarPath): array
         $zip->close();
     }
 
-    if (!$info['version'] || $info['version'] === 'Unknown') {
+    if (!$info['version'] || $info['version'] === 'Unknown' || $info['version'] === '${file.jarVersion}') {
         $info['version'] = extractVersionFromFilename(basename($jarPath));
     }
+
+    // Cache the result (long TTL as filemtime is part of key)
+    mcmm_cache_set($key, $info, 86400 * 30);
 
     return $info;
 }

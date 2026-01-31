@@ -767,12 +767,15 @@ function parseMemoryToMB($val): float
  *
  * Calculates Usage - Inactive Cache for Cgroup v1 or v2.
  *
- * @param string $containerId The container ID.
+ * @param string      $containerId The container ID.
+ * @param string|null $longId      Optional long ID if already known.
  * @return float|null RAM usage in MB or null if unavailable.
  */
-function getContainerCgroupRamMb(string $containerId): ?float
+function getContainerCgroupRamMb(string $containerId, ?string $longId = null): ?float
 {
-    $longId = getContainerLongId($containerId);
+    if (!$longId) {
+        $longId = getContainerLongId($containerId);
+    }
     if (!$longId) {
         return null;
     }

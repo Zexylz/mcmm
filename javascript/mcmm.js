@@ -150,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('tab-servers')?.classList.contains('active')) {
         loadServers();
         if (!serverRefreshInterval) {
-            serverRefreshInterval = setInterval(loadServers, 1000);
+            serverRefreshInterval = setInterval(loadServers, 3000);
         }
     }
 
@@ -238,11 +238,24 @@ var deployLogInterval = null;
 /**
  * Starts the global polling for server status updates.
  */
+/**
+ * Starts the global polling for server status updates.
+ */
 function startGlobalPolling() {
     if (!serverRefreshInterval) {
         // Initial load
         loadServers();
-        serverRefreshInterval = setInterval(loadServers, 1000);
+        serverRefreshInterval = setInterval(() => {
+            // Throttle when tab is hidden to save resources
+            if (document.hidden) {
+                // Poll every ~10 seconds instead of 1s in background
+                if (Date.now() % 10000 < 1000) {
+                    loadServers();
+                }
+            } else {
+                loadServers();
+            }
+        }, 1000);
     }
 }
 

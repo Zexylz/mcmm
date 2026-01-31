@@ -17,6 +17,9 @@ export function openConsole(serverId, serverName) {
     output.innerHTML = '<div style="color: rgb(102 102 102 / 100%); padding: 1rem;">Loading logs...</div>';
 
     fetchLogs();
+
+    // Prevent interval leaks
+    if (consoleInterval) clearInterval(consoleInterval);
     consoleInterval = setInterval(fetchLogs, 2000);
 
     document.getElementById('consoleInput').focus();

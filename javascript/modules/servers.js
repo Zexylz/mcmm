@@ -160,8 +160,7 @@ export function startServerMetricsPolling() {
     if (!document.querySelector('.mcmm-server-row[data-server-id]')) return;
     // initial refresh
     refreshServerMetricsOnce();
-    if (serverMetricsInterval) clearInterval(serverMetricsInterval);
-    serverMetricsInterval = setInterval(refreshServerMetricsOnce, 5000);
+    // MCMM.js handles global polling now
 }
 
 /**

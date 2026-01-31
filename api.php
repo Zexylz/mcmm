@@ -541,8 +541,18 @@ try {
 
             // Build map of local image tags to IDs to check for updates
             $localImages = [];
-            $imgCmd = '/usr/bin/docker images --no-trunc --format "{{.Repository}}:{{.Tag}}|{{.ID}}"';
-            $imgOutput = shell_exec($imgCmd . ' 2>/dev/null');
+            // Cache 'docker images' for 30 seconds (rarely changes)
+            $imgCache = '/tmp/mcmm_images.cache';
+            $imgOutput = null;
+            if (file_exists($imgCache) && (time() - filemtime($imgCache) < 30)) {
+                $imgOutput = file_get_contents($imgCache);
+            } else {
+                $imgCmd = '/usr/bin/docker images --no-trunc --format "{{.Repository}}:{{.Tag}}|{{.ID}}"';
+                $imgOutput = shell_exec($imgCmd . ' 2>/dev/null');
+                if ($imgOutput)
+                    @file_put_contents($imgCache, $imgOutput);
+            }
+
             if ($imgOutput) {
                 foreach (explode("\n", trim($imgOutput)) as $imgLine) {
                     $parts = explode('|', $imgLine);
@@ -551,11 +561,32 @@ try {
                     }
                 }
             }
-            $output = shell_exec($cmd . ' 2>/dev/null');
+
+            // Cache 'docker ps' output for 2s (high frequency)
+            $psCache = '/tmp/mcmm_ps.cache';
+            if (file_exists($psCache) && (time() - filemtime($psCache) < 2)) {
+                $output = file_get_contents($psCache);
+            } else {
+                $output = shell_exec($cmd . ' 2>/dev/null');
+                if ($output)
+                    @file_put_contents($psCache, $output);
+            }
+
             // Batch gather docker stats for ALL containers (authoritative & fast)
             $allStats = [];
-            $statsCmd = '/usr/bin/docker stats --no-stream --format "{{.ID}}|{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}"';
-            $statsOutput = shell_exec($statsCmd . ' 2>/dev/null');
+
+            // Cache 'docker stats' for 2 seconds (high frequency)
+            $statsCache = '/tmp/mcmm_stats.cache';
+            $statsOutput = null;
+            if (file_exists($statsCache) && (time() - filemtime($statsCache) < 2)) {
+                $statsOutput = file_get_contents($statsCache);
+            } else {
+                $statsCmd = '/usr/bin/docker stats --no-stream --format "{{.ID}}|{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}"';
+                $statsOutput = shell_exec($statsCmd . ' 2>/dev/null');
+                if ($statsOutput)
+                    @file_put_contents($statsCache, $statsOutput);
+            }
+
             if ($statsOutput) {
                 $statsLines = explode("\n", trim($statsOutput));
                 foreach ($statsLines as $sLine) {
@@ -583,7 +614,18 @@ try {
             $allInspect = [];
             $inspectIds = trim((string) shell_exec('/usr/bin/docker ps -a -q | tr "\n" " "'));
             if (!empty($inspectIds)) {
-                $inspectOutput = shell_exec("/usr/bin/docker inspect $inspectIds 2>/dev/null");
+                // Cache 'docker inspect' for 2 seconds to prevent cpu spikes on concurrent requests
+                $inspectCache = '/tmp/mcmm_inspect.cache';
+                $inspectOutput = null;
+                if (file_exists($inspectCache) && (time() - filemtime($inspectCache) < 2)) {
+                    $inspectOutput = file_get_contents($inspectCache);
+                } else {
+                    $inspectOutput = shell_exec("/usr/bin/docker inspect $inspectIds 2>/dev/null");
+                    if ($inspectOutput) {
+                        @file_put_contents($inspectCache, $inspectOutput);
+                    }
+                }
+
                 if ($inspectOutput) {
                     $inspectData = json_decode($inspectOutput, true);
                     if ($inspectData) {
@@ -715,7 +757,9 @@ try {
                             // 4. Agent WS (Working Set - Container minus inactive cache)
                             // 5. Docker Stats (Total container usage - least accurate fallback)
 
-                            $cgroupWsMb = getContainerCgroupRamMb($containerId);
+                            // Optimization: Pass pre-fetched long ID to avoid internal shell_exec
+                            $longId = isset($allInspect[$containerId]['Id']) ? $allInspect[$containerId]['Id'] : null;
+                            $cgroupWsMb = getContainerCgroupRamMb($containerId, $longId);
 
                             if (isset($metrics['pss_mb']) && floatval($metrics['pss_mb']) > 0) {
                                 $ramUsedMb = floatval($metrics['pss_mb']);
