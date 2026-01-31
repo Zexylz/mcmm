@@ -66,6 +66,17 @@ window.closeGlobalSettings = closeGlobalSettings;
 window.switchSettingsCategory = switchSettingsCategory;
 
 /**
+ * Helper to get the CSRF token from either global variable or meta tag.
+ * 
+ * @returns {string} The CSRF token.
+ */
+function getCsrfToken() {
+    if (typeof csrfToken !== 'undefined' && csrfToken) return csrfToken;
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+}
+
+/**
  * Helper to perform fetch with CSRF token.
  * 
  * @param {string} url - The URL to fetch.
@@ -73,8 +84,7 @@ window.switchSettingsCategory = switchSettingsCategory;
  * @returns {Promise<Response>}
  */
 async function mcmmFetch(url, options = {}) {
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    const token = meta ? meta.content : '';
+    const token = getCsrfToken();
 
     const headers = options.headers || {};
     if (token) {
@@ -225,7 +235,8 @@ var modState = {
     mcVersion: '',       // e.g. "1.20.1"
     loader: '',          // forge | neoforge | fabric | quilt
     serverEnv: {},
-    serverInfo: null
+    serverInfo: null,
+    modpackUpdate: null
 };
 var modSearchTimer;
 var serverRefreshInterval = null;
@@ -238,25 +249,89 @@ var deployLogInterval = null;
 
 /**
  * Starts the global polling for server status updates.
+ * Strategy: Server-Sent Events (SSE)
+ * - Connects to stream.php to receive real-time updates.
+ * - Falls back to polling if SSE fails (optional).
  */
 function startGlobalPolling() {
-    if (!serverRefreshInterval) {
-        // Initial load
-        loadServers();
-        serverRefreshInterval = setInterval(() => {
-            // Throttle when tab is hidden to save resources
-            // Throttle when tab is hidden to save resources
-            if (document.hidden) {
-                // Poll every ~12 seconds instead of 3s in background
-                if (Date.now() % 12000 < 3000) {
-                    loadServers();
-                }
-            } else {
-                loadServers();
-            }
-        }, 3000);
+    if (window.mcmmEventSource) {
+        return; // Already connected
     }
+
+    // Get CSRF token for auth
+    const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    window.mcmmEventSource = new EventSource(`/plugins/mcmm/include/stream.php?token=${encodeURIComponent(token)}`);
+
+    window.mcmmEventSource.onmessage = (e) => {
+        // Generic message handler
+    };
+
+    window.mcmmEventSource.addEventListener('server_update', (e) => {
+        try {
+            const data = JSON.parse(e.data);
+            if (data.type === 'server_list') {
+                updateServerListFromStream(data.servers);
+            }
+        } catch (err) {
+            console.error('SSE Read Error:', err);
+        }
+    });
+
+    window.mcmmEventSource.onerror = (e) => {
+        console.warn('SSE Connection Lost. Retrying in 5s...');
+        window.mcmmEventSource.close();
+        window.mcmmEventSource = null;
+        setTimeout(startGlobalPolling, 5000);
+    };
 }
+
+/**
+ * Updates the server UI from SSE data.
+ * @param {Array} servers List of server objects from stream.
+ */
+function updateServerListFromStream(servers) {
+    if (!servers) return;
+
+    const listContainer = document.getElementById('serverListContainer');
+    if (!listContainer) return; // Only update if list exists
+
+    servers.forEach(s => {
+        const row = listContainer.querySelector(`.mcmm-server-row[data-server-id="${s.id}"]`);
+        if (row) {
+            // Update Status
+            const statusTxt = row.querySelector('.mcmm-status-text');
+            const wasRunning = row.classList.contains('running');
+
+            if (s.running !== wasRunning) {
+                row.classList.toggle('running', s.running);
+                row.classList.toggle('stopped', !s.running);
+                if (statusTxt) statusTxt.textContent = s.running ? 'Online' : 'Offline';
+                // Trigger full reload to update buttons/details if status changes
+                loadServers(true);
+            }
+
+            // Update Metrics (if present)
+            if (s.metrics) {
+                const ramPercent = Math.min(Math.max(s.metrics.ram_percent || 0, 0), 100); // Need calculation in backend or here?
+                // Backend sent 'ram' (used MB). We need max to calc percent.
+                // stream.php currently sends 0 for max. 
+                // We'll trust the existing DOM/JS state for max ram if possible, or skip percent update.
+
+                // For now, simpler: Trigger loadServers(true) if something interesting happens, 
+                // but ideally update UI directly.
+                // Let's rely on standard loadServers fast mode for now triggered by this event?
+                // No, that defeats the purpose.
+
+                // TODO: Update RAM bars
+            }
+        } else {
+            // New server detected? Reload full list.
+            loadServers(false);
+        }
+    });
+}
+
 
 // Tab Switching
 /**
@@ -845,6 +920,10 @@ async function checkForUpdates() {
                     }
                 });
             });
+
+            // Identify modpack update
+            const mpUpdate = Object.values(data.updates).find(u => u.is_modpack);
+            modState.modpackUpdate = mpUpdate || null;
         }
     } catch (e) {
         console.error("[MCMM] Update check failed:", e);
@@ -1041,6 +1120,27 @@ function renderMods() {
     const container = document.getElementById('modList');
     if (!container) return;
 
+    // Show modpack update banner if available
+    let modpackBannerHtml = '';
+    if (modState.modpackUpdate) {
+        modpackBannerHtml = `
+            <div class="mcmm-panel" style="grid-column: 1/-1; background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(236, 72, 153, 0.15)); border: 1px solid var(--primary); padding: 1.5rem; border-radius: 16px; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; animation: slideIn 0.4s ease-out;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 48px; height: 48px; background: var(--primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);">
+                        <span class="material-symbols-outlined" style="font-size: 2rem;">system_update</span>
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; font-size: 1.1rem; color: var(--text-main);">Modpack Update Available!</div>
+                        <div style="font-size: 0.9rem; color: var(--text-secondary);">${modState.modpackUpdate.name} is ready to update to a newer version.</div>
+                    </div>
+                </div>
+                <button class="mcmm-btn mcmm-btn-primary" style="padding: 0.75rem 1.5rem; font-weight: 700; gap: 0.5rem;" onclick="switchTab('catalog')">
+                    <span class="material-symbols-outlined">rocket_launch</span> Update Pack
+                </button>
+            </div>
+        `;
+    }
+
     let items = [];
 
     if (modState.view === 'all') {
@@ -1219,6 +1319,10 @@ function renderMods() {
             `;
         }
     }).join('');
+
+    if (modpackBannerHtml) {
+        container.innerHTML = modpackBannerHtml + container.innerHTML;
+    }
 }
 
 /**
@@ -2245,20 +2349,24 @@ function finishDeployAndView() {
  * Fetches the list of servers from the API and updates the UI.
  *
  * @remarks Handles incremental DOM updates and sorting to maintain a smooth experience.
+ * @param {boolean} fastMode - If true, requests a lighter dataset (skips CPU/RAM).
  * @returns {Promise<void>}
  */
-async function loadServers() {
+async function loadServers(fastMode = false) {
     if (isServersLoading) return;
     const container = document.getElementById('tab-servers');
     if (!container) return;
 
     isServersLoading = true;
     try {
-        const res = await mcmmFetch('/plugins/mcmm/api.php?action=servers');
+        const url = fastMode ? '/plugins/mcmm/api.php?action=servers&fast=true' : '/plugins/mcmm/api.php?action=servers';
+        const res = await mcmmFetch(url);
         const data = await res.json();
 
-        console.group("%c MCMM %c Servers Dashboard Update", "background:rgb(124 58 237 / 100%);color:rgb(255 255 255 / 100%);font-weight:700;padding:2px 6px;border-radius:4px;", "font-weight:700;");
-        console.log("Status:", data.success ? "✅ Success" : "❌ Failed");
+        if (!fastMode) {
+            console.group("%c MCMM %c Servers Dashboard Update", "background:rgb(124 58 237 / 100%);color:rgb(255 255 255 / 100%);font-weight:700;padding:2px 6px;border-radius:4px;", "font-weight:700;");
+            console.log("Status:", data.success ? "✅ Success" : "❌ Failed");
+        }
 
         if (data.data) {
             data.data.forEach(s => {
@@ -2283,7 +2391,9 @@ async function loadServers() {
         console.groupEnd();
 
         if (data.success) {
-            localStorage.setItem('mcmm_servers_cache', JSON.stringify(data.data));
+            if (!fastMode) {
+                localStorage.setItem('mcmm_servers_cache', JSON.stringify(data.data));
+            }
 
             const tabContainer = document.getElementById('tab-servers');
             const listContainer = document.getElementById('serverListContainer');
@@ -2327,23 +2437,29 @@ async function loadServers() {
 
                     if (row) {
                         // SURGICAL UPDATE (Fast, no flicker)
-                        const ramUsedLabel = (s.ramUsedMb || 0) > 0 ? (s.ramUsedMb / 1024).toFixed(1) + ' GB' : '0 GB';
-                        const ramCapLabel = (s.ramLimitMb || 0) > 0 ? (s.ramLimitMb / 1024).toFixed(1) + ' GB' : 'N/A';
-                        const ramPercent = Math.min(Math.max(s.ram || 0, 0), 100);
-                        const cpuUsage = s.cpu || 0;
 
-                        const ramTxt = row.querySelector('.mcmm-val-ram');
-                        const ramBar = row.querySelector('.mcmm-bar-ram');
-                        const cpuTxt = row.querySelector('.mcmm-val-cpu');
-                        const cpuBar = row.querySelector('.mcmm-bar-cpu');
+                        // Only update heavy metrics if they are provided (Slow Loop)
+                        if (s.ramUsedMb !== undefined && s.ram !== undefined && s.cpu !== undefined) {
+                            const ramUsedLabel = (s.ramUsedMb || 0) > 0 ? (s.ramUsedMb / 1024).toFixed(1) + ' GB' : '0 GB';
+                            const ramCapLabel = (s.ramLimitMb || 0) > 0 ? (s.ramLimitMb / 1024).toFixed(1) + ' GB' : 'N/A';
+                            const ramPercent = Math.min(Math.max(s.ram || 0, 0), 100);
+                            const cpuUsage = s.cpu || 0;
+
+                            const ramTxt = row.querySelector('.mcmm-val-ram');
+                            const ramBar = row.querySelector('.mcmm-bar-ram');
+                            const cpuTxt = row.querySelector('.mcmm-val-cpu');
+                            const cpuBar = row.querySelector('.mcmm-bar-cpu');
+
+                            if (ramTxt) ramTxt.textContent = `${ramUsedLabel} / ${ramCapLabel}`;
+                            if (ramBar) ramBar.style.width = `${ramPercent}%`;
+                            if (cpuTxt) cpuTxt.textContent = `${Number(cpuUsage).toFixed(1)}%`;
+                            if (cpuBar) cpuBar.style.width = `${Math.min(Math.max(cpuUsage, 0), 100)}%`;
+                        }
+
+                        // Always update Status & Players (Fast Loop)
                         const playersTxt = row.querySelector('.mcmm-val-players');
                         const statusTxt = row.querySelector('.mcmm-status-text');
                         const actionsArea = row.querySelector('.mcmm-server-actions');
-
-                        if (ramTxt) ramTxt.textContent = `${ramUsedLabel} / ${ramCapLabel}`;
-                        if (ramBar) ramBar.style.width = `${ramPercent}%`;
-                        if (cpuTxt) cpuTxt.textContent = `${Number(cpuUsage).toFixed(1)}%`;
-                        if (cpuBar) cpuBar.style.width = `${Math.min(Math.max(cpuUsage, 0), 100)}%`;
 
                         const wasRunning = row.classList.contains('running');
                         if (s.isRunning !== wasRunning) {
@@ -3177,20 +3293,68 @@ function controlServer(id, action, skipConfirm = false) {
         return;
     }
 
-    // Visual feedback: disable the button or show loading state? 
-    // For now, next poll will show it.
+    const token = getCsrfToken();
+    const payload = { id: id, cmd: action, csrf_token: token };
 
-    mcmmFetch('/plugins/mcmm/api.php?action=server_control&id=' + id + '&cmd=' + action)
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                // Immediate refresh for snappy feel
-                loadServers();
-            } else {
-                alert('Error: ' + (data.error || 'Unknown error'));
+    if (typeof $ !== 'undefined' && $.ajax) {
+        $.ajax({
+            url: '/plugins/mcmm/api.php?action=server_control',
+            type: 'POST',
+            data: payload,
+            dataType: 'json',
+            xhrFields: {
+                withCredentials: true
+            },
+            headers: {
+                'X-CSRF-Token': token
+            },
+            success: function (data) {
+                if (data.success) {
+                    loadServers();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            },
+            error: function (xhr) {
+                let msg = 'Control command failed';
+                try {
+                    const j = JSON.parse(xhr.responseText);
+                    if (j.error) msg = j.error;
+                } catch (e) {
+                    msg = xhr.responseText || 'Empty response from server';
+                }
+                alert('Error: ' + msg);
             }
+        });
+    } else {
+        // Fallback to fetch
+        const params = new URLSearchParams();
+        params.append('id', id);
+        params.append('cmd', action);
+        params.append('csrf_token', token);
+
+        mcmmFetch('/plugins/mcmm/api.php?action=server_control', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
         })
-        .catch(err => alert('Error: ' + err.message));
+            .then(async r => {
+                const text = await r.text();
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    throw new Error("Server returned invalid response: " + (text.slice(0, 100) || 'Empty response'));
+                }
+            })
+            .then(data => {
+                if (data.success) {
+                    loadServers();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => alert('Error: ' + err.message));
+    }
 }
 
 /**

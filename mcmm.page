@@ -1282,6 +1282,6 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
 <script>
     const mcmmConfig = <?php echo json_encode($clientConfig); ?>;
     // @phpstan-ignore-next-line
-    const csrfToken = "<?php echo $var['csrf_token'] ?? ''; ?>";
+    const csrfToken = "<?php echo $csrfToken; ?>";
 </script>
 <script src="/plugins/mcmm/javascript/mcmm.js?v=<?php echo time(); ?>"></script>

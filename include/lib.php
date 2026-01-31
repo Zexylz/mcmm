@@ -356,8 +356,26 @@ while :; do
   TS_PREV_NS="$NOW_NS"
 
   TS=$(date +%s)
+  
+  # Prepare JSON
   JSON="{\"ts\":$TS,\"pid\":$PID,\"heap_used_mb\":$((HEAP_USED_KB/1024)),\"rss_mb\":$((RSS_KB/1024)),\"pss_mb\":$((PSS_KB/1024)),\"ws_mb\":$((WS_KB/1024)),\"cpu_milli\":$CPU_MILLI}"
-  echo "$JSON" > "$DATA_FILE.tmp" && mv -f "$DATA_FILE.tmp" "$DATA_FILE"
+  
+  # Method 1: Push to API (Host)
+  # Assuming Host IP is strictly 172.17.0.1 (Docker0) or we try to detect it.
+  # UNRAID specific: The WebGUI is on the host IP. 
+  # We'll try to push to the API endpoint.
+  
+  # Note: curl might not be installed in all minimal images, but we'll try.
+  if command -v curl >/dev/null 2>&1; then
+      HOSTNAME=$(hostname)
+      # Wrap in payload
+      PAYLOAD="{\"id\":\"$HOSTNAME\", \"metrics\":$JSON}"
+      # Try standard docker host IP
+      curl -s -X POST -H "Content-Type: application/json" -d "$PAYLOAD" "http://172.17.0.1/plugins/mcmm/api.php?action=push_metrics" >/dev/null 2>&1 &
+  else
+      # Fallback: Write to disk (Old Method)
+      echo "$JSON" > "$DATA_FILE.tmp" && mv -f "$DATA_FILE.tmp" "$DATA_FILE"
+  fi
   
   sleep "$INTERVAL"
 done
@@ -1202,8 +1220,21 @@ function backfillServerIcon(string $containerId, string $containerName, string $
  */
 function jsonResponse($data, int $statusCode = 200): void
 {
+    header('Content-Type: application/json; charset=utf-8');
     http_response_code($statusCode);
-    echo json_encode($data);
+
+    // Use flags to handle potentially invalid UTF-8 from shell_exec/exec output
+    $json = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+
+    if ($json === false) {
+        // Fallback for extreme cases
+        echo json_encode([
+            'success' => false,
+            'error' => 'Internal JSON encoding error: ' . json_last_error_msg()
+        ]);
+    } else {
+        echo $json;
+    }
     exit;
 }
 

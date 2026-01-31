@@ -22,7 +22,7 @@ require_once __DIR__ . '/include/lib.php';
 
 
 // EMERGENCY DEBUG
-// file_put_contents('/tmp/mcmm_debug.txt', date('Y-m-d H:i:s') . " - HIT " . $_SERVER['REQUEST_METHOD'] . " " . $_SERVER['QUERY_STRING'] . "\n", FILE_APPEND);
+file_put_contents('/tmp/mcmm_debug.txt', date('Y-m-d H:i:s') . " - HIT " . $_SERVER['REQUEST_METHOD'] . " " . $_SERVER['QUERY_STRING'] . " POST:" . json_encode($_POST) . "\n", FILE_APPEND);
 
 header('Content-Type: application/json');
 
@@ -92,8 +92,14 @@ $sensitiveActions = ['server_control', 'server_delete', 'mod_install', 'mod_dele
 if ($_SERVER['REQUEST_METHOD'] === 'POST' || in_array($action, $sensitiveActions)) {
     $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? '';
     if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $token)) {
+        // DETAILED DEBUG FOR CSRF FAILURE
+        $debugMsg = date('Y-m-d H:i:s') . " - CSRF FAILURE: Action: $action, Method: " . $_SERVER['REQUEST_METHOD'] .
+            ", Got Token: " . (empty($token) ? '[EMPTY]' : substr($token, 0, 8) . '...') .
+            ", Expected: " . (empty($_SESSION['csrf_token']) ? '[EMPTY]' : substr($_SESSION['csrf_token'], 0, 8) . '...') . "\n";
+        file_put_contents('/tmp/mcmm_debug.txt', $debugMsg, FILE_APPEND);
+
         header('HTTP/1.1 403 Forbidden');
-        die(json_encode(['success' => false, 'error' => 'Invalid CSRF token']));
+        die(json_encode(['success' => false, 'error' => 'Invalid CSRF token', 'debug_sid' => session_id()]));
     }
 }
 
@@ -312,8 +318,9 @@ try {
             break;
 
         case 'server_control':
-            $id = $_GET['id'] ?? '';
-            $cmd = $_GET['cmd'] ?? '';
+            $req = getRequestData();
+            $id = $req['id'] ?? $_POST['id'] ?? $_GET['id'] ?? '';
+            $cmd = $req['cmd'] ?? $_POST['cmd'] ?? $_GET['cmd'] ?? '';
 
             if (!$id || !$cmd) {
                 jsonResponse(['success' => false, 'error' => 'Missing parameters'], 400);
@@ -385,6 +392,50 @@ try {
             ]);
             break;
 
+        case 'push_metrics':
+            // High-performance endpoint for agents to push metrics
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                http_response_code(405);
+                exit;
+            }
+
+            // Allow raw POST body or form data
+            $rawInput = file_get_contents('php://input');
+            $data = json_decode($rawInput, true);
+
+            if (!$data || !isset($data['id'])) {
+                // Try $_POST
+                $id = $_POST['id'] ?? '';
+                $metrics = $_POST['metrics'] ?? '';
+                if ($id && $metrics) {
+                    $data = ['id' => $id, 'metrics' => json_decode($metrics, true)];
+                } else {
+                    jsonResponse(['success' => false, 'error' => 'Invalid data'], 400);
+                }
+            }
+
+            $containerId = $data['id'];
+            $metricsData = $data['metrics'] ?? [];
+
+            // Security: We could verify a token, but for now we rely on internal network trust + container ID validity
+            // Ideally, the agent is generated with a secret.
+
+            // Save to standard metrics location
+            // We need to resolve Container Name to find the Data Dir? 
+            // Or we assume the Agent sends the path?
+            // Agent should send its ID. We can map ID to Name via Docker or cache.
+            // BETTER: Agent simply writes to mapped volume.
+
+            // WAIT - The user request is "Agent Push" to Host.
+            // If we are pushing to API, we don't need the file mount?
+            // Correct. We can just save it to /tmp/mcmm_metrics_<ID>.json.
+
+            $cacheFile = "/tmp/mcmm_metrics_" . md5($containerId) . ".json";
+            file_put_contents($cacheFile, json_encode($metricsData));
+
+            jsonResponse(['success' => true]);
+            break;
+
         case 'check_updates':
             $id = $_GET['id'] ?? '';
             if (!$id) {
@@ -446,9 +497,16 @@ try {
                                 if ($loader) {
                                     $loaderNames = [1 => 'forge', 4 => 'fabric', 5 => 'quilt', 6 => 'neoforge'];
                                     $loaderMap = ['forge' => 1, 'fabric' => 4, 'quilt' => 5, 'neoforge' => 6];
-                                    $targetLoaderName = $loaderNames[$loaderMap[strtolower($loader)] ?? 0] ?? '';
-                                    if ($targetLoaderName && !in_array($targetLoaderName, array_map('strtolower', $versions))) {
-                                        $hasLoader = false;
+                                    $trackerLoaderName = $loaderNames[$loaderMap[strtolower($loader)] ?? 0] ?? '';
+                                    if ($trackerLoaderName && !in_array($trackerLoaderName, array_map('strtolower', $versions))) {
+                                        // RELAXED CHECK for NeoForge compatibility:
+                                        // Many NeoForge packs are still tagged as 'Forge' or have ambiguous tags. 
+                                        // If we are looking for NeoForge, accept Forge tags as a fallback.
+                                        if ($trackerLoaderName === 'neoforge' && (in_array('forge', array_map('strtolower', $versions)) || in_array('1', $file['gameVersionTypeIds'] ?? []))) {
+                                            // Allow
+                                        } else {
+                                            $hasLoader = false;
+                                        }
                                     }
                                 }
                                 if ($hasVersion && $hasLoader) {
@@ -468,6 +526,39 @@ try {
                 }
             }
 
+            // 1.5 Check for MODPACK Updates (The pack itself, not just mods inside it)
+            if (!empty($srvCfg['modpack_id']) && !empty($config['curseforge_api_key'])) {
+                $mpId = (int) $srvCfg['modpack_id'];
+                // Only check if it's not already in the installed list (avoid duplicate work)
+                if (!isset($updates[$mpId])) {
+                    $mpBatch = fetchCurseForgeModsBatch([$mpId], $config['curseforge_api_key']);
+                    if ($mpBatch && isset($mpBatch[0])) {
+                        $mpData = $mpBatch[0];
+                        $targetFile = null;
+                        if (!empty($mpData['latestFiles'])) {
+                            foreach ($mpData['latestFiles'] as $file) {
+                                $versions = $file['gameVersions'] ?? [];
+                                $hasVersion = !$mcVer || in_array($mcVer, $versions);
+                                // Modpacks often don't tag loader strictly in gameVersions, but let's check if we can
+                                // For packs, we care mostly about MC version matching.
+                                if ($hasVersion) {
+                                    $targetFile = $file;
+                                    break;
+                                }
+                            }
+                        }
+                        if ($targetFile) {
+                            $updates[$mpId] = [
+                                'latestFileId' => $targetFile['id'],
+                                'latestFileName' => $targetFile['fileName'] ?? ($targetFile['displayName'] ?? ''),
+                                'name' => $mpData['name'] . ' (Modpack)',
+                                'is_modpack' => true
+                            ];
+                        }
+                    }
+                }
+            }
+
             // 2. Check Modrinth (projects API accepts multiple IDs)
             if (!empty($mrIds)) {
                 $idsParam = json_encode($mrIds);
@@ -481,7 +572,11 @@ try {
                             $params['game_versions'] = json_encode([$mcVer]);
                         }
                         if ($loader) {
-                            $params['loaders'] = json_encode([strtolower($loader)]);
+                            $loaders = [strtolower($loader)];
+                            if (strtolower($loader) === 'neoforge') {
+                                $loaders[] = 'forge';
+                            }
+                            $params['loaders'] = json_encode($loaders);
                         }
 
                         $verQuery = !empty($params) ? '?' . http_build_query($params) : '';
@@ -545,28 +640,32 @@ try {
 
             // Build map of local image tags to IDs to check for updates
             $localImages = [];
-            // Cache 'docker images' for 30 seconds (rarely changes)
-            $imgCache = '/tmp/mcmm_images.cache';
-            $imgOutput = null;
-            if (file_exists($imgCache) && (time() - filemtime($imgCache) < 30)) {
-                $imgOutput = file_get_contents($imgCache);
-            } else {
-                $imgCmd = '/usr/bin/docker images --no-trunc --format "{{.Repository}}:{{.Tag}}|{{.ID}}"';
-                $imgOutput = shell_exec($imgCmd . ' 2>/dev/null');
-                if ($imgOutput)
-                    @file_put_contents($imgCache, $imgOutput);
-            }
+            $fastMode = isset($_GET['fast']) && $_GET['fast'] === 'true';
 
-            if ($imgOutput) {
-                foreach (explode("\n", trim($imgOutput)) as $imgLine) {
-                    $parts = explode('|', $imgLine);
-                    if (count($parts) === 2) {
-                        $localImages[$parts[0]] = $parts[1]; // "itzg/minecraft-server:latest" -> "sha256:..."
+            // Cache 'docker images' for 30 seconds (rarely changes) - SKIP in fast mode
+            if (!$fastMode) {
+                $imgCache = '/tmp/mcmm_images.cache';
+                $imgOutput = null;
+                if (file_exists($imgCache) && (time() - filemtime($imgCache) < 30)) {
+                    $imgOutput = file_get_contents($imgCache);
+                } else {
+                    $imgCmd = '/usr/bin/docker images --no-trunc --format "{{.Repository}}:{{.Tag}}|{{.ID}}"';
+                    $imgOutput = shell_exec($imgCmd . ' 2>/dev/null');
+                    if ($imgOutput)
+                        @file_put_contents($imgCache, $imgOutput);
+                }
+
+                if ($imgOutput) {
+                    foreach (explode("\n", trim($imgOutput)) as $imgLine) {
+                        $parts = explode('|', $imgLine);
+                        if (count($parts) === 2) {
+                            $localImages[$parts[0]] = $parts[1]; // "itzg/minecraft-server:latest" -> "sha256:..."
+                        }
                     }
                 }
             }
 
-            // Cache 'docker ps' output for 2s (high frequency)
+            // Cache 'docker ps' output for 2s (high frequency) - ALWAYS NEEDED for Status
             $psCache = '/tmp/mcmm_ps.cache';
             if (file_exists($psCache) && (time() - filemtime($psCache) < 2)) {
                 $output = file_get_contents($psCache);
@@ -579,37 +678,39 @@ try {
             // Batch gather docker stats for ALL containers (authoritative & fast)
             $allStats = [];
 
-            // Cache 'docker stats' for 2 seconds (high frequency)
-            $statsCache = '/tmp/mcmm_stats.cache';
-            $statsOutput = null;
-            if (file_exists($statsCache) && (time() - filemtime($statsCache) < 2)) {
-                $statsOutput = file_get_contents($statsCache);
-            } else {
-                $statsCmd = '/usr/bin/docker stats --no-stream --format "{{.ID}}|{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}"';
-                $statsOutput = shell_exec($statsCmd . ' 2>/dev/null');
-                if ($statsOutput)
-                    @file_put_contents($statsCache, $statsOutput);
-            }
+            // Cache 'docker stats' for 2 seconds (high frequency) - SKIP in fast mode
+            if (!$fastMode) {
+                $statsCache = '/tmp/mcmm_stats.cache';
+                $statsOutput = null;
+                if (file_exists($statsCache) && (time() - filemtime($statsCache) < 2)) {
+                    $statsOutput = file_get_contents($statsCache);
+                } else {
+                    $statsCmd = '/usr/bin/docker stats --no-stream --format "{{.ID}}|{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}"';
+                    $statsOutput = shell_exec($statsCmd . ' 2>/dev/null');
+                    if ($statsOutput)
+                        @file_put_contents($statsCache, $statsOutput);
+                }
 
-            if ($statsOutput) {
-                $statsLines = explode("\n", trim($statsOutput));
-                foreach ($statsLines as $sLine) {
-                    $sParts = explode('|', $sLine);
-                    if (count($sParts) >= 3) {
-                        $sId = $sParts[0];
-                        $sName = $sParts[1];
-                        $sCpuStr = str_replace('%', '', $sParts[2]);
-                        $sMemParts = explode(' / ', $sParts[3]);
-                        $sUsedMb = parseMemoryToMB($sMemParts[0]);
-                        $sCapMb = isset($sMemParts[1]) ? parseMemoryToMB($sMemParts[1]) : 0;
+                if ($statsOutput) {
+                    $statsLines = explode("\n", trim($statsOutput));
+                    foreach ($statsLines as $sLine) {
+                        $sParts = explode('|', $sLine);
+                        if (count($sParts) >= 3) {
+                            $sId = $sParts[0];
+                            $sName = $sParts[1];
+                            $sCpuStr = str_replace('%', '', $sParts[2]);
+                            $sMemParts = explode(' / ', $sParts[3]);
+                            $sUsedMb = parseMemoryToMB($sMemParts[0]);
+                            $sCapMb = isset($sMemParts[1]) ? parseMemoryToMB($sMemParts[1]) : 0;
 
-                        $statsData = [
-                            'cpu_percent' => floatval($sCpuStr) / getSystemCpuCount(),
-                            'mem_used_mb' => $sUsedMb,
-                            'mem_cap_mb' => $sCapMb
-                        ];
-                        $allStats[$sId] = $statsData;
-                        $allStats[$sName] = $statsData;
+                            $statsData = [
+                                'cpu_percent' => floatval($sCpuStr) / getSystemCpuCount(),
+                                'mem_used_mb' => $sUsedMb,
+                                'mem_cap_mb' => $sCapMb
+                            ];
+                            $allStats[$sId] = $statsData;
+                            $allStats[$sName] = $statsData;
+                        }
                     }
                 }
             }
