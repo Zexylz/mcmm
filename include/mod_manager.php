@@ -75,32 +75,43 @@ function extractModInfo(string $jarPath): array
 
     $info['hash'] = sha1_file($jarPath);
 
-    $tomlContent = shell_exec('unzip -p ' . escapeshellarg($jarPath) . ' META-INF/mods.toml 2>/dev/null');
-    if ($tomlContent) {
-        $info = array_merge($info, parseModsToml($tomlContent));
-    }
-
-    if (!$info['modId']) {
-        $mcmodContent = shell_exec('unzip -p ' . escapeshellarg($jarPath) . ' mcmod.info 2>/dev/null');
-        if ($mcmodContent) {
-            $info = array_merge($info, parseMcmodInfo($mcmodContent));
+    $zip = new ZipArchive;
+    if ($zip->open($jarPath) === TRUE) {
+        // Try mods.toml
+        if ($zip->locateName('META-INF/mods.toml') !== false) {
+            $tomlContent = $zip->getFromName('META-INF/mods.toml');
+            if ($tomlContent) {
+                $info = array_merge($info, parseModsToml($tomlContent));
+            }
         }
-    }
 
-    if (!$info['modId']) {
-        $fabricContent = shell_exec('unzip -p ' . escapeshellarg($jarPath) . ' fabric.mod.json 2>/dev/null');
-        if ($fabricContent) {
-            $info = array_merge($info, parseFabricModJson($fabricContent));
-            $info['loader'] = 'fabric';
+        // Try mcmod.info if ID missing
+        if (empty($info['modId']) && $zip->locateName('mcmod.info') !== false) {
+            $mcmodContent = $zip->getFromName('mcmod.info');
+            if ($mcmodContent) {
+                $info = array_merge($info, parseMcmodInfo($mcmodContent));
+            }
         }
-    }
 
-    if (!$info['modId']) {
-        $quiltContent = shell_exec('unzip -p ' . escapeshellarg($jarPath) . ' quilt.mod.json 2>/dev/null');
-        if ($quiltContent) {
-            $info = array_merge($info, parseQuiltModJson($quiltContent));
-            $info['loader'] = 'quilt';
+        // Try fabric.mod.json
+        if (empty($info['modId']) && $zip->locateName('fabric.mod.json') !== false) {
+            $fabricContent = $zip->getFromName('fabric.mod.json');
+            if ($fabricContent) {
+                $info = array_merge($info, parseFabricModJson($fabricContent));
+                $info['loader'] = 'fabric';
+            }
         }
+
+        // Try quilt.mod.json
+        if (empty($info['modId']) && $zip->locateName('quilt.mod.json') !== false) {
+            $quiltContent = $zip->getFromName('quilt.mod.json');
+            if ($quiltContent) {
+                $info = array_merge($info, parseQuiltModJson($quiltContent));
+                $info['loader'] = 'quilt';
+            }
+        }
+
+        $zip->close();
     }
 
     if (!$info['version'] || $info['version'] === 'Unknown') {

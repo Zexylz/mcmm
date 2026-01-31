@@ -66,6 +66,25 @@ window.closeGlobalSettings = closeGlobalSettings;
 window.switchSettingsCategory = switchSettingsCategory;
 
 /**
+ * Helper to perform fetch with CSRF token.
+ * 
+ * @param {string} url - The URL to fetch.
+ * @param {Object} [options] - Fetch options.
+ * @returns {Promise<Response>}
+ */
+async function mcmmFetch(url, options = {}) {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    const token = meta ? meta.content : '';
+
+    const headers = options.headers || {};
+    if (token) {
+        headers['X-CSRF-Token'] = token;
+    }
+
+    return window.fetch(url, { ...options, headers });
+}
+
+/**
  * Opens the global settings modal and activates the first tab.
  *
  * @remarks Logs opening to console and initializes internal state.
@@ -424,7 +443,7 @@ async function loadModpacks(query = '') {
     renderModpacks(modpackState.items);
 
     try {
-        const res = await fetch(`/plugins/mcmm/api.php?action=modpacks&source=${modpackState.source}&search=${encodeURIComponent(query)}&sort=${modpackState.sort}&page=${modpackState.page}&page_size=${modpackState.limit}`);
+        const res = await mcmmFetch(`/plugins/mcmm/api.php?action=modpacks&source=${modpackState.source}&search=${encodeURIComponent(query)}&sort=${modpackState.sort}&page=${modpackState.page}&page_size=${modpackState.limit}`);
         const data = await res.json();
         if (!data.success) {
             throw new Error(data.error || 'Failed to load modpacks');
@@ -494,7 +513,7 @@ async function openModManager(serverId, serverName) {
 
     // Fetch server details to infer MC version & loader for filtering
     try {
-        const res = await fetch('/plugins/mcmm/api.php?action=server_details&id=' + serverId);
+        const res = await mcmmFetch('/plugins/mcmm/api.php?action=server_details&id=' + serverId);
         const data = await res.json();
         console.log("MCMM Server Details:", data.data);
         if (data.success && data.data) {
@@ -702,7 +721,7 @@ async function loadMods(query) {
             source: modState.source
         });
 
-        const res = await fetch(url);
+        const res = await mcmmFetch(url);
         const data = await res.json();
         if (data.success) {
             if (modState.source === 'modrinth') {
@@ -788,7 +807,7 @@ async function checkForUpdates() {
     renderMods();
 
     try {
-        const res = await fetch(`/plugins/mcmm/api.php?action=check_updates&id=${currentServerId}`);
+        const res = await mcmmFetch(`/plugins/mcmm/api.php?action=check_updates&id=${currentServerId}`);
         const data = await res.json();
         if (data.success && data.updates) {
             // Update installed mods with latest info
@@ -832,7 +851,7 @@ async function checkForUpdates() {
 async function loadInstalledMods() {
     if (!currentServerId) return;
     try {
-        const res = await fetch('/plugins/mcmm/api.php?action=mod_list&id=' + currentServerId);
+        const res = await mcmmFetch('/plugins/mcmm/api.php?action=mod_list&id=' + currentServerId);
         const data = await res.json();
         if (data.success) {
             modState.installed = data.data || [];
@@ -977,7 +996,7 @@ async function identifyModsBatch(filenames) {
     if (!currentServerId || !filenames.length) return;
     try {
         const queries = `&files=${encodeURIComponent(JSON.stringify(filenames))}`;
-        const res = await fetch(`/plugins/mcmm/api.php?action=mod_identify_batch&id=${currentServerId}${queries}`, {
+        const res = await mcmmFetch(`/plugins/mcmm/api.php?action=mod_identify_batch&id=${currentServerId}${queries}`, {
             method: 'GET'
         });
         const data = await res.json();
@@ -1356,7 +1375,7 @@ async function fetchVersions(modId) {
         // If MC version/loader are still unknown, fetch fresh server_details once more
         if ((!modState.mcVersion || !modState.loader) && currentServerId) {
             try {
-                const srvRes = await fetch('/plugins/mcmm/api.php?action=server_details&id=' + currentServerId);
+                const srvRes = await mcmmFetch('/plugins/mcmm/api.php?action=server_details&id=' + currentServerId);
                 const srvData = await srvRes.json();
                 if (srvData.success && srvData.data) {
                     if (!modState.mcVersion && srvData.data.mcVersion) modState.mcVersion = srvData.data.mcVersion;
@@ -1374,7 +1393,7 @@ async function fetchVersions(modId) {
         if (modState.source) params.set('source', modState.source);
         if (currentServerId) params.set('server_id', currentServerId);
 
-        const res = await fetch('/plugins/mcmm/api.php?action=mod_files&' + params.toString());
+        const res = await mcmmFetch('/plugins/mcmm/api.php?action=mod_files&' + params.toString());
         const data = await res.json();
 
         if (data.success) {
@@ -1594,7 +1613,7 @@ async function performModInstall(modId, fileId, btnElement) {
             params.set('mc_version', mod.mcVersion || modState.mcVersion || '');
         }
 
-        const res = await fetch('/plugins/mcmm/api.php?' + params.toString());
+        const res = await mcmmFetch('/plugins/mcmm/api.php?' + params.toString());
         const data = await res.json();
         if (data.success) {
             if (btn) {
@@ -1634,7 +1653,7 @@ async function deleteMod(fileName) {
     if (!currentServerId || !confirm('Delete ' + fileName + '?')) return;
 
     try {
-        const res = await fetch(`/plugins/mcmm/api.php?action=mod_delete&id=${currentServerId}&file=${encodeURIComponent(fileName)}`);
+        const res = await mcmmFetch(`/plugins/mcmm/api.php?action=mod_delete&id=${currentServerId}&file=${encodeURIComponent(fileName)}`);
         const data = await res.json();
         if (data.success) {
             loadInstalledMods();
@@ -1710,7 +1729,7 @@ async function openDeployModal(pack) {
     // Fetch Modpack versions in background
     try {
         const source = pack.source || 'curseforge';
-        const res = await fetch(`/plugins/mcmm/api.php?action=mod_files&source=${source}&mod_id=` + pack.id);
+        const res = await mcmmFetch(`/plugins/mcmm/api.php?action=mod_files&source=${source}&mod_id=` + pack.id);
         const data = await res.json();
 
         if (data.success && data.data && data.data.length > 0) {
@@ -1756,7 +1775,7 @@ async function openVanillaDeploy() {
     versionList.innerHTML = '<div style="color: var(--text-secondary);">Fetching official versions...</div>';
 
     try {
-        const res = await fetch('https://launchermeta.mojang.com/mc/game/version_manifest.json');
+        const res = await mcmmFetch('https://launchermeta.mojang.com/mc/game/version_manifest.json');
         const data = await res.json();
 
         let vanillaVersions = [];
@@ -1847,7 +1866,7 @@ function setChecked(id, value) {
 async function loadSettingsDefaults() {
     if (settingsCache) return settingsCache;
     try {
-        const res = await fetch('/plugins/mcmm/api.php?action=settings');
+        const res = await mcmmFetch('/plugins/mcmm/api.php?action=settings');
         const data = await res.json();
         if (data && data.success && data.data) {
             // Normalize boolean-ish strings to real booleans
@@ -2179,7 +2198,7 @@ function startDeployLogPolling(containerId) {
     stopDeployLogPolling();
     deployLogInterval = setInterval(async () => {
         try {
-            const res = await fetch('/plugins/mcmm/api.php?action=console_logs&id=' + containerId);
+            const res = await mcmmFetch('/plugins/mcmm/api.php?action=console_logs&id=' + containerId);
             const data = await res.json();
             if (data.success) {
                 const clean = (data.logs || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, ''); // eslint-disable-line no-control-regex
@@ -2221,7 +2240,7 @@ async function loadServers() {
     if (!container) return;
 
     try {
-        const res = await fetch('/plugins/mcmm/api.php?action=servers');
+        const res = await mcmmFetch('/plugins/mcmm/api.php?action=servers');
         const data = await res.json();
 
         console.group("%c MCMM %c Servers Dashboard Update", "background:rgb(124 58 237 / 100%);color:rgb(255 255 255 / 100%);font-weight:700;padding:2px 6px;border-radius:4px;", "font-weight:700;");
@@ -2766,7 +2785,7 @@ async function submitDeploy() {
         });
     } else {
         // Fallback to fetch with manual JSON parse/diagnostics
-        fetch('/plugins/mcmm/api.php?action=deploy', {
+        mcmmFetch('/plugins/mcmm/api.php?action=deploy', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2848,7 +2867,7 @@ function openConsole(serverId, serverName) {
 async function fetchLogs() {
     if (!currentConsoleId) return;
     try {
-        const res = await fetch('/plugins/mcmm/api.php?action=console_logs&id=' + currentConsoleId);
+        const res = await mcmmFetch('/plugins/mcmm/api.php?action=console_logs&id=' + currentConsoleId);
         const data = await res.json();
         if (data.success) {
             const output = document.getElementById('consoleOutput');
@@ -2965,7 +2984,7 @@ async function fetchTabPlayers() {
     updatePlayerTabIndicator();
 
     try {
-        const res = await fetch(`/plugins/mcmm/api.php?action=players&id=${currentPlayersId}&port=${currentPlayersPort}`);
+        const res = await mcmmFetch(`/plugins/mcmm/api.php?action=players&id=${currentPlayersId}&port=${currentPlayersPort}`);
         const data = await res.json();
         if (data.success) {
             lastPlayersData = data.data;
@@ -3082,7 +3101,7 @@ async function playerAction(action, playerName) {
     if (action === 'ban' && !confirm(`Are you sure you want to ban ${playerName}?`)) return;
 
     try {
-        const res = await fetch(`/plugins/mcmm/api.php?action=player_action&id=${currentPlayersId}&type=${action}&player=${playerName}`);
+        const res = await mcmmFetch(`/plugins/mcmm/api.php?action=player_action&id=${currentPlayersId}&type=${action}&player=${playerName}`);
         const data = await res.json();
         if (data.success) {
             showToast(`Player ${playerName} ${action}ed`);
@@ -3143,7 +3162,7 @@ function controlServer(id, action, skipConfirm = false) {
     // Visual feedback: disable the button or show loading state? 
     // For now, next poll will show it.
 
-    fetch('/plugins/mcmm/api.php?action=server_control&id=' + id + '&cmd=' + action)
+    mcmmFetch('/plugins/mcmm/api.php?action=server_control&id=' + id + '&cmd=' + action)
         .then(r => r.json())
         .then(data => {
             if (data.success) {
@@ -3164,7 +3183,7 @@ function controlServer(id, action, skipConfirm = false) {
 function deleteServer(id) {
     if (!confirm('EXTREMELY IMPORTANT: This will PERMANENTLY delete this server container.\n\nAre you sure you want to proceed?')) return;
 
-    fetch('/plugins/mcmm/api.php?action=server_delete&id=' + id)
+    mcmmFetch('/plugins/mcmm/api.php?action=server_delete&id=' + id)
         .then(r => r.json())
         .then(data => {
             if (data.success) {
@@ -3248,7 +3267,7 @@ function saveSettings(e) {
         });
     } else {
         // Fallback to fetch
-        fetch('/plugins/mcmm/api.php?action=save_settings', {
+        mcmmFetch('/plugins/mcmm/api.php?action=save_settings', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -3318,7 +3337,7 @@ function handleSaveSuccess(result, statusEl) {
 
         // Auto-fetch log if error is unknown
         // if (!result || !result.error) {
-        //      fetch('/plugins/mcmm/api.php?action=get_log')
+        //      mcmmFetch('/plugins/mcmm/api.php?action=get_log')
         //         .then(r => r.json())
         //         .then(d => {
         //             if(d.success) console.log("MCMM Log:\n" + d.log);
@@ -3339,7 +3358,7 @@ function handleSaveError(err, statusEl) {
     statusEl.textContent = 'Error: ' + err.message;
 
     // Auto-fetch log on error
-    // fetch('/plugins/mcmm/api.php?action=get_log')
+    // mcmmFetch('/plugins/mcmm/api.php?action=get_log')
     //     .then(r => r.json())
     //     .then(d => {
     //         if(d.success) console.log("MCMM Log:\n" + d.log);
@@ -3452,7 +3471,7 @@ function clearQueue() {
  */
 async function startAgents() {
     try {
-        const res = await fetch('/plugins/mcmm/api.php?action=start_agents');
+        const res = await mcmmFetch('/plugins/mcmm/api.php?action=start_agents');
         const text = await res.text();
         let data;
         try {
@@ -3481,7 +3500,7 @@ async function startAgents() {
  */
 async function logRamDebug() {
     try {
-        const res = await fetch('/plugins/mcmm/api.php?action=servers&_=' + Date.now());
+        const res = await mcmmFetch('/plugins/mcmm/api.php?action=servers&_=' + Date.now());
         const text = await res.text();
         let data;
         try {
@@ -3537,7 +3556,7 @@ async function installSelectedMods() {
             params.set('mod_id', mod.id);
             if (modState.source) params.set('source', modState.source);
             // No file_id here; backend will pick latest compatible
-            const res = await fetch('/plugins/mcmm/api.php?' + params.toString());
+            const res = await mcmmFetch('/plugins/mcmm/api.php?' + params.toString());
             const data = await res.json();
 
             if (data.success) {
@@ -3643,7 +3662,7 @@ document.getElementById('consoleInput')?.addEventListener('keypress', function (
         output.textContent += `\n> ${cmd}\n`;
         output.scrollTop = output.scrollHeight;
 
-        fetch('/plugins/mcmm/api.php?action=console_command&id=' + currentConsoleId + '&cmd=' + encodeURIComponent(cmd))
+        mcmmFetch('/plugins/mcmm/api.php?action=console_command&id=' + currentConsoleId + '&cmd=' + encodeURIComponent(cmd))
             .then(r => r.json())
             .then(d => {
                 if (d.success) {
@@ -3680,7 +3699,7 @@ async function openServerSettings(id) {
     });
 
     try {
-        const res = await fetch('/plugins/mcmm/api.php?action=server_get&id=' + id);
+        const res = await mcmmFetch('/plugins/mcmm/api.php?action=server_get&id=' + id);
         const data = await res.json();
 
         if (!data.success) throw new Error(data.error);
@@ -3831,7 +3850,7 @@ async function submitServerSettings() {
         });
     } else {
         try {
-            const res = await fetch('/plugins/mcmm/api.php?action=server_update', {
+            const res = await mcmmFetch('/plugins/mcmm/api.php?action=server_update', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -3888,7 +3907,7 @@ async function initServerPlayerCounts() {
  */
 async function refreshServerPlayerCount(span, serverId, port) {
     try {
-        const res = await fetch(`/plugins/mcmm/api.php?action=server_players&id=${encodeURIComponent(serverId)}&port=${encodeURIComponent(port)}`);
+        const res = await mcmmFetch(`/plugins/mcmm/api.php?action=server_players&id=${encodeURIComponent(serverId)}&port=${encodeURIComponent(port)}`);
         const data = await res.json();
         if (data && data.success) {
             const online = data.data.online ?? 0;
@@ -3910,7 +3929,7 @@ async function loadBackups() {
     if (!container) return;
 
     try {
-        const res = await fetch('/plugins/mcmm/api.php?action=backups_list');
+        const res = await mcmmFetch('/plugins/mcmm/api.php?action=backups_list');
         const data = await res.json();
         if (data.success) {
             renderBackups(data.data);
@@ -4043,7 +4062,7 @@ async function createBackup(serverId) {
     }
 
     try {
-        const res = await fetch(`/plugins/mcmm/api.php?action=backup_create&id=${serverId}`);
+        const res = await mcmmFetch(`/plugins/mcmm/api.php?action=backup_create&id=${serverId}`);
         const data = await res.json();
 
         // Hide backup status indicator
@@ -4088,7 +4107,7 @@ async function createBackup(serverId) {
 async function deleteBackup(name) {
     if (!confirm(`Are you sure you want to delete backup ${name}?`)) return;
     try {
-        const res = await fetch(`/plugins/mcmm/api.php?action=backup_delete&name=${encodeURIComponent(name)}`);
+        const res = await mcmmFetch(`/plugins/mcmm/api.php?action=backup_delete&name=${encodeURIComponent(name)}`);
         const data = await res.json();
         if (data.success) {
             loadBackups();
@@ -4121,7 +4140,7 @@ async function reinstallFromBackup(name) {
     `;
 
     try {
-        const res = await fetch(`/plugins/mcmm/api.php?action=backup_reinstall&name=${encodeURIComponent(name)}`);
+        const res = await mcmmFetch(`/plugins/mcmm/api.php?action=backup_reinstall&name=${encodeURIComponent(name)}`);
         const data = await res.json();
         if (data.success) {
             alert('Server reinstalled successfully!');

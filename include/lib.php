@@ -1358,27 +1358,40 @@ function fetchFTBModpacks(string $search, int $page = 1, int $pageSize = 20): ?a
 {
     // Search endpoint: returns IDs
     // We fetch up to 100 to support pagination accurately from the ID list
-    $url = "https://api.modpacks.ch/public/modpack/search/100?term=" . urlencode($search ?: 'FTB');
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    $cacheKey = "ftb_search_" . md5($search);
+    $allPacks = mcmm_cache_get($cacheKey);
 
-    if ($httpCode >= 400 || !$response) {
-        dbg("FTB Search API failed with code $httpCode");
-        return null;
+    if ($allPacks === null) {
+        $url = "https://api.modpacks.ch/public/modpack/search/100?term=" . urlencode($search ?: 'FTB');
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode >= 400 || !$response) {
+            dbg("FTB Search API failed with code $httpCode");
+            return null;
+        }
+
+        $data = json_decode($response, true);
+        if (!isset($data['packs']) || empty($data['packs'])) {
+            return [];
+        }
+
+        $allPacks = $data['packs'];
+        // Cache the list of IDs for 10 minutes
+        mcmm_cache_set($cacheKey, $allPacks, 600);
     }
 
-    $data = json_decode($response, true);
-    if (!isset($data['packs']) || empty($data['packs'])) {
+    if (empty($allPacks)) {
         return [];
     }
 
     $offset = ($page - 1) * $pageSize;
-    $ids = array_slice($data['packs'], $offset, $pageSize);
+    $ids = array_slice($allPacks, $offset, $pageSize);
     $modpacks = [];
     $toFetch = [];
     $results = [];
@@ -1970,7 +1983,7 @@ function mrRequest(string $path, bool $isFullUrl = false): ?array
         return null;
     }
 
-    mcmm_cache_set($cacheKey, $json, 300); // 5 min cache
+    mcmm_cache_set($cacheKey, $json, 3600); // 1 hour cache
     return $json;
 }
 
@@ -2085,7 +2098,7 @@ function cfRequest(string $path, string $apiKey, bool $isFullUrl = false, string
     }
 
     if ($method === 'GET') {
-        mcmm_cache_set($cacheKey, $json, 300); // 5 min cache
+        mcmm_cache_set($cacheKey, $json, 3600); // 1 hour cache
     }
 
     return $json;
@@ -3136,6 +3149,19 @@ XML;
  * @return array Player statistics.
  */
 function getMinecraftLiveStats($containerId, $hostPort, $env)
+{
+    $cacheKey = "live_stats_" . $containerId;
+    $cached = mcmm_cache_get($cacheKey);
+    if ($cached !== null) {
+        return $cached;
+    }
+
+    $result = _getMinecraftLiveStatsUncached($containerId, $hostPort, $env);
+    mcmm_cache_set($cacheKey, $result, 10);
+    return $result;
+}
+
+function _getMinecraftLiveStatsUncached($containerId, $hostPort, $env)
 {
     $online = 0;
     $max = isset($env['MAX_PLAYERS']) ? intval($env['MAX_PLAYERS']) : 20;

@@ -82,7 +82,20 @@ if (file_exists($configPath)) {
 $config = array_merge($defaults, $config);
 
 // Route action
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 $action = $_GET['action'] ?? '';
+
+// Verify CSRF for state-changing actions
+$sensitiveActions = ['server_control', 'server_delete', 'mod_install', 'mod_delete', 'console_command', 'backup_create', 'backup_delete', 'backup_restore', 'save_settings'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' || in_array($action, $sensitiveActions)) {
+    $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? '';
+    if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $token)) {
+        header('HTTP/1.1 403 Forbidden');
+        die(json_encode(['success' => false, 'error' => 'Invalid CSRF token']));
+    }
+}
 
 
 
@@ -260,6 +273,26 @@ try {
             $cmd = $_GET['cmd'] ?? '';
             if (!$id || !$cmd) {
                 jsonResponse(['success' => false, 'error' => 'Missing parameters'], 400);
+            }
+
+            // ID Validation
+            if (!preg_match('/^[a-zA-Z0-9_-]+$/', $id)) {
+                jsonResponse(['success' => false, 'error' => 'Invalid Server ID'], 400);
+            }
+
+            // Command Whitelist check
+            $allowedCommands = ['say', 'list', 'whitelist', 'ban', 'kick', 'op', 'deop', 'stop', 'restart', 'save-all', 'weather', 'time', 'gamerule', 'pardon', 'ban-ip', 'pardon-ip'];
+            $cmdClean = trim($cmd);
+            if (strpos($cmdClean, '/') === 0) {
+                $cmdClean = substr($cmdClean, 1);
+            }
+            $parts = explode(' ', $cmdClean);
+            $baseCmd = strtolower($parts[0]);
+
+            if (!in_array($baseCmd, $allowedCommands)) {
+                // Log attempt?
+                // error_log("MCMM: Blocked command '$baseCmd' from web console.");
+                jsonResponse(['success' => false, 'error' => 'Command not allowed via web console: ' . htmlspecialchars($baseCmd)], 403);
             }
 
             // Execute command via rcon-cli inside container

@@ -24,6 +24,15 @@ $plugin = 'mcmm';
 $config = parse_plugin_cfg($plugin);
 $docroot = $_SERVER['DOCUMENT_ROOT'] ?? '/usr/local/emhttp';
 
+// CSRF Protection
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
+
 // Include helpers if available
 if (file_exists("$docroot/plugins/$plugin/include/helpers.php")) {
     require_once "$docroot/plugins/$plugin/include/helpers.php";
@@ -77,6 +86,12 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
             if (el.id && document.getElementById(el.id)) return;
             document.head.appendChild(el);
         }
+
+        // CSRF Token
+        const meta = document.createElement('meta');
+        meta.name = 'csrf-token';
+        meta.content = '<?php echo $csrfToken; ?>';
+        document.head.appendChild(meta);
 
         // Google Fonts
         addOnce(Object.assign(document.createElement('link'), {
