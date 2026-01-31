@@ -111,10 +111,8 @@ dbg("API Loaded. Action: " . ($action ? $action : 'none'));
 
 try {
     // Validate config loading
-    if (!is_array($config)) {
-        dbg("Warning: Config was not an array, resetting to empty.");
-        $config = [];
-    }
+    // Validate config loading
+    // Config is guaranteed to be an array from array_merge above
     $config = array_merge($defaults, $config);
 
     switch ($action) {
@@ -178,7 +176,7 @@ try {
 
             $data = getRequestData();
             // If strictly empty (missing/invalid), return error.
-            if ($data === null || (is_array($data) && empty($data) && empty($_POST))) {
+            if (empty($data) && empty($_POST)) {
                 dbg("Error: No input data found");
                 jsonResponse(['success' => false, 'error' => 'No input data received'], 400);
             }
@@ -412,7 +410,7 @@ try {
             $cfIds = [];
             $mrIds = [];
             foreach ($installed as $mid => $info) {
-                $platform = $info['platform'] ?? $srvCfg['platform'] ?? ($env['MODRINTH_ID'] ?? null ? 'modrinth' : ($env['CF_MODPACK_ID'] ?? null ? 'curseforge' : ''));
+                $platform = $info['platform'] ?? $srvCfg['platform'] ?? '';
                 if ($platform === 'modrinth') {
                     $mrIds[] = $mid;
                 } else {
@@ -468,7 +466,7 @@ try {
             if (!empty($mrIds)) {
                 $idsParam = json_encode($mrIds);
                 $projects = mrRequest('/projects?ids=' . urlencode($idsParam));
-                if ($projects && is_array($projects)) {
+                if ($projects) {
                     foreach ($projects as $proj) {
                         // For Modrinth, we need to fetch the latest version for the specific MC version
                         $fileUrl = "https://api.modrinth.com/v2/project/{$proj['id']}/version";
@@ -773,7 +771,7 @@ try {
                             } elseif (isset($metrics['ws_mb']) && floatval($metrics['ws_mb']) > 0) {
                                 $ramUsedMb = floatval($metrics['ws_mb']);
                                 $ramSource = 'agent_ws';
-                            } elseif (isset($cg['mem_used_mb']) && $cg['mem_used_mb'] > 0) {
+                            } elseif ($cg['mem_used_mb'] > 0) {
                                 $ramUsedMb = $cg['mem_used_mb'];
                                 $ramSource = 'docker_stats';
                             }
@@ -792,9 +790,6 @@ try {
 
                             // Safety clamp for display
                             if ($ramLimitMb > 0 && $ramUsedMb > $ramLimitMb) {
-                                if ($ramSource === 'agent_heap') {
-                                    $ramUsedMb = $ramLimitMb;
-                                }
                                 // If docker_stats, we allow it to exceed the limit slightly if configured that way,
                                 // but for the percentage bar we will clamp.
                             }
