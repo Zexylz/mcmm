@@ -97,7 +97,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
         addOnce(Object.assign(document.createElement('link'), {
             id: 'mcmm-fonts-outfit',
             rel: 'stylesheet',
-            href: 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap'
+            href: 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap'
         }));
         addOnce(Object.assign(document.createElement('link'), {
             id: 'mcmm-fonts-symbols',
@@ -1212,7 +1212,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
             <div class="mcmm-modal-header"
                 style="border-bottom: 1px solid var(--border); padding: 1rem 1.25rem; background: var(--bg-surface) !important;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <div class="mcmm-modal-title"
+                    <div class="mcmm-modal-title" id="playersTitle"
                         style="font-size: 1.1rem; font-weight: 700; color: var(--text-main) !important;">Player Manager
                     </div>
                     <span id="playerTotalBadge"
@@ -1230,16 +1230,21 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
             </div>
 
             <div style="display: flex; background: var(--bg-surface); border-bottom: 1px solid var(--border);">
-                <button id="tab-active" class="mcmm-modal-tab active" onclick="switchPlayerTab('active')"
-                    style="flex: 1; padding: 0.75rem; background: transparent; border: none; border-bottom: 2px solid var(--accent-primary); color: var(--text-main); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">Active</button>
-                <button id="tab-banned" class="mcmm-modal-tab" onclick="switchPlayerTab('banned')"
-                    style="flex: 1; padding: 0.75rem; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">Banned</button>
+                <button class="mcmm-modal-tab mcmm-player-tab active" data-tab="online" onclick="switchPlayerTab('online')"
+                    style="flex: 1; padding: 0.75rem; background: transparent; border: none; border-bottom: 2px solid var(--accent-primary); color: var(--text-main); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                    Online <span class="mcmm-tab-count" style="display:none; font-size:0.75em; background:rgba(255,255,255,0.1); padding:1px 6px; border-radius:10px; margin-left:6px;">0</span>
+                </button>
+                <button class="mcmm-modal-tab mcmm-player-tab" data-tab="banned" onclick="switchPlayerTab('banned')"
+                    style="flex: 1; padding: 0.75rem; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                    Banned <span class="mcmm-tab-count" style="display:none; font-size:0.75em; background:rgba(255,255,255,0.1); padding:1px 6px; border-radius:10px; margin-left:6px;">0</span>
+                </button>
+                <!-- History tab if needed later -->
             </div>
 
-            <input type="text" id="playerSearch" class="mcmm-player-search-box" placeholder="Search players..."
+            <input type="text" id="playerSearchInput" class="mcmm-player-search-box" placeholder="Search players..."
                 onkeyup="filterPlayers()">
 
-            <div id="playersBody" class="mcmm-modal-body" style="padding: 0; max-height: 60vh; overflow-y: auto;">
+            <div id="playersList" class="mcmm-modal-body" style="padding: 0; max-height: 60vh; overflow-y: auto;">
                 <div style="text-align:center; padding: 4rem 2rem; color: var(--text-secondary);">
                     <div class="mcmm-spinner" style="width: 24px; height: 24px; border-width: 3px;"></div>
                     <div

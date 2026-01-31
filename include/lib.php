@@ -2616,9 +2616,10 @@ function detectVersionFromFiles(string $dir): array
  * @param string $image         Optional Docker image tag.
  * @param int    $port          Optional host port.
  * @param string $containerId   Optional Container ID.
+ * @param string|null $explicitDataDir Optional pre-calculated data directory.
  * @return array Metadata including versions, loader, and debug info.
  */
-function getServerMetadata(array $env, array $config, string $containerName, string $apiKey, string $image = '', int $port = 0, string $containerId = ''): array
+function getServerMetadata(array $env, array $config, string $containerName, string $apiKey, string $image = '', int $port = 0, string $containerId = '', ?string $explicitDataDir = null): array
 {
     $mcVersion = '';
     $loader = '';
@@ -2627,7 +2628,7 @@ function getServerMetadata(array $env, array $config, string $containerName, str
     $modpackFileId = $env['CF_FILE_ID'] ?? $env['FTB_MODPACK_VERSION_ID'] ?? '';
     $debug = [];
 
-    $dataDir = getContainerDataDir($containerName, $containerId);
+    $dataDir = $explicitDataDir ?: getContainerDataDir($containerName, $containerId);
     $debug['dataDir'] = $dataDir;
 
     // 1. Check for install environment files (The Absolute Source of Truth for itzg installers)
@@ -3263,3 +3264,187 @@ function _getMinecraftLiveStatsUncached($containerId, $hostPort, $env)
     @file_put_contents('/tmp/mcmm_ping.log', $log . "\n", FILE_APPEND);
     return ['online' => 0, 'max' => $max];
 }
+
+/**
+ * Retrieve environment variables for a container.
+ *
+ * @param string $id Container ID or Name.
+ * @return array Associative array of environment variables.
+ */
+function getContainerEnv(string $id): array
+{
+    $json = shell_exec("docker inspect " . escapeshellarg($id));
+    $data = json_decode((string) $json, true);
+    $env = [];
+    if ($data && isset($data[0]['Config']['Env'])) {
+        foreach ($data[0]['Config']['Env'] as $e) {
+            $parts = explode('=', $e, 2);
+            if (count($parts) === 2) {
+                $env[$parts[0]] = $parts[1];
+            }
+        }
+    }
+    return $env;
+}
+
+/**
+ * Get online players list and stats.
+ *
+ * @param string $id Container ID.
+ * @param int $port Server port.
+ * @param array $env Container environment.
+ * @return array ['online' => int, 'max' => int, 'players' => array]
+ */
+function getOnlinePlayers(string $id, int $port, array $env): array
+{
+    $rconPass = $env['RCON_PASSWORD'] ?? '';
+    // $rconPort = isset($env['RCON_PORT']) ? intval($env['RCON_PORT']) : 25575;
+    $rconPort = isset($env['RCON_PORT']) ? intval($env['RCON_PORT']) : 25575;
+
+    $stats = getMinecraftLiveStats($id, $port, $env);
+    $online = $stats['online'];
+    $max = $stats['max'];
+    $players = [];
+
+    $sanitizeName = function ($n) {
+        return trim(preg_replace('/\e\[[\d;]*[A-Za-z]/', '', $n));
+    };
+
+    // 1. From Sample
+    if (!empty($stats['sample'])) {
+        foreach ($stats['sample'] as $p) {
+            if (!empty($p['name'])) {
+                $players[] = ['name' => $sanitizeName($p['name'])];
+            }
+        }
+    }
+
+    // 2. From RCON
+    if (empty($players) && $rconPass && $online > 0) {
+        $rconOut = shell_exec("docker exec " . escapeshellarg($id) . " rcon-cli --port $rconPort --password " . escapeshellarg($rconPass) . " list 2>/dev/null");
+        if ($rconOut) {
+            $rconOut = trim((string) $rconOut);
+            if (preg_match('/(?:online|players): (.*)$/i', $rconOut, $m)) {
+                $names = explode(', ', $m[1]);
+                foreach ($names as $name) {
+                    $clean = $sanitizeName($name);
+                    if ($clean !== '')
+                        $players[] = ['name' => $clean];
+                }
+            } elseif (!empty($rconOut)) {
+                $cleanOut = preg_replace('/^There are .* online: /i', '', $rconOut);
+                $names = preg_split('/[,\s]+/', $cleanOut);
+                foreach ($names as $name) {
+                    $clean = $sanitizeName($name);
+                    if ($clean !== '' && !in_array(strtolower($clean), ['there', 'are', 'players', 'online', 'max'])) {
+                        $players[] = ['name' => $clean];
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. From mc-monitor fallback
+    if (empty($players) && $online > 0) {
+        $internalPort = isset($env['SERVER_PORT']) ? intval($env['SERVER_PORT']) : 25565;
+        $statusRes = shell_exec("docker exec " . escapeshellarg($id) . " mc-monitor status --json 127.0.0.1:$internalPort 2>/dev/null");
+        if ($statusRes) {
+            $jd = json_decode((string) $statusRes, true);
+            if (!empty($jd['players']['sample'])) {
+                foreach ($jd['players']['sample'] as $p) {
+                    if (!empty($p['name']))
+                        $players[] = ['name' => $p['name']];
+                }
+            }
+        }
+    }
+
+    // Identify Operators
+    $ops = [];
+    if ($rconPass) {
+        $opOut = [];
+        exec("docker exec " . escapeshellarg($id) . " rcon-cli --port $rconPort --password " . escapeshellarg($rconPass) . " \"op list\" 2>&1", $opOut);
+        $fullOpOut = implode(' ', $opOut);
+        if (preg_match('/(?:opped players|opped player|operators):? (.*)$/i', $fullOpOut, $m)) {
+            $names = explode(',', $m[1]);
+            foreach ($names as $n)
+                $ops[] = $sanitizeName($n);
+        }
+    }
+
+    // Fallback OPS
+    if (empty($ops)) {
+        $opsJsonRaw = shell_exec("docker exec " . escapeshellarg($id) . " cat ops.json 2>/dev/null");
+        if ($opsJsonRaw) {
+            $opsData = json_decode((string) $opsJsonRaw, true);
+            if (is_array($opsData)) {
+                foreach ($opsData as $entry) {
+                    if (isset($entry['name']))
+                        $ops[] = $entry['name'];
+                }
+            }
+        }
+    }
+
+    // Set isOp
+    if (!empty($ops)) {
+        $opsLower = array_map('strtolower', $ops);
+        foreach ($players as &$p) {
+            $p['isOp'] = in_array(strtolower($p['name']), $opsLower);
+        }
+    } else {
+        foreach ($players as &$p)
+            $p['isOp'] = false;
+    }
+
+    return ['online' => $online, 'max' => $max, 'players' => $players];
+}
+
+/**
+ * Get banned players list.
+ *
+ * @param string $id Container ID.
+ * @param array $env Container environment.
+ * @return array List of banned players.
+ */
+function getBannedPlayers(string $id, array $env): array
+{
+    $rconPass = $env['RCON_PASSWORD'] ?? '';
+    $rconPort = isset($env['RCON_PORT']) ? intval($env['RCON_PORT']) : 25575;
+
+    $banned = [];
+
+    if ($rconPass) {
+        $out = shell_exec("docker exec " . escapeshellarg($id) . " rcon-cli --port $rconPort --password " . escapeshellarg($rconPass) . " \"banlist players\" 2>&1");
+        $out = trim((string) $out);
+        if ($out && stripos($out, 'no banned players') === false && preg_match('/:\s*(.*)$/i', $out, $m)) {
+            $names = explode(', ', $m[1]);
+            foreach ($names as $n) {
+                $name = trim(preg_replace('/\e\[[\d;]*[A-Za-z]/', '', $n));
+                $name = trim(explode(' ', $name)[0]);
+                if ($name && !in_array(strtolower($name), ['no', 'banned'])) {
+                    $banned[] = ['name' => $name];
+                }
+            }
+        }
+    }
+
+    if (empty($banned)) {
+        $jsonContent = shell_exec("docker exec " . escapeshellarg($id) . " cat banned-players.json 2>/dev/null");
+        if (!$jsonContent) {
+            $jsonContent = shell_exec("docker exec " . escapeshellarg($id) . " cat /data/banned-players.json 2>/dev/null");
+        }
+        if ($jsonContent) {
+            $jd = json_decode((string) $jsonContent, true);
+            if (is_array($jd)) {
+                foreach ($jd as $entry) {
+                    if (!empty($entry['name']))
+                        $banned[] = ['name' => $entry['name']];
+                }
+            }
+        }
+    }
+
+    return array_values(array_unique($banned, SORT_REGULAR));
+}
+

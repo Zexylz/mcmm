@@ -97,6 +97,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || in_array($action, $sensitiveActions
     }
 }
 
+// Release session lock to prevent blocking concurrent requests (e.g., long polling vs settings load)
+session_write_close();
+
 
 
 // Ensure nothing is printed before JSON
@@ -890,6 +893,26 @@ try {
             jsonResponse(['success' => true, 'data' => $servers]);
             break;
 
+        case 'players':
+            $id = $_GET['id'] ?? '';
+            $port = intval($_GET['port'] ?? 25565);
+            if (!$id)
+                jsonResponse(['success' => false, 'error' => 'Missing ID'], 400);
+
+            $env = getContainerEnv($id);
+            $onlineData = getOnlinePlayers($id, $port, $env);
+            $bannedList = getBannedPlayers($id, $env);
+
+            jsonResponse([
+                'success' => true,
+                'data' => [
+                    'online' => $onlineData['players'], // List of players for "online" tab
+                    'banned' => $bannedList,
+                    'history' => [] // Todo: history implementation
+                ]
+            ]);
+            break;
+
         case 'server_players':
             $id = $_GET['id'] ?? '';
             $port = $_GET['port'] ?? '25565';
@@ -1247,8 +1270,19 @@ try {
             $env['JAVA_VERSION_DETECTED'] = $javaVerDetected;
             $maxPlayers = isset($env['MAX_PLAYERS']) ? intval($env['MAX_PLAYERS']) : null;
 
+            // Pre-calculate dataDir from existing inspection data to avoid redundant calls
+            $dataDir = '';
+            if (!empty($c['Mounts'])) {
+                foreach ($c['Mounts'] as $mount) {
+                    if ($mount['Destination'] === '/data') {
+                        $dataDir = $mount['Source'];
+                        break;
+                    }
+                }
+            }
+
             // Unified Metadata Detection
-            $metadata = getServerMetadata($env, $config, $containerName, $config['curseforge_api_key'] ?? '');
+            $metadata = getServerMetadata($env, $config, $containerName, $config['curseforge_api_key'] ?? '', $c['Config']['Image'] ?? '', 0, $c['Id'], $dataDir);
             $mcVersion = $metadata['mcVersion'];
             $loader = $metadata['loader'];
 

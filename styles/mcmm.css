@@ -506,19 +506,19 @@ Styleguide 3.0.0
 }
 
 /* Apply blur only when supported (and keep background alpha consistent) */
-@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+/* @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
     .mcmm-server-row {
         background: rgb(22 24 35 / 60%);
-        /* stylelint-disable-next-line property-no-vendor-prefix */
         -webkit-backdrop-filter: blur(var(--blur-strength));
         backdrop-filter: blur(var(--blur-strength));
     }
-}
+} */
 
 /* Hover styles */
 .mcmm-server-row:hover {
     background: var(--bg-surface-hover);
 }
+
 
 /* Status-aware border tint (matches left strip) */
 .mcmm-server-row.running {
@@ -623,6 +623,12 @@ Styleguide 3.0.0
     padding: 0.15rem 0.6rem;
     vertical-align: middle;
     gap: 0.5rem;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    text-shadow: none;
+    transform: translateZ(0);
+    /* Hardware accelerate to prevent subpixel jitter */
 }
 
 .mcmm-badge.secondary {

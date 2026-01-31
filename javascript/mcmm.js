@@ -2916,9 +2916,11 @@ function closeConsole() {
 }
 
 // --- Players Modal ---
-var localCurrentPlayers = [];
-var localCurrentServerId = null;
-var currentPlayersTab = 'active';
+var currentPlayersId = null;
+var currentPlayersName = null;
+var currentPlayersPort = null;
+var currentPlayerTab = 'online';
+var lastPlayersData = null;
 
 /**
  * Opens the players management modal and fetches player data.
@@ -2983,8 +2985,8 @@ function updatePlayerTabIndicator(data) {
  * @returns {Promise<void>}
  */
 async function switchPlayerTab(tab) {
-    if (currentPlayersTab === tab) return;
-    currentPlayersTab = tab;
+    if (currentPlayerTab === tab) return;
+    currentPlayerTab = tab;
     updatePlayerTabIndicator();
     fetchTabPlayers();
 }
