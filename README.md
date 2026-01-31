@@ -29,12 +29,25 @@ configuration, and deployment documentation may be added as the project matures.
 ## Latest Release
 
 <!-- START_RELEASE -->
-# v0.0.4 Release Notes
+We're excited to announce the release of **v0.0.5**! This update brings a suite of performance enhancements and crucial bug fixes to improve stability and responsiveness.
 
-We're excited to announce the release of v0.0.4! This version focuses on enhancing code clarity and maintainability.
+---
+
+### 🚀 New Features
+*   No new features in this release, focus was on stability and performance.
 
 ### 🛠 Improvements & Refinement
-*   Enhanced code comments for better readability and understanding of the codebase.
+*   **Performance Optimization:** Implemented a 2-second file cache for `docker inspect` calls, significantly reducing CPU overhead and preventing redundant Docker process spawning.
+*   **Reduced Backend Load:** Increased the client-side server polling interval from 1000ms to 3000ms, leading to an approximate 66% reduction in backend load.
+*   **Codebase Streamlining:** Removed redundant checks, dead conditions, and impossible comparisons for a cleaner, more efficient codebase.
+
+### 🐛 Bug Fixes
+*   **PHP 8.4+ Compatibility:** Resolved a PHP 8.4+ deprecation warning by explicitly marking a nullable parameter in `getContainerCgroupRamMb`.
+*   **Global Settings Error:** Fixed an `eval()` error encountered in the Global Settings modal when the CurseForge API Key was missing.
+
+---
+
+Thank you for your continued support!
 <!-- END_RELEASE -->
 
 ---
