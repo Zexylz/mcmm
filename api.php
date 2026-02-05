@@ -966,7 +966,7 @@ try {
                                     $cachedResult = mcmm_cache_get($cacheKey);
 
                                     if ($cachedResult !== null) {
-                                        $updateAvailable = (bool)$cachedResult;
+                                        $updateAvailable = (bool) $cachedResult;
                                         if ($updateAvailable) {
                                             // dbg("Remote update (Cached) FOUND for $containerName");
                                         }
@@ -1996,7 +1996,7 @@ try {
                 // Fallback attempt if getContainerDataDirById fails but we had getContainerModsDir?
                 // Actually scanServerMods needs dataDir.
                 // Let's assume getContainerDataDirById works if getContainerModsDir worked.
-                 jsonResponse(['success' => false, 'error' => 'Could not locate server directory']);
+                jsonResponse(['success' => false, 'error' => 'Could not locate server directory']);
             }
 
             require_once __DIR__ . '/include/mod_manager.php';
@@ -2006,8 +2006,16 @@ try {
             $serversDir = '/boot/config/plugins/mcmm/servers';
             $metaFile = "$serversDir/$id/installed_mods.json";
             $metadata = [];
+            $metadata = [];
             if (file_exists($metaFile)) {
-                $metadata = json_decode(file_get_contents($metaFile), true) ?: [];
+                $fp = fopen($metaFile, 'r');
+                if ($fp && flock($fp, LOCK_SH)) {
+                    $json = stream_get_contents($fp);
+                    $metadata = json_decode($json, true) ?: [];
+                    flock($fp, LOCK_UN);
+                }
+                if ($fp)
+                    fclose($fp);
             }
 
             // Create lookup map (Filename -> Metadata)
@@ -2043,10 +2051,11 @@ try {
 
                 // Determine if identification is needed
                 // If we have a valid platform ID and author/logo, we are good.
-                $hasId = !empty($mod['curseforgeId']) || !empty($mod['modrinthId']) || !empty($mod['modId']);
-                $hasDetails = !empty($mod['author']) && !empty($mod['logo']); // Author might be in 'authors' array from scan
+                $hasId = !empty($mod['curseforgeId']) || !empty($mod['modrinthId']) || (!empty($mod['modId']) && is_numeric($mod['modId']));
+                $hasDetails = !empty($mod['author']) && !empty($mod['logo']) && $mod['author'] !== 'Unknown';
 
-                $mod['needsIdentification'] = !$hasDetails;
+                // Force identification if we lack a proper icon/author, EVEN IF we have a name from local scan
+                $mod['needsIdentification'] = !$hasId || !$hasDetails;
 
                 // Polyfill 'author' string if only 'authors' array exists
                 if (empty($mod['author']) && !empty($mod['authors']) && is_array($mod['authors'])) {
@@ -2079,129 +2088,129 @@ try {
             $metadata = [];
             $serversDir = '/boot/config/plugins/mcmm/servers';
             $metaFile = "$serversDir/$id/installed_mods.json";
-        if (file_exists($metaFile)) {
-            $metadata = json_decode(file_get_contents($metaFile), true) ?: [];
-        }
+            if (file_exists($metaFile)) {
+                $metadata = json_decode(file_get_contents($metaFile), true) ?: [];
+            }
             $mcVersion = $_GET['mc_version'] ?? '';
             $loader = $_GET['loader'] ?? '';
             $checkUpdates = isset($_GET['check_updates']) && $_GET['check_updates'] === 'true';
 
             // If we need to check updates, we'll need mcVersion and loader
-        if ($checkUpdates && (!$mcVersion || !$loader)) {
-            $inspectJson = shell_exec("docker inspect " . escapeshellarg($id));
-            $inspectData = json_decode($inspectJson, true);
-            if ($inspectData && isset($inspectData[0])) {
-                $c = $inspectData[0];
-                $containerName = ltrim($c['Name'] ?? $id, '/');
-                $envMap = [];
-                foreach (($c['Config']['Env'] ?? []) as $e) {
-                    $parts = explode('=', $e, 2);
-                    if (count($parts) === 2) {
-                        $envMap[$parts[0]] = $parts[1];
+            if ($checkUpdates && (!$mcVersion || !$loader)) {
+                $inspectJson = shell_exec("docker inspect " . escapeshellarg($id));
+                $inspectData = json_decode($inspectJson, true);
+                if ($inspectData && isset($inspectData[0])) {
+                    $c = $inspectData[0];
+                    $containerName = ltrim($c['Name'] ?? $id, '/');
+                    $envMap = [];
+                    foreach (($c['Config']['Env'] ?? []) as $e) {
+                        $parts = explode('=', $e, 2);
+                        if (count($parts) === 2) {
+                            $envMap[$parts[0]] = $parts[1];
+                        }
                     }
+                    $meta = getServerMetadata($envMap, $config, $containerName, $config['curseforge_api_key'] ?? '');
+                    $mcVersion = $mcVersion ?: $meta['mcVersion'];
+                    $loader = $loader ?: $meta['loader'];
                 }
-                $meta = getServerMetadata($envMap, $config, $containerName, $config['curseforge_api_key'] ?? '');
-                $mcVersion = $mcVersion ?: $meta['mcVersion'];
-                $loader = $loader ?: $meta['loader'];
             }
-        }
 
             $mods = [];
-        foreach (scandir($modsDir) as $file) {
-            if (substr($file, -4) === '.jar') {
-                $modInfo = [];
-                // 1. Exact filename match
-                foreach ($metadata as $mid => $info) {
-                    if (($info['fileName'] ?? '') === $file) {
-                        $modInfo = $info;
-                        break;
-                    }
-                }
-                // 2. Fuzzy match
-                if (empty($modInfo)) {
+            foreach (scandir($modsDir) as $file) {
+                if (substr($file, -4) === '.jar') {
+                    $modInfo = [];
+                    // 1. Exact filename match
                     foreach ($metadata as $mid => $info) {
-                        $metaName = strtolower($info['name'] ?? '');
-                        $metaFileRef = strtolower($info['fileName'] ?? '');
-                        $diskFile = strtolower($file);
-                        if (
-                            ($metaFileRef && strpos($diskFile, $metaFileRef) !== false) ||
-                            ($metaName && strpos($diskFile, str_replace(' ', '', $metaName)) !== false)
-                        ) {
+                        if (($info['fileName'] ?? '') === $file) {
                             $modInfo = $info;
                             break;
                         }
                     }
+                    // 2. Fuzzy match
+                    if (empty($modInfo)) {
+                        foreach ($metadata as $mid => $info) {
+                            $metaName = strtolower($info['name'] ?? '');
+                            $metaFileRef = strtolower($info['fileName'] ?? '');
+                            $diskFile = strtolower($file);
+                            if (
+                                ($metaFileRef && strpos($diskFile, $metaFileRef) !== false) ||
+                                ($metaName && strpos($diskFile, str_replace(' ', '', $metaName)) !== false)
+                            ) {
+                                $modInfo = $info;
+                                break;
+                            }
+                        }
+                    }
+
+                    $needsIdentification = empty($modInfo['author']) || empty($modInfo['logo']);
+
+                    $mods[] = array_merge([
+                        'id' => $modInfo['modId'] ?? md5($file),
+                        'name' => $file,
+                        'file' => $file,
+                        'size' => formatBytes(filesize("$modsDir/$file")),
+                        'needsIdentification' => $needsIdentification
+                    ], $modInfo);
                 }
-
-                $needsIdentification = empty($modInfo['author']) || empty($modInfo['logo']);
-
-                $mods[] = array_merge([
-                    'id' => $modInfo['modId'] ?? md5($file),
-                    'name' => $file,
-                    'file' => $file,
-                    'size' => formatBytes(filesize("$modsDir/$file")),
-                    'needsIdentification' => $needsIdentification
-                ], $modInfo);
             }
-        }
 
             // --- Update Checking Logic ---
-        if ($checkUpdates && !empty($mods)) {
-            $cfIds = [];
-            $mrIds = [];
-            foreach ($mods as $idx => $m) {
-                if (isset($m['modId']) && isset($m['platform'])) {
-                    if ($m['platform'] === 'curseforge') {
-                        $cfIds[] = $m['modId'];
-                    } elseif ($m['platform'] === 'modrinth') {
-                        $mrIds[] = $m['modId'];
-                    }
-                }
-            }
-
-            $updates = [];
-            // CurseForge Batch
-            if (!empty($cfIds) && !empty($config['curseforge_api_key'])) {
-                $batchResult = fetchCurseForgeModsBatch($cfIds, $config['curseforge_api_key']);
-                foreach ($batchResult as $cfMod) {
-                    $targetFile = null;
-                    foreach ($cfMod['latestFiles'] as $f) {
-                        $gv = $f['gameVersions'] ?? [];
-                        $hasVer = in_array($mcVersion, $gv);
-                        $hasLoader = false;
-                        $loaderMap = ['forge' => 1, 'fabric' => 4, 'quilt' => 5, 'neoforge' => 6];
-                        $li = $loaderMap[strtolower($loader)] ?? 0;
-                        if (isset($f['modLoaderType']) && (int) $f['modLoaderType'] === $li) {
-                            $hasLoader = true;
-                        }
-                        if ($hasVer && $hasLoader) {
-                            $targetFile = $f;
-                            break;
+            if ($checkUpdates && !empty($mods)) {
+                $cfIds = [];
+                $mrIds = [];
+                foreach ($mods as $idx => $m) {
+                    if (isset($m['modId']) && isset($m['platform'])) {
+                        if ($m['platform'] === 'curseforge') {
+                            $cfIds[] = $m['modId'];
+                        } elseif ($m['platform'] === 'modrinth') {
+                            $mrIds[] = $m['modId'];
                         }
                     }
-                    if ($targetFile) {
-                        $updates['curseforge_' . $cfMod['id']] = [
-                            'latestFileId' => $targetFile['id'],
-                            'latestFileName' => $targetFile['fileName'],
-                            'latestVersion' => $targetFile['displayName']
-                        ];
+                }
+
+                $updates = [];
+                // CurseForge Batch
+                if (!empty($cfIds) && !empty($config['curseforge_api_key'])) {
+                    $batchResult = fetchCurseForgeModsBatch($cfIds, $config['curseforge_api_key']);
+                    foreach ($batchResult as $cfMod) {
+                        $targetFile = null;
+                        foreach ($cfMod['latestFiles'] as $f) {
+                            $gv = $f['gameVersions'] ?? [];
+                            $hasVer = in_array($mcVersion, $gv);
+                            $hasLoader = false;
+                            $loaderMap = ['forge' => 1, 'fabric' => 4, 'quilt' => 5, 'neoforge' => 6];
+                            $li = $loaderMap[strtolower($loader)] ?? 0;
+                            if (isset($f['modLoaderType']) && (int) $f['modLoaderType'] === $li) {
+                                $hasLoader = true;
+                            }
+                            if ($hasVer && $hasLoader) {
+                                $targetFile = $f;
+                                break;
+                            }
+                        }
+                        if ($targetFile) {
+                            $updates['curseforge_' . $cfMod['id']] = [
+                                'latestFileId' => $targetFile['id'],
+                                'latestFileName' => $targetFile['fileName'],
+                                'latestVersion' => $targetFile['displayName']
+                            ];
+                        }
+                    }
+                }
+
+                // Modrinth updates (one by one for now as MR batch is project_id based but complex to filter)
+                // We'll just do minimal for MR to avoid slowness
+
+                foreach ($mods as &$m) {
+                    $key = ($m['platform'] ?? '') . '_' . ($m['modId'] ?? '');
+                    if (isset($updates[$key])) {
+                        $up = $updates[$key];
+                        $m['update_available'] = (string) $up['latestFileId'] !== (string) ($m['fileId'] ?? '');
+                        $m['latest_version'] = $up['latestVersion'] ?? '';
+                        $m['latest_file_id'] = $up['latestFileId'];
                     }
                 }
             }
-
-            // Modrinth updates (one by one for now as MR batch is project_id based but complex to filter)
-            // We'll just do minimal for MR to avoid slowness
-
-            foreach ($mods as &$m) {
-                $key = ($m['platform'] ?? '') . '_' . ($m['modId'] ?? '');
-                if (isset($updates[$key])) {
-                    $up = $updates[$key];
-                    $m['update_available'] = (string) $up['latestFileId'] !== (string) ($m['fileId'] ?? '');
-                    $m['latest_version'] = $up['latestVersion'] ?? '';
-                    $m['latest_file_id'] = $up['latestFileId'];
-                }
-            }
-        }
 
             jsonResponse(['success' => true, 'data' => $mods]);
             break;
@@ -2213,10 +2222,31 @@ try {
                 $files = json_decode(file_get_contents('php://input'), true) ?: [];
                 // Fallback to GET for WAF bypass
                 if (empty($files) && !empty($_GET['files'])) {
-                    $decoded = urldecode($_GET['files']);
-                    $files = json_decode($decoded, true);
-                    if (!$files) {
-                        $files = json_decode($_GET['files'], true);
+                    $filesStr = $_GET['files'];
+                    $requestedFilesLength = strlen($filesStr);
+                    // Arbitrary sanity check
+                    if ($requestedFilesLength > 50000) {
+                        jsonResponse(['success' => false, 'error' => 'Input too large']);
+                    }
+                    $files = json_decode(urldecode($filesStr), true);
+                    if (!is_array($files)) {
+                        $files = json_decode($filesStr, true); // Try without urldecode
+                        if (!is_array($files)) {
+                            $files = []; // Invalid JSON
+                        }
+                    }
+                }
+
+                // NEW: Get local metadata (parsed names) to help with search
+                require_once __DIR__ . '/include/mod_manager.php';
+                $localMods = [];
+                if ($dataDir) {
+                    // We use scanServerMods but we only care about the mapping of filename -> name
+                    $scanned = scanServerMods($dataDir);
+                    foreach ($scanned as $mod) {
+                        if (!empty($mod['name']) && $mod['name'] !== 'Unknown') {
+                            $localMods[$mod['fileName']] = $mod['name'];
+                        }
                     }
                 }
 
@@ -2391,22 +2421,22 @@ try {
                                 $foundFile = null;
                                 $responseHashes = [];
                                 if (!empty($fileObj['packageFingerprint'])) {
-                                    $responseHashes[] = (string)$fileObj['packageFingerprint'];
+                                    $responseHashes[] = (string) $fileObj['packageFingerprint'];
                                 }
                                 if (!empty($fileObj['fileFingerprint'])) {
-                                    $responseHashes[] = (string)$fileObj['fileFingerprint'];
+                                    $responseHashes[] = (string) $fileObj['fileFingerprint'];
                                 }
                                 if (!empty($fileObj['hashes'])) {
                                     foreach ($fileObj['hashes'] as $h) {
                                         if (!empty($h['value'])) {
-                                            $responseHashes[] = (string)$h['value'];
+                                            $responseHashes[] = (string) $h['value'];
                                         }
                                     }
                                 }
 
                                 // 1. Try matching any response hash against our local hashes
                                 foreach ($hashes as $localHash => $fileName) {
-                                    if (in_array((string)$localHash, $responseHashes)) {
+                                    if (in_array((string) $localHash, $responseHashes)) {
                                         $foundFile = $fileName;
                                         file_put_contents($debugLog, "SUCCESS: Hash match for $foundFile\n", FILE_APPEND);
                                         break;
@@ -2502,8 +2532,8 @@ try {
                                 }
                             }
                         } catch (\Throwable $e) {
-                             dbg("Fingerprint Error: " . $e->getMessage());
-                             file_put_contents($debugLog, "Error: " . $e->getMessage() . "\n", FILE_APPEND);
+                            dbg("Fingerprint Error: " . $e->getMessage());
+                            file_put_contents($debugLog, "Error: " . $e->getMessage() . "\n", FILE_APPEND);
                         }
                     }
                 }
@@ -2511,11 +2541,19 @@ try {
                 // Pass 3: Heuristic search for truly unknown mods
                 foreach ($unknownFiles as $filename) {
                     try {
-                        $query = preg_replace('/\.jar$/i', '', $filename);
-                        // Be less aggressive with stripping - keep the name part intact
-                        $simpleName = preg_replace('/[-_][vV]?\d.*/', '', $query); // Just the name part like "jei"
-                        $query = preg_replace('/[-_][vV]?\d+\.?\d+.*$/', '', $query);
-                        $query = trim(preg_replace('/([a-z])([A-Z])/', '$1 $2', $query));
+                        $query = '';
+                        // 1. Try to use valid extracted name from JAR metadata (best source)
+                        if (isset($localMods[$filename])) {
+                            $query = $localMods[$filename];
+                        }
+
+                        // 2. Fallback to guessing from filename if no metadata name
+                        if (!$query) {
+                            $query = preg_replace('/\.jar$/i', '', $filename);
+                            $query = preg_replace('/[-_][vV]?\d.*/', '', $query);
+                            $query = preg_replace('/[-_][vV]?\d+\.?\d+.*$/', '', $query);
+                            $query = trim(preg_replace('/([a-z])([A-Z])/', '$1 $2', $query));
+                        }
 
                         // Prevent empty or single-char queries
                         if (strlen($query) < 2) {
@@ -2592,12 +2630,53 @@ try {
                     }
                 }
 
-                // Save metadata
+                // Save metadata with robust file locking to prevent race conditions
                 if (!empty($results)) {
                     if (!is_dir($metaDir)) {
                         @mkdir($metaDir, 0755, true);
                     }
-                    @file_put_contents($metaFile, json_encode($metadata, JSON_PARTIAL_OUTPUT_ON_ERROR | JSON_PRETTY_PRINT));
+
+                    $fp = fopen($metaFile, 'c+');
+                    if ($fp && flock($fp, LOCK_EX)) {
+                        // 1. Read latest state from disk (crucial for concurrency)
+                        $stat = fstat($fp);
+                        $currentJson = '';
+                        if ($stat['size'] > 0) {
+                            rewind($fp);
+                            $currentJson = fread($fp, $stat['size']);
+                        }
+                        $latestMeta = json_decode($currentJson, true) ?: [];
+
+                        // 2. Merge our new results into the latest state
+                        // We must re-apply the merge logic for the *ids* we just found
+                        foreach ($results as $filename => $details) {
+                            $pid = $details['id']; // This is the modId/projectId
+                            // Re-construct the full metadata entry for this mod
+                            $newEntry = array_merge([
+                                'modId' => $pid,
+                                'name' => $details['name'],
+                                'platform' => $details['platform'],
+                                'fileName' => $filename,
+                                'fileId' => $details['latestFileId'] ?? null,
+                                'logo' => $details['icon'] ?? '',
+                                'author' => $details['author'] ?? 'Unknown',
+                                'summary' => $details['summary'] ?? '',
+                                'mcVersion' => $details['mcVersion'] ?? 'Various',
+                                'installedAt' => time()
+                            ], $latestMeta[$pid] ?? []);
+
+                            $latestMeta[$pid] = $newEntry;
+                        }
+
+                        // 3. Write back the complete merged state
+                        ftruncate($fp, 0);
+                        rewind($fp);
+                        fwrite($fp, json_encode($latestMeta, JSON_PARTIAL_OUTPUT_ON_ERROR | JSON_PRETTY_PRINT));
+                        fflush($fp);
+                        flock($fp, LOCK_UN);
+                    }
+                    if ($fp)
+                        fclose($fp);
                 }
 
                 file_put_contents($debugLog, "Identification Complete. Results Count: " . count($results) . "\n", FILE_APPEND);
