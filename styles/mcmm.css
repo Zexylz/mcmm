@@ -1416,6 +1416,56 @@ Styleguide 5.0.0
     box-shadow: 0 0 15px var(--primary-dim);
 }
 
+.mcmm-version-status-indi.mcmm-dot-static {
+    background: rgb(80 250 123 / 100%);
+    border-radius: 50%;
+    height: 6px;
+    width: 6px;
+}
+
+/* Empty State Styling */
+.mcmm-empty-players {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+    color: var(--text-secondary);
+    animation: fadeIn 0.3s ease;
+}
+
+.mcmm-empty-icon {
+    width: 80px;
+    height: 80px;
+    background: rgb(255 255 255 / 3%);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.mcmm-empty-icon .material-symbols-outlined {
+    font-size: 2.5rem;
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.mcmm-empty-text {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+}
+
+.mcmm-empty-sub {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
 .mcmm-version-status-indicator::after {
     background: rgb(255 255 255 / 100%);
     border-radius: 50%;
@@ -2229,144 +2279,138 @@ Styleguide 5.0.0
 /* Consolidated duplicate console input selector */
 
 /* Player list (modal) FIX: removed duplicate selector by keeping a single canonical .mcmm-player-list below */
-.mcmm-player-row {
+/* Player list (modal) FIX: removed duplicate selector by keeping a single canonical .mcmm-player-list below */
+.mcmm-player-card {
     align-items: center;
     background: rgb(255 255 255 / 3%);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 12px;
     display: flex;
-    gap: 0.75rem;
-    padding: 0.75rem;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0px;
 }
 
-.mcmm-player-row.compact {
-    padding: 0.6rem 0.75rem;
+.mcmm-player-card:hover {
+    background: rgb(255 255 255 / 6%);
+    border-color: rgb(255 255 255 / 20%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* FIX: merged duplicate .mcmm-player-list */
 .mcmm-player-list {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 0.5rem;
+    gap: 0.6rem;
+    padding: 1rem;
 }
 
 .mcmm-player-head {
     background-position: center;
     background-size: cover;
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: 10px;
     flex-shrink: 0;
-    height: 40px;
-    width: 40px;
+    height: 44px;
+    width: 44px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.mcmm-player-item {
-    align-items: center;
-    background: transparent;
-    border-radius: 8px;
-    display: flex;
-    padding: 0.6rem 0.75rem;
-    transition: background 0.15s ease;
-}
-
-.mcmm-player-item:hover {
-    background: var(--bg-surface-hover);
-}
-
-.mcmm-player-avatar {
-    border-radius: 6px;
-    height: 36px;
-    margin-right: 0.75rem;
-    width: 36px;
-}
-
-.mcmm-player-details {
-    display: flex;
+.mcmm-player-info {
     flex: 1;
+    min-width: 0;
+    display: flex;
     flex-direction: column;
+    justify-content: center;
 }
 
-.mcmm-player-name-text {
-    color: var(--text-main);
-    font-size: 0.95rem;
-    font-weight: 600;
-}
-
-.mcmm-player-status-row {
-    align-items: center;
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 1px;
-}
-
-.mcmm-player-role-label {
-    color: var(--text-muted);
-    font-size: 0.7rem;
-    font-weight: 500;
-    text-transform: uppercase;
-}
-
-.mcmm-player-role-label.is-op {
-    color: var(--accent-primary);
+.mcmm-player-name {
+    color: rgb(255 255 255 / 100%);
+    font-size: 1rem;
     font-weight: 700;
+    letter-spacing: -0.2px;
+    line-height: 1.2;
+    margin-bottom: 0.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
-.mcmm-player-actions-minimal {
+.mcmm-player-meta {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.mcmm-player-actions {
     display: flex;
     gap: 0.5rem;
-    opacity: 0.4;
-    transition: opacity 0.2s;
-}
-
-.mcmm-player-item:hover .mcmm-player-actions-minimal {
-    opacity: 1;
-}
-
-.mcmm-btn-minimal {
     align-items: center;
+}
+
+/* Minimal/Icon Buttons for Player Actions */
+.mcmm-action-btn {
     background: transparent;
     border: 1px solid transparent;
-    border-radius: 6px;
+    border-radius: 8px;
     color: var(--text-muted);
     cursor: pointer;
     display: flex;
-    font-size: 0.8rem;
-    font-weight: 500;
-    justify-content: center;
-    padding: 0.35rem 0.6rem;
-    transition: all 0.15s;
-}
-
-.mcmm-btn-minimal:hover {
-    background: var(--bg-surface-hover);
-    border-color: var(--border);
-    color: var(--text-main);
-}
-
-.mcmm-btn-minimal.danger:hover {
-    background: rgb(255 85 85 / 10%);
-    border-color: rgb(255 85 85 / 20%);
-    color: rgb(255 85 85 / 100%);
-}
-
-.mcmm-player-stats-minimal {
     align-items: center;
-    background: rgb(255 255 255 / 2%);
-    border-bottom: 1px solid var(--border);
-    color: var(--text-muted);
-    display: flex;
-    font-size: 0.75rem;
-    font-weight: 600;
-    gap: 0.5rem;
-    padding: 0.6rem 1.25rem;
+    justify-content: center;
+    height: 36px;
+    width: 36px;
+    transition: all 0.2s;
+    padding: 0;
 }
 
-.mcmm-dot-static {
-    background: rgb(80 250 123 / 100%);
-    border-radius: 50%;
-    height: 6px;
-    width: 6px;
+.mcmm-action-btn .material-symbols-outlined {
+    font-size: 1.25rem;
+}
+
+.mcmm-action-btn:hover {
+    background: var(--bg-surface-hover);
+    color: var(--text-main);
+    border-color: var(--border);
+}
+
+.mcmm-action-btn.success:hover {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.mcmm-action-btn.danger:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--danger);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.mcmm-action-btn.warning:hover {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+/* Status Dot in Player Card */
+.mcmm-status-dot.online {
+    background: var(--success);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+/* Placeholder for classes I removed to avoid orphans if they were used elsewhere but they seem player specific */
+.mcmm-player-avatar {
+    display: none;
+}
+
+.mcmm-player-details {
+    display: none;
+}
+
+.mcmm-player-row.compact {
+    padding: 0.5rem;
 }
 
 .mcmm-player-search-box {

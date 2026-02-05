@@ -17,9 +17,14 @@ function scanServerMods(string $dataDir): array
     $cmd = 'find -L ' . escapeshellarg($modsDir) . ' -type f -name "*.jar"';
     exec($cmd, $files);
 
+    // Debug logging setup at global level (tmp only)
+    $logFile = '/tmp/mcmm_debug.log';
+    file_put_contents($logFile, date('H:i:s') . " [SCANNER] Found " . count($files) . " files in $modsDir\n", FILE_APPEND);
+
     foreach ($files as $jarPath) {
-        if (substr($jarPath, -4) !== '.jar')
+        if (substr($jarPath, -4) !== '.jar') {
             continue;
+        }
 
         $fileName = basename($jarPath);
         $fileSize = filesize($jarPath);
@@ -74,64 +79,127 @@ function extractModInfo(string $jarPath): array
     ];
 
     // Check persistent cache first
-    $key = 'mod_' . md5($jarPath . filemtime($jarPath));
+    // Use fast file metadata for key (Path + Size + MTime) instead of hashing the path
+    $stat = stat($jarPath);
+
+    global $MCMM_DEBUG_LOG;
+    if (!isset($MCMM_DEBUG_LOG)) {
+        $MCMM_DEBUG_LOG = [];
+    }
+
+    // BUMP CACHE VERSION to mod_mm5_ to force refresh and capture logs
+    $key = 'mod_mm5_' . md5($jarPath . $stat['size'] . $stat['mtime']);
     if ($cached = mcmm_cache_get($key)) {
         return $cached;
     }
 
-    $info['hash'] = sha1_file($jarPath);
+    // Debug logging setup
+    $logFile = '/tmp/mcmm_debug.log'; // Use /tmp to ensure writability on Unraid
+    $localLogFile = dirname(dirname(__FILE__)) . '/scan_debug.log';
 
-    $zip = new ZipArchive;
-    if ($zip->open($jarPath) === TRUE) {
+    $log = function ($msg) use ($logFile, $localLogFile, $jarPath) {
+        global $MCMM_DEBUG_LOG;
+        $entry = date('H:i:s') . " [" . basename($jarPath) . "] " . $msg;
+        $MCMM_DEBUG_LOG[] = $entry;
+
+        file_put_contents($logFile, $entry . "\n", FILE_APPEND);
+        @file_put_contents($localLogFile, $entry . "\n", FILE_APPEND);
+    };
+
+    $log("Cache Miss - Scanning real file...");
+
+    $zip = new ZipArchive();
+    $res = $zip->open($jarPath);
+    if ($res === true) {
+        $foundMetadata = false;
+
         // Try mods.toml
         if ($zip->locateName('META-INF/mods.toml') !== false) {
             $tomlContent = $zip->getFromName('META-INF/mods.toml');
             if ($tomlContent) {
-                // @phpstan-ignore-next-line
-                $info = array_merge($info, parseModsToml($tomlContent));
+                $parsed = parseModsToml($tomlContent);
+                if (!empty($parsed['name'])) {
+                    $foundMetadata = true;
+                }
+                $info = array_merge($info, $parsed);
             }
-        } elseif ($zip->locateName('mods.toml') !== false) { // rare but possible
+        } elseif ($zip->locateName('mods.toml') !== false) {
             $tomlContent = $zip->getFromName('mods.toml');
             if ($tomlContent) {
                 // @phpstan-ignore-next-line
                 $info = array_merge($info, parseModsToml($tomlContent));
+                if (!empty($info['name'])) {
+                    $foundMetadata = true;
+                }
             }
         }
 
-        // Try mcmod.info if ID missing
-        if (empty($info['modId']) && $zip->locateName('mcmod.info') !== false) {
+        // Try mcmod.info
+        if (!$foundMetadata && $zip->locateName('mcmod.info') !== false) {
             $mcmodContent = $zip->getFromName('mcmod.info');
             if ($mcmodContent) {
-                // @phpstan-ignore-next-line
-                $info = array_merge($info, parseMcmodInfo($mcmodContent));
+                $parsed = parseMcmodInfo($mcmodContent);
+                if (empty($parsed)) {
+                    $log("Found mcmod.info but failed to parse JSON.");
+                } else {
+                    $item = array_merge($info, $parsed);
+                    if (!empty($item['name'])) {
+                        $foundMetadata = true;
+                        $info = $item;
+                    }
+                }
             }
         }
 
         // Try fabric.mod.json
-        if ($zip->locateName('fabric.mod.json') !== false) {
+        if (!$foundMetadata && $zip->locateName('fabric.mod.json') !== false) {
             $fabricContent = $zip->getFromName('fabric.mod.json');
             if ($fabricContent) {
-                // @phpstan-ignore-next-line
-                $info = array_merge($info, parseFabricModJson($fabricContent));
-                $info['loader'] = 'fabric';
+                $parsed = parseFabricModJson($fabricContent);
+                if (empty($parsed)) {
+                    $log("Found fabric.mod.json but failed to parse JSON (Check for syntax errors).");
+                } else {
+                    $info = array_merge($info, $parsed);
+                    $info['loader'] = 'fabric';
+                    $foundMetadata = true;
+                }
             }
         }
 
         // Try quilt.mod.json
-        if ($zip->locateName('quilt.mod.json') !== false) {
+        if (!$foundMetadata && $zip->locateName('quilt.mod.json') !== false) {
             $quiltContent = $zip->getFromName('quilt.mod.json');
             if ($quiltContent) {
-                // @phpstan-ignore-next-line
-                $info = array_merge($info, parseQuiltModJson($quiltContent));
-                $info['loader'] = 'quilt';
+                $parsed = parseQuiltModJson($quiltContent);
+                if (empty($parsed)) {
+                    $log("Found quilt.mod.json but failed to parse JSON.");
+                } else {
+                    $info = array_merge($info, $parsed);
+                    $info['loader'] = 'quilt';
+                    $foundMetadata = true;
+                }
             }
         }
 
         $zip->close();
+
+        if (!$foundMetadata) {
+            $log("Zip opened but NO valid metadata file found (checked mods.toml, mcmod.info, fabric.mod.json, quilt.mod.json).");
+        }
+    } else {
+         $log("Zip Open Failed. Error Code: $res");
     }
+
+    // Calculate hash AFTER closing zip to avoid file locking conflicts
+    $info['hash'] = computeMurmur2Hash($jarPath);
 
     if (!$info['version'] || $info['version'] === 'Unknown' || $info['version'] === '${file.jarVersion}') {
         $info['version'] = extractVersionFromFilename(basename($jarPath));
+    }
+
+    // Verify name
+    if (empty($info['name'])) {
+         $log("Final status: Unknown Name. Mod ID: " . ($info['modId'] ?? 'None'));
     }
 
     // Cache the result (long TTL as filemtime is part of key)
@@ -175,6 +243,22 @@ function parseModsToml(string $content): array
 }
 
 /**
+ * Strip comments from JSON and decode.
+ */
+function json_decode_clean(string $json): ?array
+{
+    // Remove block comments
+    $json = preg_replace('!/\*.*?\*/!s', '', $json);
+    // Remove line comments
+    $json = preg_replace('/\/\/.*$/m', '', $json);
+    // Remove trailing commas (common in lenient json)
+    $json = preg_replace('/,\s*([\]}])/s', '$1', $json);
+
+    return json_decode($json, true);
+}
+
+
+/**
  * Parse legacy Forge mcmod.info content.
  *
  * @param string $content The raw JSON content of mcmod.info.
@@ -183,7 +267,7 @@ function parseModsToml(string $content): array
 function parseMcmodInfo(string $content): array
 {
     $info = [];
-    $data = @json_decode($content, true);
+    $data = json_decode_clean($content);
 
     if (!$data) {
         return $info;
@@ -221,7 +305,7 @@ function parseMcmodInfo(string $content): array
 function parseFabricModJson(string $content): array
 {
     $info = [];
-    $data = @json_decode($content, true);
+    $data = json_decode_clean($content);
 
     if (!$data) {
         return $info;
@@ -256,7 +340,7 @@ function parseFabricModJson(string $content): array
 function parseQuiltModJson(string $content): array
 {
     $info = [];
-    $data = @json_decode($content, true);
+    $data = json_decode_clean($content);
 
     if (!$data || !isset($data['quilt_loader'])) {
         return $info;
@@ -427,4 +511,90 @@ function downloadMod(string $downloadUrl, string $targetPath, string $expectedHa
     }
 
     return true;
+}
+
+/**
+ * Compute MurmurHash2 for a file (CurseForge specific implementation).
+ *
+ * @param string $filePath Path to the file.
+ * @return int The calculated hash.
+ */
+function computeMurmur2Hash(string $filePath): int
+{
+    $seed = 1;
+    $m = 0x5bd1e995;
+    $r = 24;
+
+    $fp = fopen($filePath, 'rb');
+    if (!$fp) {
+        return 0;
+    }
+
+    $len = filesize($filePath);
+    $h = $seed ^ $len;
+
+    // Process in chunks to save memory
+    $bufferSize = 1024 * 64; // 64KB
+    $remainder = '';
+
+    while (!feof($fp)) {
+        $chunk = fread($fp, $bufferSize);
+        if ($chunk === false) {
+            break;
+        }
+
+        // Prepend remainder from previous chunk
+        if ($remainder !== '') {
+            $chunk = $remainder . $chunk;
+            $remainder = '';
+        }
+
+        $chunkLen = strlen($chunk);
+
+        // If we have less than 4 bytes and end of file, this is the final tail
+        if ($chunkLen < 4) {
+            $remainder = $chunk;
+            break;
+        }
+
+        // Process 4-byte blocks
+        $processLen = $chunkLen - ($chunkLen % 4);
+        $remainder = substr($chunk, $processLen);
+        $toProcess = substr($chunk, 0, $processLen);
+
+        $words = array_values(unpack('V*', $toProcess));
+        foreach ($words as $k) {
+            $k = ($k * $m) & 0xFFFFFFFF;
+            $k ^= ($k >> $r);
+            $k = ($k * $m) & 0xFFFFFFFF;
+
+            $h = ($h * $m) & 0xFFFFFFFF;
+            $h ^= $k;
+        }
+    }
+
+    // Handle tail (0-3 bytes)
+    if ($remainder !== '') {
+        $tail = $remainder;
+        $tailLen = strlen($tail);
+        switch ($tailLen) {
+            case 3:
+                $h ^= (ord($tail[2]) << 16);
+                // fallthrough
+            case 2:
+                $h ^= (ord($tail[1]) << 8);
+                // fallthrough
+            case 1:
+                $h ^= ord($tail[0]);
+                $h = ($h * $m) & 0xFFFFFFFF;
+        }
+    }
+
+    fclose($fp);
+
+    $h ^= ($h >> 13);
+    $h = ($h * $m) & 0xFFFFFFFF;
+    $h ^= ($h >> 15);
+
+    return $h;
 }

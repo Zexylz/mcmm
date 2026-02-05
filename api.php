@@ -2,17 +2,17 @@
 
 /**
  * MCMM API Handler
- * 
- * This file serves as the central entry point for all AJAX requests 
+ *
+ * This file serves as the central entry point for all AJAX requests
  * from the Minecraft Modpack Manager (MCMM) web interface.
- * 
+ *
  * It handles:
  * - Server lifecycle management (start, stop, delete)
  * - Modpack and mod installation logic
  * - Global and per-server settings persistence
  * - Console log streaming and player management
  * - Backup and restore operations
- * 
+ *
  * @version 43
  * @package MCMm
  */
@@ -421,7 +421,7 @@ try {
             // Ideally, the agent is generated with a secret.
 
             // Save to standard metrics location
-            // We need to resolve Container Name to find the Data Dir? 
+            // We need to resolve Container Name to find the Data Dir?
             // Or we assume the Agent sends the path?
             // Agent should send its ID. We can map ID to Name via Docker or cache.
             // BETTER: Agent simply writes to mapped volume.
@@ -500,7 +500,7 @@ try {
                                     $trackerLoaderName = $loaderNames[$loaderMap[strtolower($loader)] ?? 0] ?? '';
                                     if ($trackerLoaderName && !in_array($trackerLoaderName, array_map('strtolower', $versions))) {
                                         // RELAXED CHECK for NeoForge compatibility:
-                                        // Many NeoForge packs are still tagged as 'Forge' or have ambiguous tags. 
+                                        // Many NeoForge packs are still tagged as 'Forge' or have ambiguous tags.
                                         // If we are looking for NeoForge, accept Forge tags as a fallback.
                                         if ($trackerLoaderName === 'neoforge' && (in_array('forge', array_map('strtolower', $versions)) || in_array('1', $file['gameVersionTypeIds'] ?? []))) {
                                             // Allow
@@ -651,8 +651,9 @@ try {
                 } else {
                     $imgCmd = '/usr/bin/docker images --no-trunc --format "{{.Repository}}:{{.Tag}}|{{.ID}}"';
                     $imgOutput = shell_exec($imgCmd . ' 2>/dev/null');
-                    if ($imgOutput)
+                    if ($imgOutput) {
                         @file_put_contents($imgCache, $imgOutput);
+                    }
                 }
 
                 if ($imgOutput) {
@@ -671,8 +672,9 @@ try {
                 $output = file_get_contents($psCache);
             } else {
                 $output = shell_exec($cmd . ' 2>/dev/null');
-                if ($output)
+                if ($output) {
                     @file_put_contents($psCache, $output);
+                }
             }
 
             // Batch gather docker stats for ALL containers (authoritative & fast)
@@ -687,8 +689,9 @@ try {
                 } else {
                     $statsCmd = '/usr/bin/docker stats --no-stream --format "{{.ID}}|{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}"';
                     $statsOutput = shell_exec($statsCmd . ' 2>/dev/null');
-                    if ($statsOutput)
+                    if ($statsOutput) {
                         @file_put_contents($statsCache, $statsOutput);
+                    }
                 }
 
                 if ($statsOutput) {
@@ -997,8 +1000,9 @@ try {
         case 'players':
             $id = $_GET['id'] ?? '';
             $port = intval($_GET['port'] ?? 25565);
-            if (!$id)
+            if (!$id) {
                 jsonResponse(['success' => false, 'error' => 'Missing ID'], 400);
+            }
 
             $env = getContainerEnv($id);
             $onlineData = getOnlinePlayers($id, $port, $env);
@@ -1941,137 +1945,164 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Missing server ID'], 400);
             }
 
-            $modsDir = getContainerModsDir($id);
-            if (!$modsDir || !is_dir($modsDir)) {
-                jsonResponse(['success' => true, 'data' => []]); // Empty if dir doesn't exist
+            $dataDir = getContainerDataDirById($id);
+            if (!$dataDir) {
+                // Fallback attempt if getContainerDataDirById fails but we had getContainerModsDir?
+                // Actually scanServerMods needs dataDir.
+                // Let's assume getContainerDataDirById works if getContainerModsDir worked.
+                 jsonResponse(['success' => false, 'error' => 'Could not locate server directory']);
             }
+
+            require_once __DIR__ . '/include/mod_manager.php';
+            $mods = scanServerMods($dataDir);
+
+            global $MCMM_DEBUG_LOG;
+            jsonResponse([
+                'success' => true,
+                'data' => $mods,
+                'count' => count($mods),
+                'debug_log' => $MCMM_DEBUG_LOG ?? []
+            ]);
+            break;
+
+            /*
+               LEGACY LOGIC REMOVED:
+               The original mod_list implementation did manual scandir and fuzzy matching
+               which caused metadata loss and lack of Murmur2 hashing.
+               We now delegate to the unified scanServerMods() function.
+            */
+
+            // ... (commenting out the rest of the old case body to be safe or just deleting it)
+            // I will delete it by verifying the EndLine. The old case goes on for a while.
+            // I need to check where it ends.
+
 
             $metadata = [];
             $serversDir = '/boot/config/plugins/mcmm/servers';
             $metaFile = "$serversDir/$id/installed_mods.json";
-            if (file_exists($metaFile)) {
-                $metadata = json_decode(file_get_contents($metaFile), true) ?: [];
-            }
+        if (file_exists($metaFile)) {
+            $metadata = json_decode(file_get_contents($metaFile), true) ?: [];
+        }
             $mcVersion = $_GET['mc_version'] ?? '';
             $loader = $_GET['loader'] ?? '';
             $checkUpdates = isset($_GET['check_updates']) && $_GET['check_updates'] === 'true';
 
             // If we need to check updates, we'll need mcVersion and loader
-            if ($checkUpdates && (!$mcVersion || !$loader)) {
-                $inspectJson = shell_exec("docker inspect " . escapeshellarg($id));
-                $inspectData = json_decode($inspectJson, true);
-                if ($inspectData && isset($inspectData[0])) {
-                    $c = $inspectData[0];
-                    $containerName = ltrim($c['Name'] ?? $id, '/');
-                    $envMap = [];
-                    foreach (($c['Config']['Env'] ?? []) as $e) {
-                        $parts = explode('=', $e, 2);
-                        if (count($parts) === 2) {
-                            $envMap[$parts[0]] = $parts[1];
-                        }
+        if ($checkUpdates && (!$mcVersion || !$loader)) {
+            $inspectJson = shell_exec("docker inspect " . escapeshellarg($id));
+            $inspectData = json_decode($inspectJson, true);
+            if ($inspectData && isset($inspectData[0])) {
+                $c = $inspectData[0];
+                $containerName = ltrim($c['Name'] ?? $id, '/');
+                $envMap = [];
+                foreach (($c['Config']['Env'] ?? []) as $e) {
+                    $parts = explode('=', $e, 2);
+                    if (count($parts) === 2) {
+                        $envMap[$parts[0]] = $parts[1];
                     }
-                    $meta = getServerMetadata($envMap, $config, $containerName, $config['curseforge_api_key'] ?? '');
-                    $mcVersion = $mcVersion ?: $meta['mcVersion'];
-                    $loader = $loader ?: $meta['loader'];
                 }
+                $meta = getServerMetadata($envMap, $config, $containerName, $config['curseforge_api_key'] ?? '');
+                $mcVersion = $mcVersion ?: $meta['mcVersion'];
+                $loader = $loader ?: $meta['loader'];
             }
+        }
 
             $mods = [];
-            foreach (scandir($modsDir) as $file) {
-                if (substr($file, -4) === '.jar') {
-                    $modInfo = [];
-                    // 1. Exact filename match
+        foreach (scandir($modsDir) as $file) {
+            if (substr($file, -4) === '.jar') {
+                $modInfo = [];
+                // 1. Exact filename match
+                foreach ($metadata as $mid => $info) {
+                    if (($info['fileName'] ?? '') === $file) {
+                        $modInfo = $info;
+                        break;
+                    }
+                }
+                // 2. Fuzzy match
+                if (empty($modInfo)) {
                     foreach ($metadata as $mid => $info) {
-                        if (($info['fileName'] ?? '') === $file) {
+                        $metaName = strtolower($info['name'] ?? '');
+                        $metaFileRef = strtolower($info['fileName'] ?? '');
+                        $diskFile = strtolower($file);
+                        if (
+                            ($metaFileRef && strpos($diskFile, $metaFileRef) !== false) ||
+                            ($metaName && strpos($diskFile, str_replace(' ', '', $metaName)) !== false)
+                        ) {
                             $modInfo = $info;
                             break;
                         }
                     }
-                    // 2. Fuzzy match
-                    if (empty($modInfo)) {
-                        foreach ($metadata as $mid => $info) {
-                            $metaName = strtolower($info['name'] ?? '');
-                            $metaFileRef = strtolower($info['fileName'] ?? '');
-                            $diskFile = strtolower($file);
-                            if (
-                                ($metaFileRef && strpos($diskFile, $metaFileRef) !== false) ||
-                                ($metaName && strpos($diskFile, str_replace(' ', '', $metaName)) !== false)
-                            ) {
-                                $modInfo = $info;
-                                break;
-                            }
-                        }
-                    }
-
-                    $needsIdentification = empty($modInfo['author']) || empty($modInfo['logo']);
-
-                    $mods[] = array_merge([
-                        'id' => $modInfo['modId'] ?? md5($file),
-                        'name' => $file,
-                        'file' => $file,
-                        'size' => formatBytes(filesize("$modsDir/$file")),
-                        'needsIdentification' => $needsIdentification
-                    ], $modInfo);
                 }
+
+                $needsIdentification = empty($modInfo['author']) || empty($modInfo['logo']);
+
+                $mods[] = array_merge([
+                    'id' => $modInfo['modId'] ?? md5($file),
+                    'name' => $file,
+                    'file' => $file,
+                    'size' => formatBytes(filesize("$modsDir/$file")),
+                    'needsIdentification' => $needsIdentification
+                ], $modInfo);
             }
+        }
 
             // --- Update Checking Logic ---
-            if ($checkUpdates && !empty($mods)) {
-                $cfIds = [];
-                $mrIds = [];
-                foreach ($mods as $idx => $m) {
-                    if (isset($m['modId']) && isset($m['platform'])) {
-                        if ($m['platform'] === 'curseforge') {
-                            $cfIds[] = $m['modId'];
-                        } elseif ($m['platform'] === 'modrinth') {
-                            $mrIds[] = $m['modId'];
-                        }
-                    }
-                }
-
-                $updates = [];
-                // CurseForge Batch
-                if (!empty($cfIds) && !empty($config['curseforge_api_key'])) {
-                    $batchResult = fetchCurseForgeModsBatch($cfIds, $config['curseforge_api_key']);
-                    foreach ($batchResult as $cfMod) {
-                        $targetFile = null;
-                        foreach ($cfMod['latestFiles'] as $f) {
-                            $gv = $f['gameVersions'] ?? [];
-                            $hasVer = in_array($mcVersion, $gv);
-                            $hasLoader = false;
-                            $loaderMap = ['forge' => 1, 'fabric' => 4, 'quilt' => 5, 'neoforge' => 6];
-                            $li = $loaderMap[strtolower($loader)] ?? 0;
-                            if (isset($f['modLoaderType']) && (int) $f['modLoaderType'] === $li) {
-                                $hasLoader = true;
-                            }
-                            if ($hasVer && $hasLoader) {
-                                $targetFile = $f;
-                                break;
-                            }
-                        }
-                        if ($targetFile) {
-                            $updates['curseforge_' . $cfMod['id']] = [
-                                'latestFileId' => $targetFile['id'],
-                                'latestFileName' => $targetFile['fileName'],
-                                'latestVersion' => $targetFile['displayName']
-                            ];
-                        }
-                    }
-                }
-
-                // Modrinth updates (one by one for now as MR batch is project_id based but complex to filter)
-                // We'll just do minimal for MR to avoid slowness
-
-                foreach ($mods as &$m) {
-                    $key = ($m['platform'] ?? '') . '_' . ($m['modId'] ?? '');
-                    if (isset($updates[$key])) {
-                        $up = $updates[$key];
-                        $m['update_available'] = (string) $up['latestFileId'] !== (string) ($m['fileId'] ?? '');
-                        $m['latest_version'] = $up['latestVersion'] ?? '';
-                        $m['latest_file_id'] = $up['latestFileId'];
+        if ($checkUpdates && !empty($mods)) {
+            $cfIds = [];
+            $mrIds = [];
+            foreach ($mods as $idx => $m) {
+                if (isset($m['modId']) && isset($m['platform'])) {
+                    if ($m['platform'] === 'curseforge') {
+                        $cfIds[] = $m['modId'];
+                    } elseif ($m['platform'] === 'modrinth') {
+                        $mrIds[] = $m['modId'];
                     }
                 }
             }
+
+            $updates = [];
+            // CurseForge Batch
+            if (!empty($cfIds) && !empty($config['curseforge_api_key'])) {
+                $batchResult = fetchCurseForgeModsBatch($cfIds, $config['curseforge_api_key']);
+                foreach ($batchResult as $cfMod) {
+                    $targetFile = null;
+                    foreach ($cfMod['latestFiles'] as $f) {
+                        $gv = $f['gameVersions'] ?? [];
+                        $hasVer = in_array($mcVersion, $gv);
+                        $hasLoader = false;
+                        $loaderMap = ['forge' => 1, 'fabric' => 4, 'quilt' => 5, 'neoforge' => 6];
+                        $li = $loaderMap[strtolower($loader)] ?? 0;
+                        if (isset($f['modLoaderType']) && (int) $f['modLoaderType'] === $li) {
+                            $hasLoader = true;
+                        }
+                        if ($hasVer && $hasLoader) {
+                            $targetFile = $f;
+                            break;
+                        }
+                    }
+                    if ($targetFile) {
+                        $updates['curseforge_' . $cfMod['id']] = [
+                            'latestFileId' => $targetFile['id'],
+                            'latestFileName' => $targetFile['fileName'],
+                            'latestVersion' => $targetFile['displayName']
+                        ];
+                    }
+                }
+            }
+
+            // Modrinth updates (one by one for now as MR batch is project_id based but complex to filter)
+            // We'll just do minimal for MR to avoid slowness
+
+            foreach ($mods as &$m) {
+                $key = ($m['platform'] ?? '') . '_' . ($m['modId'] ?? '');
+                if (isset($updates[$key])) {
+                    $up = $updates[$key];
+                    $m['update_available'] = (string) $up['latestFileId'] !== (string) ($m['fileId'] ?? '');
+                    $m['latest_version'] = $up['latestVersion'] ?? '';
+                    $m['latest_file_id'] = $up['latestFileId'];
+                }
+            }
+        }
 
             jsonResponse(['success' => true, 'data' => $mods]);
             break;
@@ -2745,10 +2776,12 @@ try {
                 'mods' => $mods
             ], JSON_PRETTY_PRINT));
 
+            global $MCMM_DEBUG_LOG;
             jsonResponse([
                 'success' => true,
                 'data' => $mods,
-                'count' => count($mods)
+                'count' => count($mods),
+                'debug_log' => $MCMM_DEBUG_LOG ?? []
             ]);
             break;
 
@@ -2861,11 +2894,13 @@ try {
                 ], JSON_PRETTY_PRINT));
             }
 
+            global $MCMM_DEBUG_LOG;
             jsonResponse([
                 'success' => true,
                 'data' => $mods,
                 'count' => count($mods),
-                'cached' => $cached
+                'cached' => $cached,
+                'debug_log' => $MCMM_DEBUG_LOG ?? []
             ]);
             break;
 

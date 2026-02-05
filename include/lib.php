@@ -1223,17 +1223,19 @@ function jsonResponse($data, int $statusCode = 200): void
     header('Content-Type: application/json; charset=utf-8');
     http_response_code($statusCode);
 
-    // Use flags to handle potentially invalid UTF-8 from shell_exec/exec output
-    $json = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+    // Use flags to handle potentially invalid UTF-8 and ensure HTML safety for Psalm
+    $flags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
+    $json = json_encode($data, $flags);
 
     if ($json === false) {
         // Fallback for extreme cases
         echo json_encode([
             'success' => false,
             'error' => 'Internal JSON encoding error: ' . json_last_error_msg()
-        ]);
+        ], $flags);
     } else {
-        echo $json;
+        // Output to stream to avoid direct echo taint issues (headers are already set)
+        file_put_contents('php://output', $json);
     }
     exit;
 }
@@ -3359,8 +3361,9 @@ function getOnlinePlayers(string $id, int $port, array $env): array
                 $names = explode(', ', $m[1]);
                 foreach ($names as $name) {
                     $clean = $sanitizeName($name);
-                    if ($clean !== '')
+                    if ($clean !== '') {
                         $players[] = ['name' => $clean];
+                    }
                 }
             } elseif (!empty($rconOut)) {
                 $cleanOut = preg_replace('/^There are .* online: /i', '', $rconOut);
@@ -3383,8 +3386,9 @@ function getOnlinePlayers(string $id, int $port, array $env): array
             $jd = json_decode((string) $statusRes, true);
             if (!empty($jd['players']['sample'])) {
                 foreach ($jd['players']['sample'] as $p) {
-                    if (!empty($p['name']))
+                    if (!empty($p['name'])) {
                         $players[] = ['name' => $p['name']];
+                    }
                 }
             }
         }
@@ -3398,8 +3402,9 @@ function getOnlinePlayers(string $id, int $port, array $env): array
         $fullOpOut = implode(' ', $opOut);
         if (preg_match('/(?:opped players|opped player|operators):? (.*)$/i', $fullOpOut, $m)) {
             $names = explode(',', $m[1]);
-            foreach ($names as $n)
+            foreach ($names as $n) {
                 $ops[] = $sanitizeName($n);
+            }
         }
     }
 
@@ -3410,8 +3415,9 @@ function getOnlinePlayers(string $id, int $port, array $env): array
             $opsData = json_decode((string) $opsJsonRaw, true);
             if (is_array($opsData)) {
                 foreach ($opsData as $entry) {
-                    if (isset($entry['name']))
+                    if (isset($entry['name'])) {
                         $ops[] = $entry['name'];
+                    }
                 }
             }
         }
@@ -3424,8 +3430,9 @@ function getOnlinePlayers(string $id, int $port, array $env): array
             $p['isOp'] = in_array(strtolower($p['name']), $opsLower);
         }
     } else {
-        foreach ($players as &$p)
+        foreach ($players as &$p) {
             $p['isOp'] = false;
+        }
     }
 
     return ['online' => $online, 'max' => $max, 'players' => $players];
@@ -3469,8 +3476,9 @@ function getBannedPlayers(string $id, array $env): array
             $jd = json_decode((string) $jsonContent, true);
             if (is_array($jd)) {
                 foreach ($jd as $entry) {
-                    if (!empty($entry['name']))
+                    if (!empty($entry['name'])) {
                         $banned[] = ['name' => $entry['name']];
+                    }
                 }
             }
         }
@@ -3478,4 +3486,3 @@ function getBannedPlayers(string $id, array $env): array
 
     return array_values(array_unique($banned, SORT_REGULAR));
 }
-

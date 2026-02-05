@@ -945,6 +945,11 @@ async function loadInstalledMods() {
         const res = await mcmmFetch('/plugins/mcmm/api.php?action=mod_list&id=' + currentServerId);
         const data = await res.json();
         if (data.success) {
+            if (data.debug_log && data.debug_log.length > 0) {
+                console.groupCollapsed("[MCMM] Server-Side Scan Logs");
+                data.debug_log.forEach(line => console.log(line));
+                console.groupEnd();
+            }
             modState.installed = data.data || [];
 
             // Trigger identification for unknown mods in CHUNKS
@@ -1222,7 +1227,7 @@ function renderMods() {
             }
         }
 
-        const safeModName = (mod.name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const safeModName = (mod.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
         // Custom Render for Installed / Updates
         if (modState.view === 'installed' || modState.view === 'updates') {
@@ -3172,8 +3177,13 @@ function renderPlayers(query = '') {
     if (players.length === 0) {
         container.innerHTML = `
             <div class="mcmm-empty-players">
-                <span class="material-symbols-outlined">person_off</span>
-                <p>No players found in this category.</p>
+                <div class="mcmm-empty-icon">
+                    <span class="material-symbols-outlined">person_off</span>
+                </div>
+                <div class="mcmm-empty-text">No players found</div>
+                <div class="mcmm-empty-sub">
+                     ${currentPlayerTab === 'online' ? 'No one is online right now.' : (currentPlayerTab === 'banned' ? 'No banned players.' : 'No player history available.')}
+                </div>
             </div>
         `;
         return;
@@ -3182,16 +3192,16 @@ function renderPlayers(query = '') {
     container.innerHTML = players.map(p => {
         const isBanned = currentPlayerTab === 'banned';
         const isOnline = currentPlayerTab === 'online';
+        const avatarUrl = `https://mc-heads.net/avatar/${p.name}/64`;
 
         return `
-            <div class="mcmm-player-row">
-                <div class="mcmm-player-avatar">
-                   <img src="https://mc-heads.net/avatar/${p.name}/40" alt="${p.name}">
-                </div>
+            <div class="mcmm-player-card">
+                <div class="mcmm-player-head" style="background-image: url('${avatarUrl}');"></div>
                 <div class="mcmm-player-info">
                     <div class="mcmm-player-name">
                         ${p.name}
-                        ${isOnline ? '<span class="mcmm-player-status-dot online"></span>' : ''}
+                        ${isOnline ? '<span class="mcmm-status-dot online" style="width: 8px; height: 8px; border-radius: 50%; display: inline-block;"></span>' : ''}
+                        ${p.op ? '<span class="mcmm-ver-chip" style="font-size:0.65rem; padding: 1px 6px; letter-spacing:0.5px; border-color:var(--accent-primary); color:var(--accent-primary);">OP</span>' : ''}
                     </div>
                     <div class="mcmm-player-meta">
                         ${isBanned ? `Banned on: ${p.date || 'Unknown'}` : (p.lastSeen ? `Last seen: ${p.lastSeen}` : 'Player')}
@@ -3199,14 +3209,31 @@ function renderPlayers(query = '') {
                 </div>
                 <div class="mcmm-player-actions">
                     ${isOnline ? `
-                        <button class="mcmm-btn-icon" title="Whisper" onclick="whisperPlayer('${p.name}')"><span class="material-symbols-outlined">chat</span></button>
-                        <button class="mcmm-btn-icon danger" title="Kick" onclick="playerAction('kick', '${p.name}')"><span class="material-symbols-outlined">logout</span></button>
+                        <button class="mcmm-action-btn" title="Whisper ${p.name}" onclick="whisperPlayer('${p.name}')">
+                            <span class="material-symbols-outlined">chat</span>
+                        </button>
+                        ${p.isOp ? `
+                            <button class="mcmm-action-btn warning" title="Deop ${p.name}" onclick="playerAction('deop', '${p.name}')">
+                                <span class="material-symbols-outlined">remove_moderator</span>
+                            </button>
+                        ` : `
+                            <button class="mcmm-action-btn success" title="Op ${p.name}" onclick="playerAction('op', '${p.name}')">
+                                <span class="material-symbols-outlined">shield_person</span>
+                            </button>
+                        `}
+                        <button class="mcmm-action-btn warning" title="Kick ${p.name}" onclick="playerAction('kick', '${p.name}')">
+                            <span class="material-symbols-outlined">logout</span>
+                        </button>
                     ` : ''}
                     
                     ${isBanned ? `
-                        <button class="mcmm-btn-icon success" title="Unban" onclick="playerAction('unban', '${p.name}')"><span class="material-symbols-outlined">gavel</span></button>
+                        <button class="mcmm-action-btn success" title="Unban ${p.name}" onclick="playerAction('unban', '${p.name}')">
+                            <span class="material-symbols-outlined">check_circle</span>
+                        </button>
                     ` : `
-                        <button class="mcmm-btn-icon danger" title="Ban" onclick="playerAction('ban', '${p.name}')"><span class="material-symbols-outlined">gavel</span></button>
+                        <button class="mcmm-action-btn danger" title="Ban ${p.name}" onclick="playerAction('ban', '${p.name}')">
+                            <span class="material-symbols-outlined">block</span>
+                        </button>
                     `}
                 </div>
             </div>
@@ -3235,7 +3262,7 @@ async function playerAction(action, playerName) {
     if (action === 'ban' && !confirm(`Are you sure you want to ban ${playerName}?`)) return;
 
     try {
-        const res = await mcmmFetch(`/plugins/mcmm/api.php?action=player_action&id=${currentPlayersId}&type=${action}&player=${playerName}`);
+        const res = await mcmmFetch(`/plugins/mcmm/api.php?action=server_player_action&id=${currentPlayersId}&player_action=${action}&player=${playerName}`);
         const data = await res.json();
         if (data.success) {
             showToast(`Player ${playerName} ${action}ed`);

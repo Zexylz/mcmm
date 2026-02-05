@@ -1208,7 +1208,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
     <!-- Players Modal -->
     <div class="mcmm-modal-overlay" id="playersModal">
         <div class="mcmm-modal"
-            style="max-width: 480px !important; width: 95% !important; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border) !important; box-shadow: 0 15px 40px rgb(0 0 0 / 40%) !important; background: var(--bg-surface) !important;">
+            style="max-width: 600px !important; width: 95% !important; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border) !important; box-shadow: 0 25px 60px rgb(0 0 0 / 60%) !important; background: var(--bg-surface) !important; border-radius: 16px;">
             <div class="mcmm-modal-header"
                 style="border-bottom: 1px solid var(--border); padding: 1rem 1.25rem; background: var(--bg-surface) !important;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -1280,7 +1280,7 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
 </div>
 
 <script>
-    const mcmmConfig = <?php echo json_encode($clientConfig); ?>;
+    const mcmmConfig = <?php echo json_encode($clientConfig, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     // @phpstan-ignore-next-line
     const csrfToken = "<?php echo $csrfToken; ?>";
 </script>
