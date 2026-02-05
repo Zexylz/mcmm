@@ -642,26 +642,38 @@ try {
             $localImages = [];
             $fastMode = isset($_GET['fast']) && $_GET['fast'] === 'true';
 
-            // Cache 'docker images' for 30 seconds (rarely changes) - SKIP in fast mode
-            if (!$fastMode) {
-                $imgCache = '/tmp/mcmm_images.cache';
-                $imgOutput = null;
-                if (file_exists($imgCache) && (time() - filemtime($imgCache) < 30)) {
-                    $imgOutput = file_get_contents($imgCache);
-                } else {
-                    $imgCmd = '/usr/bin/docker images --no-trunc --format "{{.Repository}}:{{.Tag}}|{{.ID}}"';
-                    $imgOutput = shell_exec($imgCmd . ' 2>/dev/null');
-                    if ($imgOutput) {
-                        @file_put_contents($imgCache, $imgOutput);
+            // Cache 'docker images' for 60 seconds (prevents checking on every poll)
+            $imgCache = '/tmp/mcmm_images.cache';
+            $imgOutput = null;
+            $cacheAge = file_exists($imgCache) ? (time() - filemtime($imgCache)) : 999;
+
+            // Load from cache if available
+            if ($cacheAge < 60) {
+                $imgOutput = file_get_contents($imgCache);
+            }
+
+            // If not cached (or stale) AND not in fast mode, refresh it
+            // In fast mode, we rely on cache or skip (to keep it fast).
+            // BUT we still parse the STALE cache if available in fast mode to preserve status
+            if (!$imgOutput && (!$fastMode || ($fastMode && file_exists($imgCache)))) {
+                if (!$fastMode || $cacheAge < 300) { // Allow stale cache up to 5 mins in fast mode
+                    if (!$fastMode) {
+                        $imgCmd = '/usr/bin/docker images --no-trunc --format "{{.Repository}}:{{.Tag}}|{{.ID}}"';
+                        $imgOutput = shell_exec($imgCmd . ' 2>/dev/null');
+                        if ($imgOutput) {
+                            @file_put_contents($imgCache, $imgOutput);
+                        }
+                    } elseif (file_exists($imgCache)) {
+                        $imgOutput = file_get_contents($imgCache);
                     }
                 }
+            }
 
-                if ($imgOutput) {
-                    foreach (explode("\n", trim($imgOutput)) as $imgLine) {
-                        $parts = explode('|', $imgLine);
-                        if (count($parts) === 2) {
-                            $localImages[$parts[0]] = $parts[1]; // "itzg/minecraft-server:latest" -> "sha256:..."
-                        }
+            if ($imgOutput) {
+                foreach (explode("\n", trim($imgOutput)) as $imgLine) {
+                    $parts = explode('|', $imgLine);
+                    if (count($parts) === 2) {
+                        $localImages[$parts[0]] = $parts[1]; // "itzg/minecraft-server:latest" -> "sha256:..."
                     }
                 }
             }
@@ -932,11 +944,45 @@ try {
                             $updateAvailable = false;
                             if (isset($inspect['Config']['Image'])) {
                                 $tag = $inspect['Config']['Image'];
+                                if (strpos($tag, ':') === false) {
+                                    $tag .= ':latest';
+                                }
                                 if (isset($localImages[$tag])) {
                                     $latestId = $localImages[$tag];
                                     $runningId = $inspect['Image'];
+
+                                    // Debug image comparison
+                                    // dbg("Checking $containerName: Tag=$tag, Local=$latestId, Running=$runningId");
+
                                     if ($latestId !== $runningId) {
                                         $updateAvailable = true;
+                                    }
+                                }
+
+                                // 2. Remote Registry Check (Authoritative fallback if local didn't find one)
+                                // Only for itzg/minecraft-server for now, and strictly cached
+                                if (!$updateAvailable && (strpos($tag, 'itzg/minecraft-server') !== false) && !$fastMode) {
+                                    $cacheKey = "ver_chk_" . md5($tag . $runningId);
+                                    $cachedResult = mcmm_cache_get($cacheKey);
+
+                                    if ($cachedResult !== null) {
+                                        $updateAvailable = (bool)$cachedResult;
+                                        if ($updateAvailable) {
+                                            // dbg("Remote update (Cached) FOUND for $containerName");
+                                        }
+                                    } else {
+                                        // Cache miss - perform remote check (TTL 1 hour)
+                                        // dbg("Checking remote registry for $tag...");
+                                        $hasRemoteUpdate = checkDockerHubUpdate($tag, $runningId);
+
+                                        if ($hasRemoteUpdate !== null) {
+                                            $updateAvailable = $hasRemoteUpdate;
+                                            mcmm_cache_set($cacheKey, $updateAvailable, 3600);
+                                            // if ($updateAvailable) dbg("Remote update FOUND for $containerName");
+                                        } else {
+                                            // Failed to check (rate limit?), cache failure briefly (5 mins)
+                                            mcmm_cache_set($cacheKey, false, 300);
+                                        }
                                     }
                                 }
                             }
@@ -1956,6 +2002,59 @@ try {
             require_once __DIR__ . '/include/mod_manager.php';
             $mods = scanServerMods($dataDir);
 
+            // Enrich with known metadata
+            $serversDir = '/boot/config/plugins/mcmm/servers';
+            $metaFile = "$serversDir/$id/installed_mods.json";
+            $metadata = [];
+            if (file_exists($metaFile)) {
+                $metadata = json_decode(file_get_contents($metaFile), true) ?: [];
+            }
+
+            // Create lookup map (Filename -> Metadata)
+            $metaByFile = [];
+            foreach ($metadata as $m) {
+                if (!empty($m['fileName'])) {
+                    $metaByFile[$m['fileName']] = $m;
+                }
+            }
+
+            foreach ($mods as &$mod) {
+                $fileName = $mod['fileName'];
+                $info = $metaByFile[$fileName] ?? [];
+
+                // If no exact match, try fuzzy matching existing metadata (legacy support)
+                if (empty($info)) {
+                    foreach ($metadata as $m) {
+                        if (
+                            (!empty($m['fileName']) && strpos(strtolower($fileName), strtolower($m['fileName'])) !== false) ||
+                            (!empty($m['name']) && strpos(strtolower($fileName), strtolower(str_replace(' ', '', $m['name']))) !== false)
+                        ) {
+                            $info = $m;
+                            break;
+                        }
+                    }
+                }
+
+                if (!empty($info)) {
+                    // Merge, but prefer scan result for some fields if needed?
+                    // Actually metadata is usually better (has logo, author).
+                    $mod = array_merge($mod, $info);
+                }
+
+                // Determine if identification is needed
+                // If we have a valid platform ID and author/logo, we are good.
+                $hasId = !empty($mod['curseforgeId']) || !empty($mod['modrinthId']) || !empty($mod['modId']);
+                $hasDetails = !empty($mod['author']) && !empty($mod['logo']); // Author might be in 'authors' array from scan
+
+                $mod['needsIdentification'] = !$hasDetails;
+
+                // Polyfill 'author' string if only 'authors' array exists
+                if (empty($mod['author']) && !empty($mod['authors']) && is_array($mod['authors'])) {
+                    $mod['author'] = implode(', ', $mod['authors']);
+                }
+            }
+            unset($mod);
+
             global $MCMM_DEBUG_LOG;
             jsonResponse([
                 'success' => true,
@@ -2174,7 +2273,7 @@ try {
                         }
                     }
 
-                    if ($foundId) {
+                    if ($foundId && !empty($apiKey)) {
                         $manifestMap[$filename] = (int) $foundId;
                     } else {
                         $unknownFiles[] = $filename;
@@ -2224,6 +2323,188 @@ try {
                         }
                     } catch (\Throwable $e) {
                         // Non-fatal, just log if possible
+                    }
+                }
+
+                // Pass 2.5: Fingerprint Matching (The "Fool Proof" Method)
+                $debugLog = __DIR__ . "/identify_debug.log";
+                file_put_contents($debugLog, "Batch Start V2.8. Files: " . count($files) . " DataDir: $dataDir\n", FILE_APPEND);
+
+                // If files are physical JARs on disk, we can hash them to find exact matches.
+                if (!empty($unknownFiles) && !empty($apiKey)) {
+                    $hashes = []; // filehash -> filename
+                    $fingerprints = [];
+                    $modsDir = rtrim($dataDir, '/') . '/mods';
+
+                    foreach ($unknownFiles as $file) {
+                        $fullPath = $modsDir . '/' . $file;
+                        if (file_exists($fullPath)) {
+                            $hash = GetMurmurHash2($fullPath);
+                            if ($hash > 0) {
+                                $hashes[$hash] = $file;
+                                $fingerprints[] = $hash;
+                            }
+                        }
+                    }
+
+                    if (!empty($fingerprints)) {
+                        file_put_contents($debugLog, "Fingerprints: " . count($fingerprints) . "\n", FILE_APPEND);
+                        try {
+                            // CF API accepts batch of integers
+                            $matchesRaw = fetchCurseForgeFingerprints($fingerprints, $apiKey);
+                            // fetchCurseForgeFingerprints already returns the inner array of matches if successful
+                            $matches = $matchesRaw;
+                            file_put_contents($debugLog, "Matches: " . count($matches) . "\n", FILE_APPEND);
+                            foreach ($matches as $match) {
+                                // Match structure: { id, file, latestFiles... }
+                                // Actually checking CF docs: exactMatches: [{ id, file: { id, fileName, fileLength... }, latestFiles... }]
+
+                                $fileObj = $match['file'];
+                                $projId = $match['id'];
+                                $hash = $fileObj['packageFingerprint'] ?? 0;
+
+                                // We need to map back to OUR filename via hash?
+                                // CF response might not include the hash we sent if it's packageFingerprint?
+                                // Actually, typical CF response for fingerprints includes the matches.
+                                // But mapping back relies on us knowing which hash belongs to which file.
+                                // If CF returns the matched hash, good.
+                                // If not, we might have collisions or issues, but Murmur2 is decent.
+
+                                // Alternative: CF returns 'file' object which has 'packageFingerprint'.
+                                file_put_contents($debugLog, "Mapping Match PID $projId. Local Hashes Count: " . count($hashes) . " UnknownFiles Count: " . count($unknownFiles) . "\n", FILE_APPEND);
+                                file_put_contents($debugLog, "Local UnknownFiles: " . implode(', ', $unknownFiles) . "\n", FILE_APPEND);
+                                // let's try to match via that.
+                                $matchedHash = $fileObj['packageFingerprint'] ?? $fileObj['fileFingerprint'] ?? null;
+                                if (!$matchedHash && !empty($fileObj['hashes'])) {
+                                    foreach ($fileObj['hashes'] as $h) {
+                                        if (($h['algo'] ?? 0) == 1) { // Murmur2 variant usually
+                                            $matchedHash = $h['value'];
+                                            break;
+                                        }
+                                    }
+                                }
+                                file_put_contents($debugLog, "PID: $projId, Hash: $matchedHash, File: " . ($fileObj['fileName'] ?? 'Unknown') . "\n", FILE_APPEND);
+                                if (!$matchedHash) {
+                                    file_put_contents($debugLog, "DEBUG FileObj: " . json_encode($fileObj) . "\n", FILE_APPEND);
+                                }
+
+                                $foundFile = null;
+                                $responseHashes = [];
+                                if (!empty($fileObj['packageFingerprint'])) {
+                                    $responseHashes[] = (string)$fileObj['packageFingerprint'];
+                                }
+                                if (!empty($fileObj['fileFingerprint'])) {
+                                    $responseHashes[] = (string)$fileObj['fileFingerprint'];
+                                }
+                                if (!empty($fileObj['hashes'])) {
+                                    foreach ($fileObj['hashes'] as $h) {
+                                        if (!empty($h['value'])) {
+                                            $responseHashes[] = (string)$h['value'];
+                                        }
+                                    }
+                                }
+
+                                // 1. Try matching any response hash against our local hashes
+                                foreach ($hashes as $localHash => $fileName) {
+                                    if (in_array((string)$localHash, $responseHashes)) {
+                                        $foundFile = $fileName;
+                                        file_put_contents($debugLog, "SUCCESS: Hash match for $foundFile\n", FILE_APPEND);
+                                        break;
+                                    }
+                                }
+
+                                // 2. Fallback: Try matching by filename (if same as local)
+                                if (!$foundFile && !empty($fileObj['fileName'])) {
+                                    $cfFileName = $fileObj['fileName'];
+                                    if (isset($unknownFiles)) {
+                                        foreach ($unknownFiles as $uf) {
+                                            if (strtolower($uf) === strtolower($cfFileName)) {
+                                                $foundFile = $uf;
+                                                file_put_contents($debugLog, "SUCCESS: Filename match for $foundFile\n", FILE_APPEND);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if ($foundFile) {
+                                    $filename = $foundFile;
+
+                                    // Fetch full mod info if needed, but 'match' usually has it?
+                                    // The 'match' object has 'id' (Project ID).
+                                    // We might need to fetch Project Details to get Name/Author/Logo if not in fingerprint response.
+                                    // Fingerprint response 'exactMatches' usually contains 'id' and 'file'.
+                                    // It does NOT contain Project Name/Logo.
+                                    // So we collect these IDs and do a Batch Mod Fetch.
+
+                                    $manifestMap[$filename] = $projId; // Reuse Pass 2 logic!
+
+                                    // Remove from unknownFiles
+                                    $key = array_search($filename, $unknownFiles);
+                                    if ($key !== false) {
+                                        unset($unknownFiles[$key]);
+                                    }
+                                }
+                            }
+
+                            // Now trigger Pass 2 logic again for these new IDs?
+                            // Iterate manifestMap again? Or just add to a new list to fetch.
+                            // Let's do a second Batch Fetch for these identified mods.
+
+                            $newIds = array_unique(array_values($manifestMap));
+                            // Filter out already fetched ones?
+                            // Simplified: Just re-run a fetch for the new IDs found via fingerprint
+                            // But we need to define the logic here or copy-paste.
+
+                            // Let's just fetch details for these new IDs right here.
+                            if (!empty($manifestMap)) {
+                                $cfMods = fetchCurseForgeModsBatch($newIds, $apiKey);
+                                $cfById = [];
+                                foreach ($cfMods as $mod) {
+                                    $cfById[$mod['id']] = $mod;
+                                }
+
+                                foreach ($manifestMap as $filename => $pid) {
+                                    // Only process if not already in results
+                                    if (isset($results[$filename])) {
+                                        continue;
+                                    }
+
+                                    if (isset($cfById[$pid])) {
+                                        $m = $cfById[$pid];
+                                        $author = !empty($m['authors']) ? $m['authors'][0]['name'] : 'Unknown';
+                                        $details = [
+                                            'id' => $m['id'],
+                                            'name' => $m['name'],
+                                            'author' => $author,
+                                            'summary' => $m['summary'] ?? '',
+                                            'icon' => $m['logo']['thumbnailUrl'] ?? $m['logo']['url'] ?? '',
+                                            'latestFileId' => $m['mainFileId'] ?? null,
+                                            'platform' => 'curseforge'
+                                        ];
+
+                                        $results[$filename] = $details;
+
+                                        // Save metadata
+                                        $metadata[$pid] = array_merge([
+                                            'modId' => $pid,
+                                            'name' => $details['name'],
+                                            'platform' => 'curseforge',
+                                            'fileName' => $filename,
+                                            'fileId' => $details['latestFileId'],
+                                            'logo' => $details['icon'],
+                                            'author' => $author,
+                                            'summary' => $details['summary'],
+                                            'mcVersion' => 'Various', // Fingerprint ignores version usually
+                                            'installedAt' => time()
+                                        ], $metadata[$pid] ?? []);
+                                    }
+                                }
+                            }
+                        } catch (\Throwable $e) {
+                             dbg("Fingerprint Error: " . $e->getMessage());
+                             file_put_contents($debugLog, "Error: " . $e->getMessage() . "\n", FILE_APPEND);
+                        }
                     }
                 }
 
@@ -2319,6 +2600,7 @@ try {
                     @file_put_contents($metaFile, json_encode($metadata, JSON_PARTIAL_OUTPUT_ON_ERROR | JSON_PRETTY_PRINT));
                 }
 
+                file_put_contents($debugLog, "Identification Complete. Results Count: " . count($results) . "\n", FILE_APPEND);
                 jsonResponse(['success' => true, 'data' => $results]);
             } catch (\Throwable $e) {
                 jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);

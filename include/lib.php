@@ -6,6 +6,10 @@
  * Core library containing helper functions for configuration, Docker interaction,
  * metrics gathering, and caching.
  */
+
+require_once __DIR__ . '/docker_hub.php';
+
+/**
 /**
  * Get the total number of logical CPU cores on the system.
  *
@@ -3557,4 +3561,103 @@ function getBannedPlayers(string $id, array $env): array
     }
 
     return array_values(array_unique($banned, SORT_REGULAR));
+}
+// End of existing file
+
+/**
+ * Calculate MurmurHash2 for CurseForge fingerprinting.
+ *
+ * @param string $filePath Path to the file.
+ * @param int $seed Seed value (default 1).
+ * @return int The calculated hash.
+ */
+function GetMurmurHash2(string $filePath, int $seed = 1): int
+{
+    // Read file
+    $content = @file_get_contents($filePath);
+    if ($content === false) {
+        return 0;
+    }
+
+    // Filter typical whitespace characters: 9 (TAB), 10 (LF), 13 (CR), 32 (SPACE)
+    // Using str_replace is faster than preg_replace for simple byte removal
+    $content = str_replace([chr(9), chr(10), chr(13), chr(32)], '', $content);
+
+    $length = strlen($content);
+    $m = 0x5bd1e995;
+    $r = 24;
+    $h = $seed ^ $length;
+    $i = 0;
+
+    while ($length >= 4) {
+        $k = unpack('V', substr($content, $i, 4))[1];
+
+        $k = ($k * $m) & 0xFFFFFFFF;
+        $k ^= ($k >> $r);
+        $k = ($k * $m) & 0xFFFFFFFF;
+
+        $h = ($h * $m) & 0xFFFFFFFF;
+        $h ^= $k;
+
+        $i += 4;
+        $length -= 4;
+    }
+
+    switch ($length) {
+        case 3:
+            $h ^= ord($content[$i + 2]) << 16;
+        case 2:
+            $h ^= ord($content[$i + 1]) << 8;
+        case 1:
+            $h ^= ord($content[$i]);
+            $h = ($h * $m) & 0xFFFFFFFF;
+    }
+
+    $h ^= ($h >> 13);
+    $h = ($h * $m) & 0xFFFFFFFF;
+    $h ^= ($h >> 15);
+
+    return $h;
+}
+
+/**
+ * Fetch mod details from CurseForge using fingerprints (MurmurHash2).
+ *
+ * @param array $fingerprints Array of integer hashes.
+ * @param string $apiKey CurseForge API Key.
+ * @return array List of matched files/mods.
+ */
+function fetchCurseForgeFingerprints(array $fingerprints, string $apiKey): array
+{
+    $url = "https://api.curseforge.com/v1/fingerprints";
+    $payload = json_encode(['fingerprints' => $fingerprints]);
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'x-api-key: ' . $apiKey
+    ]);
+
+    // Disable SSL verification for local dev/unraid environments if needed
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode !== 200 || !$response) {
+        dbg("CF Fingerprint Error $httpCode: $response");
+        return [];
+    }
+
+    $json = json_decode($response, true);
+    if (!$json || empty($json['data']['exactMatches'])) {
+        return [];
+    }
+
+    return $json['data']['exactMatches'];
 }

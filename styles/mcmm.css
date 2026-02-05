@@ -637,6 +637,13 @@ Styleguide 3.0.0
     color: var(--primary-hover);
 }
 
+.mcmm-badge.update {
+    background: rgba(251, 191, 36, 0.15);
+    color: rgb(251, 191, 36);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    cursor: help;
+}
+
 .mcmm-status-dot {
     background: rgb(100 116 139 / 100%);
     border-radius: 50%;

@@ -953,7 +953,7 @@ async function loadInstalledMods() {
             modState.installed = data.data || [];
 
             // Trigger identification for unknown mods in CHUNKS
-            const unknownMods = modState.installed.filter(m => m.needsIdentification).map(m => m.file);
+            const unknownMods = modState.installed.filter(m => m.needsIdentification).map(m => m.file || m.fileName).filter(Boolean);
             if (unknownMods.length > 0) {
                 console.log(`[MCMM] Identifying ${unknownMods.length} mods...`);
                 // Batch in chunks of 20 with minimal delay for speed
@@ -1100,7 +1100,8 @@ async function identifyModsBatch(filenames) {
             console.log(`[MCMM] Successfully identified batch of ${Object.keys(data.data).length} mods`);
             // Update the state
             modState.installed = modState.installed.map(m => {
-                const identified = data.data[m.file];
+                const f = m.file || m.fileName;
+                const identified = data.data[f];
                 if (identified) {
                     return {
                         ...m,
@@ -2574,7 +2575,7 @@ function renderServerRow(server) {
                     <span class="mcmm-badge">${mcVersion}</span>
                     <span class="mcmm-badge secondary">${loader}</span>
                     ${modpackVersion ? `<span class="mcmm-badge" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.25);" title="Modpack Version">${modpackVersion}</span>` : ''}
-                    ${server.containerUpdate ? `<span class="mcmm-badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);" title="New container image available"><span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 2px; vertical-align: text-bottom;">download</span> Update</span>` : ''}
+                    ${server.containerUpdate ? `<span class="mcmm-badge update" title="New container image available"><span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 2px; vertical-align: text-bottom;">download</span> Update</span>` : ''}
                 </div>
                 <div class="mcmm-server-subtitle">
                     <span class="mcmm-status-dot"></span>
