@@ -1399,6 +1399,13 @@ function fetchFTBModpacks(string $search, int $page = 1, int $pageSize = 20): ?a
 
     if ($allPacks === null) {
         $url = "https://api.modpacks.ch/public/modpack/search/100?term=" . urlencode($search ?: 'FTB');
+
+        // Strict Host Validation for SSRF Protection
+        $host = parse_url($url, PHP_URL_HOST);
+        if ($host !== 'api.modpacks.ch') {
+            return null;
+        }
+
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -1994,6 +2001,14 @@ function mrRequest(string $path, bool $isFullUrl = false): ?array
     }
 
     $url = $isFullUrl ? $path : ('https://api.modrinth.com/v2' . $path);
+
+    // SSRF Check for Modrinth
+    $host = parse_url($url, PHP_URL_HOST);
+    if (!empty($host) && !preg_match('/(modrinth\.com|modrinth-production\.s3\.amazonaws\.com)$/', $host)) {
+         dbg("Blocked SSRF attempt in mrRequest: $url");
+         return null;
+    }
+
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -2088,6 +2103,13 @@ function cfRequest(string $path, string $apiKey, bool $isFullUrl = false, string
 
     $url = $isFullUrl ? $path : ('https://api.curseforge.com/v1' . $path);
     dbg("CF Request ($method): $url");
+
+    // SSRF Check for CurseForge
+    $host = parse_url($url, PHP_URL_HOST);
+    if (!empty($host) && !str_ends_with($host, 'curseforge.com')) {
+         dbg("Blocked SSRF attempt in cfRequest: $url");
+         return null;
+    }
 
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
