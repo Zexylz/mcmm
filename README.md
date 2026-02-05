@@ -29,19 +29,17 @@ configuration, and deployment documentation may be added as the project matures.
 ## Latest Release
 
 <!-- START_RELEASE -->
-Here's a summary of the updates for v0.0.6:
+# Release Notes v0.0.7
 
-## v0.0.6 Release Notes
+We're pleased to announce the release of v0.0.7! This update focuses on crucial dependency updates and general refinements to improve stability and security.
 
-We're excited to announce the release of v0.0.6, focusing on enhancing the stability and performance of our application.
+## 🛠 Improvements & Refinement
+*   The mod manager has received an update, bringing general enhancements.
+*   Updated the `globals` dependency to v17.3.0 for improved stability.
+*   Updated the `stylelint` dependency to v17.1.0, ensuring a more robust development environment.
 
-### 🛠 Improvements & Refinement
-*   Applied crucial performance and stability fixes to ensure a smoother experience.
-
-### 🐛 Bug Fixes
-*   Addressed various underlying issues through additional fixes.
-
-Thank you for your continued support!
+## 🐛 Bug Fixes
+*   Addressed and fixed security concerns to bolster overall application security.
 <!-- END_RELEASE -->
 
 ---
