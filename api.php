@@ -265,7 +265,7 @@ try {
             exit;
 
         case 'console_logs':
-            $id = $_GET['id'] ?? '';
+            $id = safeContainerName($_GET['id'] ?? '');
             if (!$id) {
                 jsonResponse(['success' => false, 'error' => 'Missing ID'], 400);
             }
@@ -319,7 +319,7 @@ try {
 
         case 'server_control':
             $req = getRequestData();
-            $id = $req['id'] ?? $_POST['id'] ?? $_GET['id'] ?? '';
+            $id = safeContainerName($req['id'] ?? $_POST['id'] ?? $_GET['id'] ?? '');
             $cmd = $req['cmd'] ?? $_POST['cmd'] ?? $_GET['cmd'] ?? '';
 
             if (!$id || !$cmd) {
@@ -330,7 +330,7 @@ try {
                 jsonResponse(['success' => false, 'error' => 'Invalid command'], 400);
             }
 
-            $output = shell_exec("docker $cmd " . escapeshellarg($id) . " 2>&1");
+            $output = shell_exec("docker " . escapeshellarg($cmd) . " " . escapeshellarg($id) . " 2>&1");
 
             jsonResponse([
                 'success' => true,
@@ -340,7 +340,7 @@ try {
             break;
 
         case 'server_delete':
-            $id = $_GET['id'] ?? '';
+            $id = safeContainerName($_GET['id'] ?? '');
             if (!$id) {
                 jsonResponse(['success' => false, 'error' => 'Missing ID'], 400);
             }
@@ -437,7 +437,7 @@ try {
             break;
 
         case 'check_updates':
-            $id = $_GET['id'] ?? '';
+            $id = safeContainerName($_GET['id'] ?? '');
             if (!$id) {
                 jsonResponse(['success' => false, 'error' => 'Missing server ID'], 400);
             }
@@ -1263,7 +1263,7 @@ try {
                 'unban' => "pardon " . escapeshellarg($player),
                 'op' => "op " . escapeshellarg($player),
                 'deop' => "deop " . escapeshellarg($player),
-                'whisper' => "tell " . escapeshellarg($player) . " " . ($_GET['message'] ?? ''),
+                'whisper' => "tell " . escapeshellarg($player) . " " . escapeshellarg($_GET['message'] ?? ''),
             ];
             if (!isset($cmdMap[$player_action])) {
                 jsonResponse(['success' => false, 'error' => 'Unsupported action: ' . $player_action], 400);
@@ -2110,7 +2110,7 @@ try {
         case 'mod_identify_batch':
             try {
                 @set_time_limit(600);
-                $id = $_GET['id'] ?? '';
+                $id = safeContainerName($_GET['id'] ?? '');
                 $files = json_decode(file_get_contents('php://input'), true) ?: [];
                 // Fallback to GET for WAF bypass
                 if (empty($files) && !empty($_GET['files'])) {
@@ -2328,10 +2328,10 @@ try {
 
         case 'mod_files':
             $source = strtolower($_GET['source'] ?? 'curseforge');
-            $modId = $_GET['mod_id'] ?? '';
-            $mcVersion = $_GET['mc_version'] ?? '';
-            $loader = $_GET['loader'] ?? '';
-            $serverId = $_GET['server_id'] ?? '';
+            $modId = sanitizeKey($_GET['mod_id'] ?? '');
+            $mcVersion = sanitizeKey($_GET['mc_version'] ?? '');
+            $loader = sanitizeKey($_GET['loader'] ?? '');
+            $serverId = safeContainerName($_GET['server_id'] ?? '');
 
             if (!$modId) {
                 jsonResponse(['success' => false, 'error' => 'Missing mod ID'], 400);
@@ -2379,9 +2379,9 @@ try {
 
         case 'mod_install':
             $source = strtolower($_REQUEST['source'] ?? 'curseforge');
-            $id = $_REQUEST['id'] ?? '';
-            $modId = $_REQUEST['mod_id'] ?? '';
-            $fileId = $_REQUEST['file_id'] ?? '';
+            $id = safeContainerName($_REQUEST['id'] ?? '');
+            $modId = safeContainerName($_REQUEST['mod_id'] ?? '');
+            $fileId = safeContainerName($_REQUEST['file_id'] ?? '');
 
             if (!$id || !$modId) {
                 jsonResponse(['success' => false, 'error' => 'Missing parameters'], 400);
@@ -2467,7 +2467,7 @@ try {
             break;
 
         case 'identify_mod':
-            $id = $_GET['id'] ?? '';
+            $id = safeContainerName($_GET['id'] ?? '');
             $filename = $_GET['filename'] ?? '';
             if (!$id || !$filename) {
                 jsonResponse(['success' => false, 'error' => 'Missing parameters'], 400);
@@ -2566,14 +2566,14 @@ try {
 
         case 'import_manifest':
             require_once __DIR__ . '/include/mod_manager.php';
-            $id = $_REQUEST['id'] ?? '';
+            $id = safeContainerName($_REQUEST['id'] ?? '');
             $json = $_REQUEST['manifest_json'] ?? '';
 
             // Handle raw POST body if param is missing
             if (!$json) {
                 $input = json_decode(file_get_contents('php://input'), true);
                 if (is_array($input)) {
-                    $id = $input['id'] ?? $id;
+                    $id = safeContainerName($input['id'] ?? $id);
                     $json = $input['manifest_json'] ?? ($input['json'] ?? '');
                     if (is_array($json)) {
                         $json = json_encode($json);
@@ -2713,7 +2713,7 @@ try {
 
 
         case 'mod_delete':
-            $id = $_GET['id'] ?? '';
+            $id = safeContainerName($_GET['id'] ?? '');
             $file = $_GET['file'] ?? '';
             if (!$id || !$file) {
                 jsonResponse(['success' => false, 'error' => 'Missing parameters'], 400);
@@ -2908,7 +2908,7 @@ try {
             // Check for updates to installed mods
             require_once __DIR__ . '/include/mod_manager.php';
 
-            $id = $_GET['id'] ?? '';
+            $id = safeContainerName($_GET['id'] ?? '');
             if (!$id) {
                 jsonResponse(['success' => false, 'error' => 'Missing server ID'], 400);
             }
@@ -2961,7 +2961,7 @@ try {
             // Update a specific mod to latest version
             require_once __DIR__ . '/include/mod_manager.php';
 
-            $id = $_GET['id'] ?? '';
+            $id = safeContainerName($_GET['id'] ?? '');
             $modFile = $_GET['file'] ?? '';
 
             if (!$id || !$modFile) {

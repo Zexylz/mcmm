@@ -6,7 +6,15 @@ yarn-error.log*
 
 # Logs
 *.log
+psalm_errors.txt
 
 # OS / Editor
 .DS_Store
 Thumbs.db
+
+# Composer / Psalm
+vendor/
+psalm.xml
+composer.lock
+composer.json
+NDH6SA~M

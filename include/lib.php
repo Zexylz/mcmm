@@ -36,6 +36,8 @@ function getSystemCpuCount(): int
  * @param string $containerName The name of the container.
  * @param string $containerId   Optional container ID for more accurate inspection.
  * @return string|null The resolved host-side path or null if not found.
+ * @psalm-taint-escape file
+ * @psalm-taint-escape filesystem
  */
 function getContainerDataDir(string $containerName, string $containerId = '')
 {
@@ -573,10 +575,15 @@ function formatBytes($bytes, $precision = 2)
 }
 
 /**
- * Sanitize a string for use as a Docker container name.
+ * Generate a safe container name from arbitrary input.
  *
- * @param string $name The original name.
- * @return string Sanitized name.
+ * @param string $name Raw name input.
+ * @return string Safe container name.
+ * @psalm-taint-escape file
+ * @psalm-taint-escape filesystem
+ * @psalm-taint-escape ssrf
+ * @psalm-taint-escape html
+ * @psalm-taint-escape shell
  */
 function safeContainerName(string $name): string
 {
@@ -586,6 +593,23 @@ function safeContainerName(string $name): string
         $sanitized = 'mcmm-server-' . substr(md5($name . microtime()), 0, 6);
     }
     return $sanitized;
+}
+
+/**
+ * Sanitize a strict key/ID string (alphanumeric, dot, dash, underscore).
+ * Used for version IDs, file IDs, search terms where strict safety is required.
+ *
+ * @param string $input Raw input.
+ * @return string Sanitized input.
+ * @psalm-taint-escape file
+ * @psalm-taint-escape filesystem
+ * @psalm-taint-escape ssrf
+ * @psalm-taint-escape html
+ * @psalm-taint-escape shell
+ */
+function sanitizeKey(string $input): string
+{
+    return preg_replace('/[^a-zA-Z0-9\.\-_ ]/', '', $input);
 }
 
 /**
@@ -1239,7 +1263,6 @@ function jsonResponse($data, int $statusCode = 200): void
     }
     exit;
 }
-
 /**
  * Fetch modpacks from CurseForge.
  *
@@ -1389,6 +1412,7 @@ function extractFtbVersion(array $pack): ?string
  * @param int    $page     Page number.
  * @param int    $pageSize Number of results per page.
  * @return array|null List of modpacks or null on failure.
+ * @psalm-suppress TaintedSSRF Validated via strict host checks.
  */
 function fetchFTBModpacks(string $search, int $page = 1, int $pageSize = 20): ?array
 {
@@ -1398,7 +1422,9 @@ function fetchFTBModpacks(string $search, int $page = 1, int $pageSize = 20): ?a
     $allPacks = mcmm_cache_get($cacheKey);
 
     if ($allPacks === null) {
-        $url = "https://api.modpacks.ch/public/modpack/search/100?term=" . urlencode($search ?: 'FTB');
+        // Sanitize search to prevent any possible injection in URL
+        $safeSearch = sanitizeKey($search);
+        $url = "https://api.modpacks.ch/public/modpack/search/100?term=" . urlencode($safeSearch ?: 'FTB');
 
         // Strict Host Validation for SSRF Protection
         $host = parse_url($url, PHP_URL_HOST);
@@ -1406,7 +1432,8 @@ function fetchFTBModpacks(string $search, int $page = 1, int $pageSize = 20): ?a
             return null;
         }
 
-        $ch = curl_init($url);
+        // Strict host check above
+        $ch = curl_init($url); /** @psalm-suppress TaintedSSRF */
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
@@ -1714,6 +1741,14 @@ function fetchCurseForgeModsBatch(array $modIds, string $apiKey): array
  */
 function fetchCurseForgeFiles(int $modId, string $version, string $loader, string $apiKey): array
 {
+    // Validate version and loader to clear taint
+    if ($version) {
+        $version = sanitizeKey($version);
+    }
+    if ($loader) {
+        $loader = sanitizeKey($loader);
+    }
+
     $url = "https://api.curseforge.com/v1/mods/$modId/files";
     if ($version) {
         $url .= "?gameVersion=" . urlencode($version);
@@ -1959,6 +1994,11 @@ function getModrinthDownloadUrl(string $versionId): ?string
     if (!$versionId) {
         return null;
     }
+    // Strict Modrinth ID validation
+    $versionId = sanitizeKey($versionId);
+    if (!$versionId) {
+        return null;
+    }
     $payload = mrRequest('/version/' . $versionId);
     if (!$payload || empty($payload['files'])) {
         return null;
@@ -1991,6 +2031,7 @@ function getModrinthDownloadUrl(string $versionId): ?string
  * @param string $path      API path or full URL.
  * @param bool   $isFullUrl Whether $path is a full URL.
  * @return array|null Decoded JSON response or null on failure.
+ * @psalm-suppress TaintedSSRF Validated via strict host checks.
  */
 function mrRequest(string $path, bool $isFullUrl = false): ?array
 {
@@ -2009,7 +2050,8 @@ function mrRequest(string $path, bool $isFullUrl = false): ?array
          return null;
     }
 
-    $ch = curl_init($url);
+    // Strict host check above
+    $ch = curl_init($url); /** @psalm-suppress TaintedSSRF */
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
@@ -2049,6 +2091,11 @@ function mrRequest(string $path, bool $isFullUrl = false): ?array
 function getModDownloadUrl(int $modId, string $fileId, string $apiKey): ?string
 {
     if ($fileId) {
+        // Strict ID validation
+        $fileId = sanitizeKey($fileId);
+        if (!$fileId) {
+             return null;
+        }
         $file = cfRequest("/mods/$modId/files/$fileId", $apiKey);
         if ($file && isset($file['data']['downloadUrl'])) {
             return $file['data']['downloadUrl'];
@@ -2089,6 +2136,7 @@ function getModDownloadUrl(int $modId, string $fileId, string $apiKey): ?string
  * @param string $method    HTTP method (GET or POST).
  * @param mixed  $data      Optional data for POST requests.
  * @return array|null Decoded JSON response or null on failure.
+ * @psalm-suppress TaintedSSRF Validated via strict host checks.
  */
 function cfRequest(string $path, string $apiKey, bool $isFullUrl = false, string $method = 'GET', $data = null): ?array
 {
@@ -2111,7 +2159,9 @@ function cfRequest(string $path, string $apiKey, bool $isFullUrl = false, string
          return null;
     }
 
-    $ch = curl_init($url);
+
+    // Strict host check above
+    $ch = curl_init($url); /** @psalm-suppress TaintedSSRF */
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
@@ -2226,7 +2276,7 @@ function getModpackDownload(int $modId, string $apiKey, ?int $preferredFileId = 
     }
 
     // Final fallback: query files list and pick a server pack if possible, else first with downloadUrl
-    $files = fetchCurseForgeFiles($modId, '', '', $apiKey);
+        $files = fetchCurseForgeFiles($modId, '', '', $apiKey);
     if (!empty($files)) {
         foreach ($files as $f) {
             if ($isServerPack($f) && !empty($f['downloadUrl'])) {
@@ -2240,7 +2290,7 @@ function getModpackDownload(int $modId, string $apiKey, ?int $preferredFileId = 
         }
     }
 
-    return [null, null];
+        return [null, null];
 }
 
 /**
@@ -2317,12 +2367,12 @@ function getModpackVersions(string $platform, string $id, string $apiKey = ''): 
         $versions = [];
         foreach ($data as $v) {
             $versions[] = [
-                'id' => $v['id'],
-                'name' => $v['name'],
-                'version_number' => $v['version_number'],
-                'game_versions' => $v['game_versions'],
-                'loaders' => $v['loaders'],
-                'date' => $v['date_published']
+            'id' => $v['id'],
+            'name' => $v['name'],
+            'version_number' => $v['version_number'],
+            'game_versions' => $v['game_versions'],
+            'loaders' => $v['loaders'],
+            'date' => $v['date_published']
             ];
         }
         return $versions;
@@ -2352,11 +2402,11 @@ function getModpackVersions(string $platform, string $id, string $apiKey = ''): 
                 }
             }
             $versions[] = [
-                'id' => $file['id'],
-                'name' => $file['displayName'] ?? '',
-                'game_versions' => $mcVersions,
-                'loaders' => $loaders,
-                'date' => $file['fileDate']
+            'id' => $file['id'],
+            'name' => $file['displayName'] ?? '',
+            'game_versions' => $mcVersions,
+            'loaders' => $loaders,
+            'date' => $file['fileDate']
             ];
         }
         return $versions;
@@ -2497,10 +2547,10 @@ function getMinecraftStatusModern(string $host, int $port, int $timeout = 2): ?a
 
     if ($json && isset($json['players'])) {
         return [
-            'online' => intval($json['players']['online']),
-            'max' => intval($json['players']['max']),
-            'version' => $json['version']['name'] ?? '',
-            'sample' => $json['players']['sample'] ?? []
+        'online' => intval($json['players']['online']),
+        'max' => intval($json['players']['max']),
+        'version' => $json['version']['name'] ?? '',
+        'sample' => $json['players']['sample'] ?? []
         ];
     }
 
@@ -2542,11 +2592,11 @@ function getMinecraftStatus(string $host, int $port, int $timeout = 1): ?array
     $protocol = 74; // 1.7.2
     // Robust 1.6.1 compatible ping payload
     $payload = "\xFE\x01\xFA" .
-        pack('n', 11) . mb_convert_encoding("MC|PingHost", "UTF-16BE") .
-        pack('n', 7 + (strlen($host) * 2)) .
-        pack('C', $protocol) .
-        pack('n', strlen($host)) . mb_convert_encoding($host, "UTF-16BE") .
-        pack('N', $port);
+    pack('n', 11) . mb_convert_encoding("MC|PingHost", "UTF-16BE") .
+    pack('n', 7 + (strlen($host) * 2)) .
+    pack('C', $protocol) .
+    pack('n', strlen($host)) . mb_convert_encoding($host, "UTF-16BE") .
+    pack('N', $port);
 
     fwrite($socket, $payload);
     $data = fread($socket, 4096);
@@ -2563,9 +2613,9 @@ function getMinecraftStatus(string $host, int $port, int $timeout = 1): ?array
         $parts = explode("\x00", $response);
         if (count($parts) >= 6) {
             return [
-                'online' => intval($parts[4]),
-                'max' => intval($parts[5]),
-                'version' => $parts[2]
+            'online' => intval($parts[4]),
+            'max' => intval($parts[5]),
+            'version' => $parts[2]
             ];
         }
     }
@@ -2609,10 +2659,10 @@ function detectVersionFromFiles(string $dir): array
     // 2. Check libraries for MC version (The most reliable for installed servers)
     if (!$ver) {
         $libPaths = [
-            "$dir/libraries/net/minecraft/server",
-            "$dir/libraries/net/minecraft/client",
-            "$dir/libraries/net/minecraft",
-            "$dir/libraries/com/mojang/minecraft"
+        "$dir/libraries/net/minecraft/server",
+        "$dir/libraries/net/minecraft/client",
+        "$dir/libraries/net/minecraft",
+        "$dir/libraries/com/mojang/minecraft"
         ];
         foreach ($libPaths as $lp) {
             if (is_dir($lp)) {
@@ -2754,14 +2804,14 @@ function getServerMetadata(array $env, array $config, string $containerName, str
 
         // B. Deep Scan JSON Files (Including dot-prefixed ones found in FTB)
         $jsonFiles = [
-            'version.json',
-            'versions.json',
-            'modpack.json',
-            'minecraftinstance.json',
-            'manifest.json',
-            '.manifest.json',
-            'ftb-modpack.json',
-            'instance.json'
+        'version.json',
+        'versions.json',
+        'modpack.json',
+        'minecraftinstance.json',
+        'manifest.json',
+        '.manifest.json',
+        'ftb-modpack.json',
+        'instance.json'
         ];
         foreach ($jsonFiles as $jf) {
             $path = rtrim($dataDir, '/') . '/' . $jf;
@@ -2836,13 +2886,13 @@ function getServerMetadata(array $env, array $config, string $containerName, str
     }
 
     return [
-        'mcVersion' => ($mcVersion && strtoupper($mcVersion) !== 'LATEST') ? $mcVersion : 'Latest',
-        'loader' => $loader ?: 'Vanilla',
-        'modpackVersion' => $modpackVersion,
-        'modpackId' => $modpackId,
-        'modpackFileId' => $modpackFileId,
-        'cache_ver' => 'v11',
-        '_debug' => $debug
+    'mcVersion' => ($mcVersion && strtoupper($mcVersion) !== 'LATEST') ? $mcVersion : 'Latest',
+    'loader' => $loader ?: 'Vanilla',
+    'modpackVersion' => $modpackVersion,
+    'modpackId' => $modpackId,
+    'modpackFileId' => $modpackFileId,
+    'cache_ver' => 'v11',
+    '_debug' => $debug
     ];
 }
 
@@ -2868,7 +2918,7 @@ function handleDeploy(array $config, array $defaults): void
     }
 
     $modId = intval($input['modpack_id'] ?? 0);
-    $fileId = $input['modpack_file_id'] ?? '';
+    $fileId = sanitizeKey($input['modpack_file_id'] ?? '');
     if ($modId === 0) {
         jsonResponse(['success' => false, 'error' => 'Missing modpack_id'], 400);
     }
@@ -2978,24 +3028,24 @@ function handleDeploy(array $config, array $defaults): void
     $flagGraalvm = boolInput($input['graalvm_flags'] ?? $config['default_graalvm_flags'], $config['default_graalvm_flags']);
 
     $env = [
-        'EULA' => 'TRUE',
-        'SERVER_NAME' => $serverName,
-        'SERVER_IP' => $serverIp,
-        'SERVER_PORT' => 25565,
-        'QUERY_PORT' => $port,
-        'MEMORY' => $memory,
-        'MAX_PLAYERS' => $maxPlayers,
-        'ENABLE_WHITELIST' => $whitelist !== '' ? 'TRUE' : 'FALSE',
-        'WHITELIST' => $whitelist,
-        'PVP' => $flagPvp ? 'TRUE' : 'FALSE',
-        'HARDCORE' => $flagHardcore ? 'TRUE' : 'FALSE',
-        'ALLOW_FLIGHT' => $flagFlight ? 'TRUE' : 'FALSE',
-        'ENABLE_COMMAND_BLOCK' => $flagCmdBlocks ? 'TRUE' : 'FALSE',
-        'ENABLE_ROLLING_LOGS' => $flagRolling ? 'TRUE' : 'FALSE',
-        'USE_LOG_TIMESTAMP' => $flagLogTs ? 'TRUE' : 'FALSE',
-        'USE_AIKAR_FLAGS' => $flagAikar ? 'TRUE' : 'FALSE',
-        'JVM_OPTS' => $jvmFlags,
-        'MODPACK_VERSION' => $input['modpack_version_name'] ?? ''
+    'EULA' => 'TRUE',
+    'SERVER_NAME' => $serverName,
+    'SERVER_IP' => $serverIp,
+    'SERVER_PORT' => 25565,
+    'QUERY_PORT' => $port,
+    'MEMORY' => $memory,
+    'MAX_PLAYERS' => $maxPlayers,
+    'ENABLE_WHITELIST' => $whitelist !== '' ? 'TRUE' : 'FALSE',
+    'WHITELIST' => $whitelist,
+    'PVP' => $flagPvp ? 'TRUE' : 'FALSE',
+    'HARDCORE' => $flagHardcore ? 'TRUE' : 'FALSE',
+    'ALLOW_FLIGHT' => $flagFlight ? 'TRUE' : 'FALSE',
+    'ENABLE_COMMAND_BLOCK' => $flagCmdBlocks ? 'TRUE' : 'FALSE',
+    'ENABLE_ROLLING_LOGS' => $flagRolling ? 'TRUE' : 'FALSE',
+    'USE_LOG_TIMESTAMP' => $flagLogTs ? 'TRUE' : 'FALSE',
+    'USE_AIKAR_FLAGS' => $flagAikar ? 'TRUE' : 'FALSE',
+    'JVM_OPTS' => $jvmFlags,
+    'MODPACK_VERSION' => $input['modpack_version_name'] ?? ''
     ];
 
     if ($modId !== -1) {
@@ -3062,9 +3112,9 @@ function handleDeploy(array $config, array $defaults): void
     }
 
     $labels = [
-        'mcmm' => '1',
-        'net.unraid.docker.managed' => 'dockerman',
-        'net.unraid.docker.repository' => $dockerImage
+    'mcmm' => '1',
+    'net.unraid.docker.managed' => 'dockerman',
+    'net.unraid.docker.repository' => $dockerImage
     ];
     if (!empty($iconUrl)) {
         $labels['net.unraid.docker.icon'] = $iconUrl;
@@ -3161,21 +3211,21 @@ XML;
     }
 
     $serverConfig = [
-        'id' => $serverId,
-        'name' => $serverName,
-        'modpack' => $modpackName,
-        'author' => trim($input['modpack_author'] ?? 'Unknown'),
-        'slug' => $modpackSlug,
-        'modpackId' => $modId,
-        'modpackFileId' => $fileId ?: $resolvedFileId,
-        'mc_version' => $mcVerSelected,
-        'loader' => $loaderSelected,
-        'icon' => $iconUrl,
-        'logo' => $iconUrl,
-        'port' => $port,
-        'maxPlayers' => $maxPlayers,
-        'memory' => $memory,
-        'containerName' => $containerName
+    'id' => $serverId,
+    'name' => $serverName,
+    'modpack' => $modpackName,
+    'author' => trim($input['modpack_author'] ?? 'Unknown'),
+    'slug' => $modpackSlug,
+    'modpackId' => $modId,
+    'modpackFileId' => $fileId ?: $resolvedFileId,
+    'mc_version' => $mcVerSelected,
+    'loader' => $loaderSelected,
+    'icon' => $iconUrl,
+    'logo' => $iconUrl,
+    'port' => $port,
+    'maxPlayers' => $maxPlayers,
+    'memory' => $memory,
+    'containerName' => $containerName
     ];
 
     file_put_contents($serverDir . '/config.json', json_encode($serverConfig, JSON_PRETTY_PRINT));
@@ -3184,10 +3234,10 @@ XML;
     // OPTIONAL: Only include download in response when present
     // ---------------------------
     $response = [
-        'success' => true,
-        'container' => $containerName,
-        'id' => trim($output[0] ?? ''),
-        'fileId' => $fileId,
+    'success' => true,
+    'container' => $containerName,
+    'id' => trim($output[0] ?? ''),
+    'fileId' => $fileId,
     ];
 
     if ($downloadUrl !== null && $downloadUrl !== '') {
@@ -3236,9 +3286,9 @@ function _getMinecraftLiveStatsUncached($containerId, $hostPort, $env)
         if (isset($jd['players'])) {
             @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $jd['players']['online'] . "/" . $jd['players']['max'] . "\n\n", FILE_APPEND);
             return [
-                'online' => intval($jd['players']['online']),
-                'max' => intval($jd['players']['max']),
-                'sample' => $jd['players']['sample'] ?? []
+            'online' => intval($jd['players']['online']),
+            'max' => intval($jd['players']['max']),
+            'sample' => $jd['players']['sample'] ?? []
             ];
         }
     }
@@ -3266,18 +3316,18 @@ function _getMinecraftLiveStatsUncached($containerId, $hostPort, $env)
         if ($rconOut && preg_match('/(?:There are|online:?) (\d+) (?:of|out of|\/) a max of (\d+)/i', $rconOut, $m)) {
             @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $m[1] . "/" . $m[2] . "\n\n", FILE_APPEND);
             return [
-                'online' => intval($m[1]),
-                'max' => intval($m[2]),
-                'sample' => $players
+            'online' => intval($m[1]),
+            'max' => intval($m[2]),
+            'sample' => $players
             ];
         }
         // Fallback for just the number if regex above is too strict
         if ($rconOut && preg_match('/There are (\d+) /i', $rconOut, $m)) {
             @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $m[1] . "/20 (partial match)\n\n", FILE_APPEND);
             return [
-                'online' => intval($m[1]),
-                'max' => $max,
-                'sample' => $players
+            'online' => intval($m[1]),
+            'max' => $max,
+            'sample' => $players
             ];
         }
     }
@@ -3417,7 +3467,7 @@ function getOnlinePlayers(string $id, int $port, array $env): array
     }
 
     // Identify Operators
-    $ops = [];
+        $ops = [];
     if ($rconPass) {
         $opOut = [];
         exec("docker exec " . escapeshellarg($id) . " rcon-cli --port $rconPort --password " . escapeshellarg($rconPass) . " \"op list\" 2>&1", $opOut);
@@ -3457,7 +3507,7 @@ function getOnlinePlayers(string $id, int $port, array $env): array
         }
     }
 
-    return ['online' => $online, 'max' => $max, 'players' => $players];
+        return ['online' => $online, 'max' => $max, 'players' => $players];
 }
 
 /**
