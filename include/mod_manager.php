@@ -87,8 +87,8 @@ function extractModInfo(string $jarPath): array
         $MCMM_DEBUG_LOG = [];
     }
 
-    // BUMP CACHE VERSION to mod_mm6_ to force refresh and capture logs
-    $key = 'mod_mm6_' . md5($jarPath . $stat['size'] . $stat['mtime']);
+    // BUMP CACHE VERSION to mod_mm5_ to force refresh and capture logs
+    $key = 'mod_mm5_' . md5($jarPath . $stat['size'] . $stat['mtime']);
     if ($cached = mcmm_cache_get($key)) {
         return $cached;
     }
@@ -117,22 +117,11 @@ function extractModInfo(string $jarPath): array
         if ($zip->locateName('META-INF/mods.toml') !== false) {
             $tomlContent = $zip->getFromName('META-INF/mods.toml');
             if ($tomlContent) {
-                // @phpstan-ignore-next-line
-                $info = array_merge($info, parseModsToml($tomlContent));
-                if (!empty($info['name'])) {
+                $parsed = parseModsToml($tomlContent);
+                if (!empty($parsed['name'])) {
                     $foundMetadata = true;
                 }
-            }
-        } elseif ($zip->locateName('META-INF/neoforge.mods.toml') !== false) {
-            $tomlContent = $zip->getFromName('META-INF/neoforge.mods.toml');
-            if ($tomlContent) {
-                // @phpstan-ignore-next-line
-                $info = array_merge($info, parseModsToml($tomlContent));
-                if (!empty($info['name'])) {
-                    $foundMetadata = true;
-                    // NeoForge usually implies neoforge loader, but we keep 'forge' generic or switch if needed
-                    $info['loader'] = 'neoforge';
-                }
+                $info = array_merge($info, $parsed);
             }
         } elseif ($zip->locateName('mods.toml') !== false) {
             $tomlContent = $zip->getFromName('mods.toml');
@@ -195,10 +184,10 @@ function extractModInfo(string $jarPath): array
         $zip->close();
 
         if (!$foundMetadata) {
-            $log("Zip opened but NO valid metadata file found (checked mods.toml, neoforge.mods.toml, mcmod.info, fabric.mod.json, quilt.mod.json).");
+            $log("Zip opened but NO valid metadata file found (checked mods.toml, mcmod.info, fabric.mod.json, quilt.mod.json).");
         }
     } else {
-        $log("Zip Open Failed. Error Code: $res");
+         $log("Zip Open Failed. Error Code: $res");
     }
 
     // Calculate hash AFTER closing zip to avoid file locking conflicts
@@ -210,7 +199,7 @@ function extractModInfo(string $jarPath): array
 
     // Verify name
     if (empty($info['name'])) {
-        $log("Final status: Unknown Name. Mod ID: " . ($info['modId'] ?? 'None'));
+         $log("Final status: Unknown Name. Mod ID: " . ($info['modId'] ?? 'None'));
     }
 
     // Cache the result (long TTL as filemtime is part of key)
@@ -230,43 +219,25 @@ function parseModsToml(string $content): array
 {
     $info = [];
 
-    // Improve regex to handle multiline strings (triple quotes) and varying whitespace
-    // Note: This is still a heuristic/regex parser, not a full TOML parser.
-
-    // 1. Clean up newlines for easier multiline matching if we want, but simple regex usually suffices for properties
-
-    // Match: modId="example" or modId = "example" or modId='example'
-    if (preg_match('/^\s*modId\s*=\s*["\']([^"\']+)["\']/m', $content, $m)) {
+    if (preg_match('/modId\s*=\s*["\']([^"\']+)["\']/', $content, $m)) {
         $info['modId'] = $m[1];
     }
 
-    // Match: version="1.0"
-    if (preg_match('/^\s*version\s*=\s*["\']([^"\']+)["\']/m', $content, $m)) {
+    if (preg_match('/version\s*=\s*["\']([^"\']+)["\']/', $content, $m)) {
         $info['version'] = $m[1];
     }
 
-    // Match: displayName="Example Mod"
-    if (preg_match('/^\s*displayName\s*=\s*["\']([^"\']+)["\']/m', $content, $m)) {
+    if (preg_match('/displayName\s*=\s*["\']([^"\']+)["\']/', $content, $m)) {
         $info['name'] = $m[1];
     }
 
-    // Match: description='''...''' or description="..."
-    // Try triple quotes first
-    if (preg_match('/^\s*description\s*=\s*\'\'\'(.*?)\'\'\'/ms', $content, $m)) {
-        $info['description'] = trim($m[1]);
-    } elseif (preg_match('/^\s*description\s*=\s*"""(.*?)"""/ms', $content, $m)) {
-        $info['description'] = trim($m[1]);
-    } elseif (preg_match('/^\s*description\s*=\s*["\']([^"\']+)["\']/m', $content, $m)) {
+    if (preg_match('/description\s*=\s*["\']([^"\']+)["\']/', $content, $m)) {
         $info['description'] = $m[1];
     }
 
-    // Match: authors="Author" (Legacy/Single)
-    if (preg_match('/^\s*authors\s*=\s*["\']([^"\']+)["\']/m', $content, $m)) {
+    if (preg_match('/authors\s*=\s*["\']([^"\']+)["\']/', $content, $m)) {
         $info['authors'] = [$m[1]];
     }
-
-    // If authors wasn't found, NeoForge used to output specific format or just same as above.
-    // Sometimes it's inside `[[mods]]` block, but the regex above works if keys are unique enough.
 
     return $info;
 }
@@ -276,9 +247,6 @@ function parseModsToml(string $content): array
  */
 function json_decode_clean(string $json): ?array
 {
-    // Remove BOM if present
-    $json = preg_replace('/^\xEF\xBB\xBF/', '', $json);
-
     // Remove block comments
     $json = preg_replace('!/\*.*?\*/!s', '', $json);
     // Remove line comments
@@ -612,10 +580,10 @@ function computeMurmur2Hash(string $filePath): int
         switch ($tailLen) {
             case 3:
                 $h ^= (ord($tail[2]) << 16);
-            // fallthrough
+                // fallthrough
             case 2:
                 $h ^= (ord($tail[1]) << 8);
-            // fallthrough
+                // fallthrough
             case 1:
                 $h ^= ord($tail[0]);
                 $h = ($h * $m) & 0xFFFFFFFF;

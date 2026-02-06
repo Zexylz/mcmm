@@ -3586,24 +3586,22 @@ function getBannedPlayers(string $id, array $env): array
  */
 function GetMurmurHash2(string $filePath, int $seed = 1): int
 {
-    // Read file
-    $content = @file_get_contents($filePath);
-    if ($content === false) {
+    $data = @file_get_contents($filePath);
+    if ($data === false) {
         return 0;
     }
 
-    // Filter typical whitespace characters: 9 (TAB), 10 (LF), 13 (CR), 32 (SPACE)
-    // Using str_replace is faster than preg_replace for simple byte removal
-    $content = str_replace([chr(9), chr(10), chr(13), chr(32)], '', $content);
+    // MANDATORY for CurseForge: Filter whitespace bytes (9, 10, 13, 32)
+    $data = str_replace([chr(9), chr(10), chr(13), chr(32)], '', $data);
 
-    $length = strlen($content);
+    $length = strlen($data);
     $m = 0x5bd1e995;
     $r = 24;
-    $h = $seed ^ $length;
-    $i = 0;
+    $h = ($seed ^ $length) & 0xFFFFFFFF;
 
+    $i = 0;
     while ($length >= 4) {
-        $k = unpack('V', substr($content, $i, 4))[1];
+        $k = unpack('V', $data, $i)[1];
 
         $k = ($k * $m) & 0xFFFFFFFF;
         $k ^= ($k >> $r);
@@ -3616,23 +3614,30 @@ function GetMurmurHash2(string $filePath, int $seed = 1): int
         $length -= 4;
     }
 
-    switch ($length) {
-        case 3:
-            $h ^= ord($content[$i + 2]) << 16;
-        case 2:
-            $h ^= ord($content[$i + 1]) << 8;
-        case 1:
-            $h ^= ord($content[$i]);
+    if ($length > 0) {
+        if ($length >= 3) {
+            $h ^= ord($data[$i + 2]) << 16;
+        }
+        if ($length >= 2) {
+            $h ^= ord($data[$i + 1]) << 8;
+        }
+        if ($length >= 1) {
+            $h ^= ord($data[$i]);
             $h = ($h * $m) & 0xFFFFFFFF;
+        }
     }
 
     $h ^= ($h >> 13);
     $h = ($h * $m) & 0xFFFFFFFF;
     $h ^= ($h >> 15);
 
-    return $h;
-}
+    // Convert to Java signed int (CurseForge compatible)
+    if ($h >= 0x80000000) {
+        $h -= 0x100000000;
+    }
 
+    return (int)$h;
+}
 /**
  * Fetch mod details from CurseForge using fingerprints (MurmurHash2).
  *
