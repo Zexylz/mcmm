@@ -29,19 +29,18 @@ configuration, and deployment documentation may be added as the project matures.
 ## Latest Release
 
 <!-- START_RELEASE -->
-## Release Notes for v0.0.8
-
-We're excited to announce the release of v0.0.8, bringing foundational new features and behind-the-scenes improvements!
+We're excited to announce the release of **v0.0.8**! This update brings foundational new features, particularly around plugin configuration and mod management.
 
 ### 🚀 New Features
-
-*   **Initial Mod Scanning:** Introduced the foundational functionality for scanning mods.
-*   **Enhanced Plugin Configuration:** Implemented support for `plugin.json` and XML structures, providing more flexible and robust ways to configure plugins.
-*   **MCMM Plugin Slack Descriptions:** Added functionality to generate Slack descriptions specifically for the MCMM plugin.
+*   **Enhanced Plugin Configuration:** Introduced initial capabilities for plugin configuration, including support for `plugin.json` and XML structures.
+*   **MCMM Plugin Slack Description:** Added support for generating Slack descriptions for the MCMM plugin.
+*   **Mod Scanning:** Implemented initial functionality for mod scanning.
 
 ### 🛠 Improvements & Refinement
+*   **Dependency Updates:** Updated various development dependencies in `package.json` for better stability and performance.
 
-*   **Development Dependency Updates:** Updated various development dependencies in `package.json`, ensuring a more stable and efficient development environment.
+### 🐛 Bug Fixes
+*   No specific bug fixes were included in this release.
 <!-- END_RELEASE -->
 
 ---
