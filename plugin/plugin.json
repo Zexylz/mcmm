@@ -1,0 +1,9 @@
+{
+    "name": "mcmm",
+    "package_name": "mcmm-plugin",
+    "author": "Zexylz",
+    "min": "7.0.0",
+    "icon": "cube",
+    "support": "https://github.com/Zexylz/mcmm/issues",
+    "launch": "Tools/MCMM"
+}
