@@ -29,18 +29,19 @@ configuration, and deployment documentation may be added as the project matures.
 ## Latest Release
 
 <!-- START_RELEASE -->
-## Release Notes: v0.0.7
+## Release Notes for v0.0.8
 
-We're excited to announce the release of v0.0.7, bringing a security fix and general improvements to enhance your experience.
+We're excited to announce the release of v0.0.8, bringing foundational new features and behind-the-scenes improvements!
+
+### 🚀 New Features
+
+*   **Initial Mod Scanning:** Introduced the foundational functionality for scanning mods.
+*   **Enhanced Plugin Configuration:** Implemented support for `plugin.json` and XML structures, providing more flexible and robust ways to configure plugins.
+*   **MCMM Plugin Slack Descriptions:** Added functionality to generate Slack descriptions specifically for the MCMM plugin.
 
 ### 🛠 Improvements & Refinement
 
-*   The mod manager has received an update, ensuring smoother operation.
-*   Updated internal dependencies (e.g., `globals`, `stylelint`) to their latest versions, contributing to improved stability and performance.
-
-### 🐛 Bug Fixes
-
-*   Addressed and fixed a reported security vulnerability.
+*   **Development Dependency Updates:** Updated various development dependencies in `package.json`, ensuring a more stable and efficient development environment.
 <!-- END_RELEASE -->
 
 ---
@@ -95,6 +96,7 @@ still leveraging best-in-class container images for Minecraft server execution.
 ├── empty_report.json
 ├── default.cfg
 ├── mcmm.page
+├── debug_scan.php
 ├── README.md
 ├── api.php
 ├── mcmm-plugin.zip
