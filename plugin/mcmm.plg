@@ -1,0 +1,70 @@
+<?xml version='1.0' standalone='yes'?>
+<!DOCTYPE PLUGIN>
+
+<PLUGIN 
+  name="mcmm"
+  author="Zexylz"
+  version="0.0.8"
+  launch="Tools/MCMM"
+  pluginURL="https://raw.githubusercontent.com/Zexylz/mcmm/main/plugin/mcmm.plg"
+  support="https://github.com/Zexylz/mcmm/issues"
+  min="7.0.0"
+  
+  icon="cube"
+>
+
+<CHANGES>
+<![CDATA[
+Release notes: https://github.com/Zexylz/mcmm/releases/tag/v0.0.8
+
+For older releases, see https://github.com/Zexylz/mcmm/releases
+]]>
+</CHANGES>
+
+<FILE Name="/boot/config/plugins/mcmm/mcmm-plugin-0.0.8-noarch-1.txz">
+<URL>https://github.com/Zexylz/mcmm/releases/download/v0.0.8/mcmm-plugin-0.0.8-noarch-1.txz</URL>
+<SHA256>f8e3be5935a4d1a4d8e3623235a9719fa96d98d17ac2eff7f051a528dfd02522</SHA256>
+</FILE>
+
+<!--
+The 'install' script.
+-->
+<FILE Run="/bin/bash">
+<INLINE>
+<![CDATA[
+upgradepkg --install-new /boot/config/plugins/mcmm/mcmm-plugin-0.0.8-noarch-1.txz
+
+# cleanup old versions
+rm -f $(ls /boot/config/plugins/mcmm/mcmm-plugin-*.txz 2>/dev/null | grep -v '0.0.8')
+
+echo ""
+echo "----------------------------------------------------"
+echo " MCMM - Modpack Manager has been installed."
+echo " Version: 0.0.8"
+echo "----------------------------------------------------"
+echo ""
+]]>
+</INLINE>
+</FILE>
+
+<!--
+The 'remove' script.
+-->
+<FILE Run="/bin/bash" Method="remove">
+<INLINE>
+<![CDATA[
+removepkg mcmm-plugin
+
+rm -rf /usr/local/emhttp/plugins/mcmm
+rm -rf /boot/config/plugins/mcmm
+
+echo ""
+echo "----------------------------------------------------"
+echo " MCMM - Modpack Manager has been removed."
+echo "----------------------------------------------------"
+echo ""
+]]>
+</INLINE>
+</FILE>
+
+</PLUGIN>
