@@ -1,0 +1,11 @@
+mcmm-plugin: MCMM - Modpack Manager
+mcmm-plugin:
+mcmm-plugin: MCMM is a foundational platform for managing Minecraft modpacks in
+mcmm-plugin: containerized or server-oriented environments. The project emphasizes
+mcmm-plugin: maintainability, modularity, and the enforcement of consistent coding
+mcmm-plugin: standards across all components.
+mcmm-plugin:
+mcmm-plugin: Minecraft server instances managed by MCMM are created and operated
+mcmm-plugin: using Docker images provided by itzg/docker-minecraft-server.
+mcmm-plugin:
+mcmm-plugin: Homepage: https://github.com/Zexylz/mcmm
