@@ -677,17 +677,6 @@ Styleguide 3.0.0
     }
 }
 
-/* Metrics: cleaner alignment + responsive */
-.mcmm-server-metrics {
-    display: flex;
-    flex: 1 1 auto;
-    gap: 1.4rem;
-    padding: 0 0.5rem;
-    min-width: 280px;
-
-    /* less aggressive than 0 2rem; keeps spacing consistent */
-}
-
 .mcmm-metric {
     display: flex;
     flex: 1;
@@ -809,6 +798,195 @@ Styleguide 3.0.0
     border-color: var(--success);
     box-shadow: 0 0 16px rgb(52 211 153 / 30%), 0 14px 28px rgb(0 0 0 / 18%);
     color: rgb(255 255 255 / 100%);
+}
+
+/* ===== SERVER TOOLBAR ===== */
+.mcmm-server-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.mcmm-server-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.mcmm-server-toolbar-title {
+    font-size: 1.25rem;
+    font-weight: 750;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.mcmm-server-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
+.mcmm-server-toolbar-stats {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/*
+Stat Pill
+Small count badge used in the server toolbar to show online/offline counts.
+
+Markup:
+<span class="mcmm-stat-pill online">3 online</span>
+<span class="mcmm-stat-pill offline">1 offline</span>
+
+Styleguide 3.1.0
+*/
+.mcmm-stat-pill {
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.65rem;
+    letter-spacing: 0.04em;
+}
+
+.mcmm-stat-pill.online {
+    background: rgb(52 211 153 / 12%);
+    border: 1px solid rgb(52 211 153 / 30%);
+    color: rgb(52 211 153 / 100%);
+}
+
+.mcmm-stat-pill.offline {
+    background: rgb(248 113 113 / 10%);
+    border: 1px solid rgb(248 113 113 / 25%);
+    color: rgb(248 113 113 / 90%);
+}
+
+/* Sort select */
+.mcmm-sort-select {
+    background: rgb(0 0 0 / 40%);
+    border: 1px solid rgb(157 78 221 / 30%);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 0.6rem 0.9rem;
+    transition: border-color 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.mcmm-sort-select:focus {
+    border-color: var(--primary);
+    outline: none;
+}
+
+/*
+Status Pill
+Colored pill badge showing server online/offline status.
+
+Markup:
+<span class="mcmm-status-pill pill-online">
+    <span class="mcmm-status-dot"></span>
+    <span class="mcmm-status-text">Online</span>
+</span>
+
+Modifiers:
+.pill-online  - Green tint for running servers
+.pill-offline - Red tint for stopped servers
+
+Styleguide 3.2.0
+*/
+.mcmm-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.65rem;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+
+.mcmm-status-pill.pill-online {
+    background: rgb(52 211 153 / 12%);
+    border: 1px solid rgb(52 211 153 / 35%);
+    color: rgb(52 211 153 / 100%);
+}
+
+.mcmm-status-pill.pill-offline {
+    background: rgb(248 113 113 / 10%);
+    border: 1px solid rgb(248 113 113 / 30%);
+    color: rgb(248 113 113 / 90%);
+}
+
+/* Server name */
+.mcmm-server-name {
+    font-size: 1.05rem;
+    font-weight: 750;
+    color: rgb(255 255 255 / 100%);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+/* Subtitle separator dot */
+.mcmm-sep {
+    color: var(--text-muted);
+    opacity: 0.5;
+    font-size: 0.8rem;
+}
+
+/* Backup timestamp */
+.mcmm-backup-ts {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    margin-top: 0.3rem;
+    opacity: 0.7;
+}
+
+/*
+Sparkline Canvas
+Small inline canvas showing RAM usage history for a server.
+
+Markup:
+<canvas class="mcmm-sparkline" id="sparkline-server-id" width="120" height="36"></canvas>
+
+Styleguide 3.3.0
+*/
+.mcmm-sparkline {
+    flex-shrink: 0;
+    border-radius: 6px;
+    opacity: 0.85;
+    align-self: center;
+}
+
+/* Metrics wrapper: bars on the left, sparkline on the right */
+.mcmm-server-metrics {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 0 0.5rem;
+    min-width: 280px;
+}
+
+.mcmm-metrics-bars {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 0.6rem;
+    min-width: 160px;
 }
 
 /* Extra-small screens: prevent tab overflow + improve stacking */
@@ -2009,7 +2187,8 @@ Styleguide 5.0.0
 .mcmm-settings-footer {
     display: flex;
     justify-content: flex-end;
-    padding-top: 1rem;
+    gap: 0.75rem;
+    padding-top: 1.5rem;
 }
 
 /* ===== MODAL ===== */
@@ -2054,17 +2233,34 @@ Styleguide 5.0.0
 }
 
 .mcmm-modal-close {
-    background: none;
-    border: none;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--text-muted);
     cursor: pointer;
-    font-size: 1.5rem;
-    padding: 0;
-    transition: color 0.2s;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    padding: 0 !important;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    margin-top: -2px;
+    /* Fine-tune vertical center with title */
+    box-sizing: border-box !important;
+}
+
+.mcmm-modal-close span {
+    font-size: 1.2rem;
+    line-height: 1;
 }
 
 .mcmm-modal-close:hover {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.4);
     color: var(--danger);
+    transform: none;
 }
 
 .mcmm-modal-body {
@@ -3082,4 +3278,262 @@ Styleguide 5.0.0
     opacity: 0.2;
     cursor: not-allowed;
     filter: grayscale(1);
+}
+
+/* ===== NOTIFICATION BANNER (FIXED) ===== */
+#mcmm-global-notification-area {
+    position: fixed;
+    bottom: 80px;
+    /* Moved up to avoid being cut off */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    pointer-events: none;
+    width: 90%;
+    max-width: 600px;
+    display: flex;
+    justify-content: center;
+}
+
+.mcmm-notification-bar {
+    pointer-events: auto;
+    background: rgba(22, 24, 35, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(157, 78, 221, 0.3);
+    padding: 16px 24px;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    color: var(--text-main);
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+}
+
+.mcmm-notification-bar.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.mcmm-notification-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+/* ===== NOTIFICATION BANNER (FIXED) ===== */
+#mcmm-global-notification-area {
+    position: fixed;
+    bottom: 80px;
+    /* Moved up to avoid being cut off */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    pointer-events: none;
+    width: 90%;
+    max-width: 600px;
+    display: flex;
+    justify-content: center;
+}
+
+.mcmm-notification-bar {
+    pointer-events: auto;
+    background: rgba(22, 24, 35, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(157, 78, 221, 0.3);
+    padding: 16px 24px;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    color: var(--text-main);
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+}
+
+.mcmm-notification-bar.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.mcmm-notification-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.mcmm-notification-content i {
+    color: var(--primary);
+    font-size: 1.4rem;
+}
+
+.mcmm-notification-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+/* Modal Fixes */
+#systemUpdateConfirmModal {
+    z-index: 11000;
+}
+
+/* ===== NOTIFICATION BUTTON OVERRIDES ===== */
+/* Force styles to override Unraid defaults with !important */
+
+.mcmm-notification-actions .mcmm-btn {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    box-shadow: none !important;
+    text-transform: none !important;
+    line-height: normal !important;
+    height: auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.mcmm-notification-actions .mcmm-btn:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    transform: translateY(-1px) !important;
+}
+
+.mcmm-notification-actions .mcmm-btn-primary {
+    background: linear-gradient(135deg, rgb(123 44 191 / 100%) 0%, rgb(157 78 221 / 100%) 100%) !important;
+    border: 1px solid transparent !important;
+    box-shadow: 0 4px 15px rgba(123, 44, 191, 0.4) !important;
+}
+
+.mcmm-notification-actions .mcmm-btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(123, 44, 191, 0.6) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Modal Button Overrides as well to be safe */
+#systemUpdateConfirmModal .mcmm-btn {
+    border-radius: 12px !important;
+    padding: 12px 24px !important;
+    font-weight: 700 !important;
+    text-transform: none !important;
+    height: 48px !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: var(--text-secondary) !important;
+    transition: all 0.2s ease !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+#systemUpdateConfirmModal .mcmm-btn:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    color: #fff !important;
+}
+
+#systemUpdateConfirmModal .mcmm-btn-primary {
+    background: linear-gradient(135deg, rgb(123 44 191 / 100%) 0%, rgb(157 78 221 / 100%) 100%) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 6px 20px rgba(123, 44, 191, 0.4) !important;
+}
+
+#systemUpdateConfirmModal .mcmm-btn-primary:hover {
+    box-shadow: 0 8px 30px rgba(123, 44, 191, 0.6) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ===== UPDATE PROGRESS BAR ===== */
+.mcmm-update-progress-container {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.mcmm-update-status {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.mcmm-update-status-text {
+    color: var(--text-main);
+}
+
+.mcmm-update-percentage {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.mcmm-progress-bar-bg {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.mcmm-progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary) 0%, #c77dff 100%);
+    width: 0%;
+    transition: width 0.4s ease;
+    border-radius: 4px;
+    box-shadow: 0 0 10px rgba(157, 78, 221, 0.5);
+}
+
+.mcmm-update-details {
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    opacity: 0.8;
+}
+
+/* Pulse animation for the progress bar fill when active */
+.mcmm-progress-bar-fill.active {
+    animation: progress-pulse 2s infinite linear;
+    background-size: 200% 100%;
+    background-image: linear-gradient(90deg,
+            var(--primary) 0%,
+            #c77dff 25%,
+            var(--primary) 50%,
+            #c77dff 75%,
+            var(--primary) 100%);
+}
+
+@keyframes progress-pulse {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: 0% 0;
+    }
 }

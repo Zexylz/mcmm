@@ -33,28 +33,26 @@ function getMinecraftServers()
     global $config;
 
     $servers = [];
-    $serversDir = '/boot/config/plugins/mcmm/servers';
+    $serversBase = defined('MCMM_SERVERS_DIR') ? MCMM_SERVERS_DIR : '/mnt/user/appdata/mcmm/servers';
 
     // Debug logging
     $debugLog = "=== getMinecraftServers Debug ===\n";
 
-    // Ensure servers directory exists
-    if (!is_dir($serversDir)) {
-        @mkdir($serversDir, 0755, true);
-    }
-
-    // First, read all server configs from disk
+    // First, read all server configs from disk to have them ready for matching
     $serverConfigs = [];
-    if (is_dir($serversDir)) {
-        $dirs = @glob($serversDir . '/*', GLOB_ONLYDIR);
+    if (is_dir($serversBase)) {
+        $dirs = @glob($serversBase . '/*', GLOB_ONLYDIR);
         if ($dirs) {
             foreach ($dirs as $dir) {
-                $configFile = $dir . '/config.json';
-                if (file_exists($configFile)) {
-                    $cfg = @json_decode(file_get_contents($configFile), true);
-                    if ($cfg && isset($cfg['containerName'])) {
-                        $serverConfigs[$cfg['containerName']] = $cfg;
-                        $debugLog .= "Loaded config for: {$cfg['containerName']}, icon: " . ($cfg['logo'] ?? 'none') . "\n";
+                // IMPORTANT: The directory name itself is NOT always the container name anymore.
+                // We must rely ongetServerMetadataDir or scan the directories carefully.
+                $metaFile = $dir . '/metadata.json';
+                if (file_exists($metaFile)) {
+                    $meta = @json_decode(file_get_contents($metaFile), true);
+                    if ($meta && (isset($meta['containerName']) || isset($meta['serverName']))) {
+                        $cName = $meta['containerName'] ?? $meta['serverName'];
+                        $serverConfigs[$cName] = $meta;
+                        $debugLog .= "Loaded meta for: $cName, icon: " . ($meta['logo'] ?? $meta['icon'] ?? 'none') . "\n";
                     }
                 }
             }
@@ -126,7 +124,7 @@ function getMinecraftServers()
 
                         // If still no icon, try to backfill from Docker environment variables
                         if (empty($icon)) {
-                            $icon = backfillServerIconPage($containerId, $containerName, $serversDir, $config);
+                            $icon = backfillServerIcon($containerId, $containerName, $config);
                             $debugLog .= "Icon from backfill: " . ($icon ?: 'none') . "\n";
                         }
                     }
@@ -137,12 +135,8 @@ function getMinecraftServers()
                     $mcVer = 'Latest';
                     $loaderVer = 'Vanilla';
 
-                    $dataDir = "/mnt/user/appdata/mcmm/servers/$containerName";
-                    if (!is_dir($dataDir)) {
-                        $dataDir = "/mnt/user/appdata/binaries/$containerName";
-                    }
-
-                    $metricsFile = $dataDir . '/mcmm_metrics.json';
+                    $metaDir = getServerMetadataDir($containerId);
+                    $metricsFile = $metaDir . '/mcmm_metrics.json';
                     if (file_exists($metricsFile)) {
                         $metrics = json_decode(file_get_contents($metricsFile), true);
                         if ($metrics) {
@@ -152,14 +146,14 @@ function getMinecraftServers()
                     }
 
                     // Metadata cache
-                    $metaFile = "/boot/config/plugins/mcmm/servers/" . md5($containerName) . "/metadata_v11.json";
+                    $metaFile = "$metaDir/metadata.json";
                     $modpackVer = '';
                     if (file_exists($metaFile)) {
                         $meta = json_decode(file_get_contents($metaFile), true);
                         if ($meta) {
-                            $mcVer = $meta['mcVersion'] ?? 'Latest';
+                            $mcVer = $meta['mc_version'] ?? $meta['mcVersion'] ?? 'Latest';
                             $loaderVer = $meta['loader'] ?? 'Vanilla';
-                            $modpackVer = $meta['modpackVersion'] ?? '';
+                            $modpackVer = $meta['modpack_version'] ?? $meta['modpackVersion'] ?? '';
                         }
                     }
 
@@ -187,72 +181,7 @@ function getMinecraftServers()
     }
 
     $debugLog .= "Total servers found: " . count($servers) . "\n";
-    @file_put_contents('/tmp/mcmm_debug_page.log', $debugLog);
+    @mcmm_file_put_contents('/tmp/mcmm_debug_page.log', $debugLog);
 
     return $servers;
-}
-
-/**
- * Attempt to backfill server icon from Docker environment variables.
- *
- * Simplified version for page load to avoid timeouts.
- *
- * @param string $containerId   Docker container ID.
- * @param string $containerName Target container name.
- * @param string $serversDir    Base directory for server configs.
- * @param array  $config        Global plugin configuration.
- * @return string The resolved icon URL or empty string if not found.
- */
-function backfillServerIconPage($containerId, $containerName, $serversDir, $config)
-{
-    try {
-        // Inspect container to get environment variables
-        $inspectCmd = '/usr/bin/docker inspect ' . escapeshellarg($containerId) . ' 2>/dev/null';
-        $inspectOutput = @shell_exec($inspectCmd);
-        if (!$inspectOutput) {
-            return '';
-        }
-
-        $inspectData = @json_decode($inspectOutput, true);
-        if (!$inspectData || !isset($inspectData[0])) {
-            return '';
-        }
-
-        $containerInfo = $inspectData[0];
-        $env = $containerInfo['Config']['Env'] ?? [];
-
-        // Extract ICON environment variable directly (fastest method)
-        foreach ($env as $envVar) {
-            if (strpos($envVar, 'ICON=') === 0) {
-                $iconEnv = substr($envVar, 5);
-                if (!empty($iconEnv)) {
-                    // Save to config for future use
-                    $serverId = md5($containerName);
-                    $serverDir = $serversDir . '/' . $serverId;
-
-                    if (!is_dir($serverDir)) {
-                        @mkdir($serverDir, 0755, true);
-                    }
-
-                    $serverConfig = [
-                        'id' => $serverId,
-                        'name' => $containerName,
-                        'logo' => $iconEnv,
-                        'containerName' => $containerName,
-                        'backfilled' => true
-                    ];
-
-                    @file_put_contents($serverDir . '/config.json', json_encode($serverConfig, JSON_PRETTY_PRINT));
-                    return $iconEnv;
-                }
-            }
-        }
-
-        // If no ICON env var, don't do slow API lookups on page load
-        // These will be handled by the API endpoint instead
-        return '';
-    } catch (Exception $e) {
-        // Silently fail to avoid breaking page load
-        return '';
-    }
 }

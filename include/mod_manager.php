@@ -1,5 +1,23 @@
 <?php
 
+use Aternos\CurseForgeApi\Client\CurseForgeAPIClient;
+
+require_once __DIR__ . '/../vendor/autoload.php';
+use Aternos\CurseForgeApi\Client\CursedFingerprintHelper;
+use Aternos\ModrinthApi\Client\ModrinthAPIClient;
+
+// Ensure dbg function exists if not included from api.php
+if (!function_exists('dbg')) {
+    function dbg($msg)
+    {
+        $logDir = defined('MCMM_LOG_DIR') ? MCMM_LOG_DIR : '/tmp';
+        mcmm_mkdir($logDir, 0777, true);
+        $logFile = $logDir . '/mcmm_debug.log';
+        $entry = date('H:i:s') . " [MOD_MGR] " . print_r($msg, true) . "\n";
+        @mcmm_file_put_contents($logFile, $entry, FILE_APPEND);
+    }
+}
+
 /**
  * Scan a directory for Minecraft mod files (.jar) and extract metadata.
  *
@@ -17,9 +35,7 @@ function scanServerMods(string $dataDir): array
     $cmd = 'find -L ' . escapeshellarg($modsDir) . ' -type f -name "*.jar"';
     exec($cmd, $files);
 
-    // Debug logging setup at global level (tmp only)
-    $logFile = '/tmp/mcmm_debug.log';
-    file_put_contents($logFile, date('H:i:s') . " [SCANNER] Found " . count($files) . " files in $modsDir\n", FILE_APPEND);
+    dbg("[SCANNER] Found " . count($files) . " files in $modsDir");
 
     foreach ($files as $jarPath) {
         if (substr($jarPath, -4) !== '.jar') {
@@ -40,7 +56,7 @@ function scanServerMods(string $dataDir): array
             'relativePath' => str_replace($modsDir . '/', '', $jarPath), // Keep track of subfolders
             'fileSize' => $fileSize,
             'modId' => $modInfo['modId'] ?? '',
-            'name' => $modInfo['name'] ?? $fileName,
+            'name' => !empty($modInfo['name']) ? $modInfo['name'] : $fileName, // Robust fallback
             'version' => $modInfo['version'] ?? 'Unknown',
             'authors' => $modInfo['authors'] ?? [],
             'description' => $modInfo['description'] ?? '',
@@ -67,7 +83,7 @@ function extractModInfo(string $jarPath): array
 {
     $info = [
         'modId' => '',
-        'name' => '',
+        'name' => null, // Initialize to null to allow fallback to filename
         'version' => '',
         'authors' => [],
         'description' => '',
@@ -94,7 +110,7 @@ function extractModInfo(string $jarPath): array
     }
 
     // Debug logging setup
-    $logFile = '/tmp/mcmm_debug.log'; // Use /tmp to ensure writability on Unraid
+    $logFile = (defined('MCMM_LOG_DIR') ? MCMM_LOG_DIR : '/tmp') . '/mcmm_debug.log';
     $localLogFile = dirname(dirname(__FILE__)) . '/scan_debug.log';
 
     $log = function ($msg) use ($logFile, $localLogFile, $jarPath) {
@@ -102,8 +118,9 @@ function extractModInfo(string $jarPath): array
         $entry = date('H:i:s') . " [" . basename($jarPath) . "] " . $msg;
         $MCMM_DEBUG_LOG[] = $entry;
 
-        file_put_contents($logFile, $entry . "\n", FILE_APPEND);
-        @file_put_contents($localLogFile, $entry . "\n", FILE_APPEND);
+        mcmm_mkdir(dirname($logFile), 0777, true);
+        mcmm_file_put_contents($logFile, $entry . "\n", FILE_APPEND);
+        @mcmm_file_put_contents($localLogFile, $entry . "\n", FILE_APPEND);
     };
 
     $log("Cache Miss - Scanning real file...");
@@ -187,7 +204,7 @@ function extractModInfo(string $jarPath): array
             $log("Zip opened but NO valid metadata file found (checked mods.toml, mcmod.info, fabric.mod.json, quilt.mod.json).");
         }
     } else {
-         $log("Zip Open Failed. Error Code: $res");
+        $log("Zip Open Failed. Error Code: $res");
     }
 
     // Calculate hash AFTER closing zip to avoid file locking conflicts
@@ -199,7 +216,7 @@ function extractModInfo(string $jarPath): array
 
     // Verify name
     if (empty($info['name'])) {
-         $log("Final status: Unknown Name. Mod ID: " . ($info['modId'] ?? 'None'));
+        $log("Final status: Unknown Name. Mod ID: " . ($info['modId'] ?? 'None'));
     }
 
     // Cache the result (long TTL as filemtime is part of key)
@@ -385,38 +402,162 @@ function extractVersionFromFilename(string $filename): string
 }
 /**
  * Check for updates for a list of mods via CurseForge.
- *
- * @param array  $mods      List of mod data with hashes.
- * @param string $apiKey    CurseForge API Key.
- * @param string $mcVersion Minecraft version for filtering.
- * @return array Updated mod list with update status.
  */
-function checkModUpdates(array $mods, string $apiKey, string $mcVersion = ''): array
+function checkModUpdates(array $mods, string $apiKey, string $mcVersion = '', string $loader = 'forge'): array
 {
-    if (!$apiKey) {
+    if (!$apiKey || empty($mods)) {
         return $mods;
     }
 
-    $hashes = array_filter(array_column($mods, 'hash'));
+    try {
+        $cfClient = new CurseForgeAPIClient($apiKey);
+        $fingerprints = [];
+        $modsByHash = []; // Map hash to mod array index
 
-    if (empty($hashes)) {
-        return $mods;
-    }
-
-    $fingerprintData = queryCurseForgeFingerprintAPI($hashes, $apiKey);
-
-    foreach ($mods as &$mod) {
-        if (!$mod['hash']) {
-            continue;
+        // 1. Prepare Fingerprints
+        foreach ($mods as $index => $m) {
+            if (!empty($m['hash'])) {
+                $fingerprints[] = (int) $m['hash'];
+                $modsByHash[(int) $m['hash']] = $index;
+            }
         }
 
-        if (isset($fingerprintData[$mod['hash']])) {
-            $cfData = $fingerprintData[$mod['hash']];
-            $mod['curseforgeId'] = $cfData['id'];
-            $mod['updateAvailable'] = $cfData['hasUpdate'] ?? false;
-            $mod['latestVersion'] = $cfData['latestVersion'] ?? null;
-            $mod['latestFileId'] = $cfData['latestFileId'] ?? null;
+        $projectIds = [];
+        $installedFileIds = []; // Map curseforgeId -> installed file ID
+
+        // 2. Identify Mods via Fingerprints
+        if (!empty($fingerprints)) {
+            $matchesResult = $cfClient->getFilesByFingerPrintMatches($fingerprints);
+            foreach ($matchesResult->getExactMatches() as $match) {
+                $file = $match->getFile();
+                $hash = $file->getFileFingerprint();
+                $idx = $modsByHash[$hash] ?? null;
+
+                if ($idx !== null) {
+                    $modId = $match->getId();
+                    $fileId = $file->getId();
+
+                    $mods[$idx]['curseforgeId'] = $modId;
+                    $mods[$idx]['identified'] = true;
+                    // Store installed file ID for comparison
+                    $mods[$idx]['installedFileId'] = $fileId;
+
+                    // Deduplicate project IDs for batch fetch
+                    $projectIds[$modId] = $modId;
+                    $installedFileIds[$modId] = $fileId;
+                }
+            }
         }
+
+        // Add IDs from mods that were already identified (e.g. from installed_mods.json)
+        foreach ($mods as $index => $m) {
+            if (!empty($m['curseforgeId'])) {
+                $pid = $m['curseforgeId'];
+                $projectIds[$pid] = $pid;
+                // If we don't have installedFileId from fingerprint, we can't reliably check updates by ID,
+                // but we will try if we can match the version string later (omitted for reliability).
+            }
+        }
+
+        if (empty($projectIds)) {
+            return $mods;
+        }
+
+        // 3. Batch Fetch Project Details to get Latest Files
+        $projects = $cfClient->getMods(array_values($projectIds));
+
+        // 4. Compare Versions
+        foreach ($projects as $project) {
+            $pId = $project->getData()->getId();
+
+            // Filter compatible files
+            $candidateFile = null;
+
+            // getLatestFiles() returns plain array or objects depending on SDK version.
+            // Assuming generic object access or array. The Lint feedback suggests SDK is typed.
+            // Using standard getters based on usage elsewhere in API.
+
+            foreach ($project->getData()->getLatestFiles() as $file) {
+                // Check MC Version compatibility
+                $versions = $file->getGameVersions(); // returns array of strings
+                if (!in_array($mcVersion, $versions)) {
+                    continue;
+                }
+
+                // Check Loader compatibility (case-insensitive)
+                $loaderMatch = false;
+                foreach ($versions as $v) {
+                    if (strcasecmp($v, $loader) === 0) {
+                        $loaderMatch = true;
+                        break;
+                    }
+                    if ($loader === 'quilt' && strcasecmp($v, 'fabric') === 0) {
+                        // Quilt can often run Fabric mods
+                        $loaderMatch = true;
+                        break;
+                    }
+                }
+                if (!$loaderMatch) {
+                    continue;
+                }
+
+                // Found a compatible file. Logic: File with largest ID is newest.
+                if (!$candidateFile || $file->getId() > $candidateFile->getId()) {
+                    $candidateFile = $file;
+                }
+            }
+
+            if ($candidateFile) {
+                // Check against installed mods
+                foreach ($mods as &$mod) {
+                    if (($mod['curseforgeId'] ?? 0) == $pId) {
+                        $mod['latestFileId'] = $candidateFile->getId();
+                        $mod['latestFileName'] = $candidateFile->getDisplayName();
+
+                        $installedId = $mod['installedFileId'] ?? 0;
+                        if ($installedId > 0 && $candidateFile->getId() > $installedId) {
+                            $mod['updateAvailable'] = true;
+                        } else {
+                            $mod['updateAvailable'] = false;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. Modrinth Update Check
+        $mrMods = array_filter($mods, fn($m) => ($m['platform'] ?? '') === 'modrinth' && !empty($m['modId']));
+        if (!empty($mrMods)) {
+            $mrClient = new ModrinthAPIClient();
+            foreach ($mrMods as $idx => $m) {
+                try {
+                    $pid = $m['modId'];
+                    $loaders = $loader ? [strtolower($loader)] : null;
+                    if ($loaders && $loaders[0] === 'quilt') {
+                        $loaders[] = 'fabric';
+                    }
+                    $versions = $mrClient->getProjectVersions($pid, $loaders, $mcVersion ? [$mcVersion] : null);
+                    if (!empty($versions)) {
+                        $latest = $versions[0];
+                        $latestId = $latest->getData()->getId();
+                        $installedId = $m['installedFileId'] ?? $m['fileId'] ?? '';
+
+                        $mods[$idx]['latestFileId'] = $latestId;
+                        $mods[$idx]['latestFileName'] = $latest->getData()->getName() ?? $latest->getData()->getVersionNumber();
+
+                        if ($installedId && $latestId !== $installedId) {
+                            $mods[$idx]['updateAvailable'] = true;
+                        } else {
+                            $mods[$idx]['updateAvailable'] = false;
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    dbg("Modrinth Update Error ($pid): " . $e->getMessage());
+                }
+            }
+        }
+    } catch (\Throwable $e) {
+        dbg("Update Check Error: " . $e->getMessage());
     }
 
     return $mods;
@@ -521,80 +662,5 @@ function downloadMod(string $downloadUrl, string $targetPath, string $expectedHa
  */
 function computeMurmur2Hash(string $filePath): int
 {
-    $seed = 1;
-    $m = 0x5bd1e995;
-    $r = 24;
-
-    $fp = fopen($filePath, 'rb');
-    if (!$fp) {
-        return 0;
-    }
-
-    $len = filesize($filePath);
-    $h = $seed ^ $len;
-
-    // Process in chunks to save memory
-    $bufferSize = 1024 * 64; // 64KB
-    $remainder = '';
-
-    while (!feof($fp)) {
-        $chunk = fread($fp, $bufferSize);
-        if ($chunk === false) {
-            break;
-        }
-
-        // Prepend remainder from previous chunk
-        if ($remainder !== '') {
-            $chunk = $remainder . $chunk;
-            $remainder = '';
-        }
-
-        $chunkLen = strlen($chunk);
-
-        // If we have less than 4 bytes and end of file, this is the final tail
-        if ($chunkLen < 4) {
-            $remainder = $chunk;
-            break;
-        }
-
-        // Process 4-byte blocks
-        $processLen = $chunkLen - ($chunkLen % 4);
-        $remainder = substr($chunk, $processLen);
-        $toProcess = substr($chunk, 0, $processLen);
-
-        $words = array_values(unpack('V*', $toProcess));
-        foreach ($words as $k) {
-            $k = ($k * $m) & 0xFFFFFFFF;
-            $k ^= ($k >> $r);
-            $k = ($k * $m) & 0xFFFFFFFF;
-
-            $h = ($h * $m) & 0xFFFFFFFF;
-            $h ^= $k;
-        }
-    }
-
-    // Handle tail (0-3 bytes)
-    if ($remainder !== '') {
-        $tail = $remainder;
-        $tailLen = strlen($tail);
-        switch ($tailLen) {
-            case 3:
-                $h ^= (ord($tail[2]) << 16);
-                // fallthrough
-            case 2:
-                $h ^= (ord($tail[1]) << 8);
-                // fallthrough
-            case 1:
-                $h ^= ord($tail[0]);
-                $h = ($h * $m) & 0xFFFFFFFF;
-        }
-    }
-
-    fclose($fp);
-
-    $h ^= ($h >> 13);
-    $h = ($h * $m) & 0xFFFFFFFF;
-    $h ^= ($h >> 15);
-
-    return $h;
+    return (int) CursedFingerprintHelper::getFingerprintFromFile($filePath);
 }

@@ -1,0 +1,68 @@
+<?xml version='1.0' standalone='yes'?>
+<!DOCTYPE PLUGIN [
+<!ENTITY name      "mcmm">
+<!ENTITY author    "Semmy">
+<!ENTITY version   "2023.12.08">
+<!ENTITY launch    "Settings/mcmm">
+<!ENTITY gitURL    "https://github.com/semmy/unraid-mcmm">
+<!ENTITY pluginURL "https://raw.githubusercontent.com/semmy/unraid-mcmm/master/plugins/mcmm.plg">
+]>
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0" support="https://forums.unraid.net/topic/placeholder">
+<CHANGES>
+###2023.12.08
+- Initial Release: Integrated Minecraft Modpack Manager for Unraid.
+- Features: Server deployment, CurseForge modpack browsing, Docker integration.
+</CHANGES>
+
+<!-- Pre-install script -->
+<FILE Run="/bin/bash">
+<INLINE>
+# Remove old installation
+rm -rf /usr/local/emhttp/plugins/&name;
+rm -f /boot/config/plugins/&name;/default.cfg
+
+# Create config dir
+mkdir -p /boot/config/plugins/&name;
+
+echo "Installing &name;..."
+</INLINE>
+</FILE>
+
+<!--
+    In a real release, the TXZ would be downloaded here.
+    For this dev environment, we assume files are present or would be packaged.
+    <FILE Name="/boot/config/plugins/&name;/&name;-&version;.txz" Run="upgradepkg --install-new">
+    <URL>https://github.com/semmy/unraid-mcmm/releases/download/&version;/&name;-&version;.txz</URL>
+    </FILE>
+-->
+
+<!-- Post-install script -->
+<FILE Run="/bin/bash">
+<INLINE>
+# Fix permissions
+chown -R root:root /usr/local/emhttp/plugins/&name;
+chmod -R 755 /usr/local/emhttp/plugins/&name;
+
+echo ""
+echo "----------------------------------------------------"
+echo " &name; has been installed."
+echo " Version: &version;"
+echo "----------------------------------------------------"
+echo ""
+</INLINE>
+</FILE>
+
+<!-- Removal script -->
+<FILE Run="/bin/bash" Method="remove">
+<INLINE>
+removepkg &name;-&version;
+rm -rf /usr/local/emhttp/plugins/&name;
+rm -rf /boot/config/plugins/&name;
+echo "&name; has been removed."
+</INLINE>
+</FILE>
+</PLUGIN>
+
+
+
+

@@ -1,4 +1,6 @@
 <?php
+use Aternos\CurseForgeApi\Client\CursedFingerprintHelper;
+require_once __DIR__ . '/../vendor/autoload.php';
 
 /**
  * MCMM API Library
@@ -9,7 +11,6 @@
 
 require_once __DIR__ . '/docker_hub.php';
 
-/**
 /**
  * Get the total number of logical CPU cores on the system.
  *
@@ -45,14 +46,12 @@ function getSystemCpuCount(): int
  */
 function getContainerDataDir(string $containerName, string $containerId = '')
 {
-    $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
     if ($containerId) {
-        $cmd = "$dockerBin inspect -f '{{range .Mounts}}{{if eq .Destination \"/data\"}}{{.Source}}{{end}}{{end}}' " . escapeshellarg($containerId);
-        $path = trim((string) shell_exec($cmd));
-        if ($path && is_dir($path)) {
+        $path = getContainerDataDirById($containerId);
+        if ($path)
             return $path;
-        }
     }
+
     $path = "/mnt/user/appdata/" . $containerName;
     if (is_dir($path)) {
         return $path;
@@ -68,26 +67,215 @@ function getContainerDataDir(string $containerName, string $containerId = '')
  */
 function getContainerDataDirById(string $id): ?string
 {
-    // First try standard inspection for /data mount
     $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
-    $cmd = "$dockerBin inspect -f '{{range .Mounts}}{{if eq .Destination \"/data\"}}{{.Source}}{{end}}{{end}}' " . escapeshellarg($id);
-    $path = trim((string) shell_exec($cmd));
-    if ($path && is_dir($path)) {
-        return $path;
+
+    // Get full inspection JSON to be safe and avoid complex format strings that might fail for stopped containers
+    $json = shell_exec("$dockerBin inspect " . escapeshellarg($id) . " 2>/dev/null");
+    $data = json_decode($json, true);
+
+    if ($data && isset($data[0])) {
+        $c = $data[0];
+
+        // 1. Try Mounts (Authoritative)
+        if (!empty($c['Mounts'])) {
+            foreach ($c['Mounts'] as $mount) {
+                if ($mount['Destination'] === '/data') {
+                    $path = $mount['Source'];
+                    if ($path && is_dir($path)) {
+                        return $path;
+                    }
+                }
+            }
+        }
+
+        // 2. Fallback to Appdata Name inference from Inspect
+        $name = ltrim($c['Name'], '/');
+        if ($name) {
+            $path = "/mnt/user/appdata/" . $name;
+            if (is_dir($path)) {
+                return $path;
+            }
+        }
     }
 
-    // If not found, try to get name and infer path
-    $nameCmd = "$dockerBin inspect -f '{{.Name}}' " . escapeshellarg($id);
-    $name = trim((string) shell_exec($nameCmd), '/');
-    if ($name) {
-        $path = "/mnt/user/appdata/" . $name;
-        if (is_dir($path)) {
-            return $path;
-        }
+    // 3. Absolute last ditch: If ID was actually a name (sometimes happens in legacy calls)
+    $path = "/mnt/user/appdata/" . $id;
+    if (is_dir($path)) {
+        return $path;
     }
 
     return null;
 }
+
+
+/**
+ * Fix permissions for a file or directory to nobody:users and 0777.
+ *
+ * @param string $path The path to fix permissions for.
+ * @return bool True on success, false on failure.
+ */
+function mcmm_fix_permissions(string $path): bool
+{
+    if (!file_exists($path)) {
+        return false;
+    }
+
+    // Try to set group first (users)
+    @chgrp($path, 'users');
+    // Try to set owner (nobody)
+    @chown($path, 'nobody');
+    // Set permissions (777)
+    return @chmod($path, 0777);
+}
+
+/**
+ * Wrapper for mkdir that enforces permissions and ownership.
+ *
+ * @param string $path       The directory to create.
+ * @param int    $mode       Ignored, always uses 0777.
+ * @param bool   $recursive  Whether to create parent directories.
+ * @return bool True on success, false on failure.
+ */
+function mcmm_mkdir(string $path, int $mode = 0777, bool $recursive = true): bool
+{
+    if (is_dir($path)) {
+        return true;
+    }
+
+    if ($recursive) {
+        $parent = dirname($path);
+        if ($parent !== $path && !is_dir($parent)) {
+            mcmm_mkdir($parent, $mode, true);
+        }
+    }
+
+    $res = @mkdir($path, 0777);
+    if ($res) {
+        mcmm_fix_permissions($path);
+    }
+    return $res;
+}
+
+/**
+ * Wrapper for file_put_contents that enforces permissions and ownership.
+ *
+ * @param string $path     The file path.
+ * @param mixed  $data     The data to write.
+ * @param int    $flags    See file_put_contents documentation.
+ * @param mixed  $context  Optional context.
+ * @return int|bool Number of bytes written or false on failure.
+ */
+function mcmm_file_put_contents(string $path, $data, int $flags = 0, $context = null)
+{
+    $res = @file_put_contents($path, $data, $flags, $context);
+    if ($res !== false) {
+        mcmm_fix_permissions($path);
+    }
+    return $res;
+}
+
+/**
+ * Wrapper for rename that enforces permissions and ownership on the target.
+ *
+ * @param string $oldname The old path.
+ * @param string $newname The new path.
+ * @return bool True on success.
+ */
+function mcmm_rename(string $oldname, string $newname): bool
+{
+    $res = @rename($oldname, $newname);
+    if ($res) {
+        mcmm_fix_permissions($newname);
+    }
+    return $res;
+}
+
+/**
+ * Get the standardized metadata directory path for a server.
+ * Handles migration from older naming formats (ID-only or Name-only).
+ *
+ * @param string $id Container ID or name.
+ * @return string The resolved metadata directory path.
+ */
+function getServerMetadataDir(string $id): string
+{
+    $serversBase = defined('MCMM_SERVERS_DIR') ? MCMM_SERVERS_DIR : '/mnt/user/appdata/mcmm/servers';
+
+    // 1. Resolve Name and Short ID
+    $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
+    $inspect = shell_exec("$dockerBin inspect -f '{{.Name}}|{{.Id}}' " . escapeshellarg($id) . " 2>/dev/null");
+
+    $targetFolder = $id; // Fallback
+    $shortId = '';
+    $name = '';
+
+    if ($inspect && strpos($inspect, '|') !== false) {
+        $parts = explode('|', trim($inspect));
+        $name = ltrim($parts[0], '/');
+        $shortId = substr($parts[1], 0, 12);
+        $targetFolder = "$name - $shortId";
+    }
+
+    $targetPath = "$serversBase/$targetFolder";
+
+    // 2. Migration Logic
+    if (!is_dir($targetPath)) {
+        // Candidates for migration: Raw ID, Name, ShortID, and MD5 hashes of each
+        $candidates = [$id, $name, $shortId, md5($id), md5($name), md5($shortId)];
+        foreach ($candidates as $c) {
+            if (!$c)
+                continue;
+            $oldPath = "$serversBase/$c";
+            if (is_dir($oldPath) && $oldPath !== $targetPath) {
+                // Found an old directory, migrate it
+                @rename($oldPath, $targetPath);
+                break;
+            }
+        }
+    }
+
+    // 3. Metadata Unification (Merge config.json and metadata_v11.json into metadata.json)
+    $legacyFiles = [
+        'config' => "$targetPath/config.json",
+        'meta' => "$targetPath/metadata_v11.json"
+    ];
+    $unifiedFile = "$targetPath/metadata.json";
+
+    if (!file_exists($unifiedFile) && (file_exists($legacyFiles['config']) || file_exists($legacyFiles['meta']))) {
+        $unifiedData = [];
+
+        // Load legacy config
+        if (file_exists($legacyFiles['config'])) {
+            $cfg = json_decode(file_get_contents($legacyFiles['config']), true) ?: [];
+            $unifiedData = array_merge($unifiedData, $cfg);
+        }
+
+        // Load legacy meta (and standardize keys)
+        if (file_exists($legacyFiles['meta'])) {
+            $meta = json_decode(file_get_contents($legacyFiles['meta']), true) ?: [];
+            if (isset($meta['mcVersion']))
+                $unifiedData['mc_version'] = $meta['mcVersion'];
+            if (isset($meta['loader']))
+                $unifiedData['loader'] = $meta['loader'];
+            if (isset($meta['modpackVersion']))
+                $unifiedData['modpack_version'] = $meta['modpackVersion'];
+            if (isset($meta['lastUpdated']))
+                $unifiedData['last_updated'] = $meta['lastUpdated'];
+        }
+
+        if (!empty($unifiedData)) {
+            @file_put_contents($unifiedFile, json_encode($unifiedData, JSON_PRETTY_PRINT));
+            // Cleanup legacy files
+            foreach ($legacyFiles as $f) {
+                if (file_exists($f))
+                    @unlink($f);
+            }
+        }
+    }
+
+    return $targetPath;
+}
+
 
 /**
  * Load mod metadata from modpack manifest files.
@@ -408,12 +596,12 @@ BASH;
     $startOut = shell_exec($startCmd . " 2>&1");
 
     // Diagnostic log
-    @mkdir('/tmp/mcmm', 0777, true);
+    mcmm_mkdir(MCMM_LOG_DIR, 0777, true);
     $logMsg = date('[Y-m-d H:i:s]') . " Telemetry Bridge Push: $containerName ($containerId)\n";
     if ($startOut) {
         $logMsg .= "Start Result: $startOut\n";
     }
-    @file_put_contents('/tmp/mcmm/agent.log', $logMsg, FILE_APPEND);
+    @mcmm_file_put_contents(MCMM_LOG_DIR . '/agent.log', $logMsg, FILE_APPEND);
 }
 
 // Helper to write INI file
@@ -429,6 +617,7 @@ if (!function_exists('write_ini_file')) {
     function write_ini_file($assoc_arr, $path, $has_sections = false)
     {
         $content = "";
+        mcmm_mkdir(dirname($path), 0777, true);
 
         $formatValue = function ($val) {
             if (is_bool($val)) {
@@ -504,7 +693,7 @@ function dbg($msg)
  */
 function mcmm_cache_set($key, $data, $ttl = 3600)
 {
-    $cacheDir = '/tmp/mcmm_cache';
+    $cacheDir = defined('MCMM_TMP_DIR') ? MCMM_TMP_DIR : '/tmp/mcmm_cache';
     if (!is_dir($cacheDir)) {
         @mkdir($cacheDir, 0777, true);
     }
@@ -522,9 +711,23 @@ function mcmm_cache_set($key, $data, $ttl = 3600)
  * @param string $key Cache key.
  * @return mixed|null Cached data or null if not found or expired.
  */
+// Fallback if constants not defined (e.g. from mcmm.page)
+if (!defined('MCMM_BASE_DIR')) {
+    define('MCMM_BASE_DIR', '/mnt/user/appdata/mcmm');
+    define('MCMM_TMP_DIR', MCMM_BASE_DIR . '/tmp');
+    define('MCMM_LOG_DIR', MCMM_BASE_DIR . '/logs');
+    define('MCMM_SERVERS_DIR', MCMM_BASE_DIR . '/servers');
+    if (!is_dir(MCMM_TMP_DIR))
+        @mkdir(MCMM_TMP_DIR, 0777, true);
+    if (!is_dir(MCMM_LOG_DIR))
+        @mkdir(MCMM_LOG_DIR, 0777, true);
+    if (!is_dir(MCMM_SERVERS_DIR))
+        @mkdir(MCMM_SERVERS_DIR, 0777, true);
+}
+
 function mcmm_cache_get($key)
 {
-    $cacheDir = '/tmp/mcmm_cache';
+    $cacheDir = defined('MCMM_TMP_DIR') ? MCMM_TMP_DIR : '/tmp/mcmm_cache';
     $file = $cacheDir . '/' . md5($key) . '.json';
     if (file_exists($file)) {
         $content = @file_get_contents($file);
@@ -663,8 +866,8 @@ function getContainerModsDir(string $containerId): ?string
  */
 function saveModMetadata($serverId, $modId, $platform, $modName, $fileName, $fileId = null, $logo = null, $extraData = [])
 {
-    $serversDir = '/boot/config/plugins/mcmm/servers';
-    $metaFile = "$serversDir/$serverId/installed_mods.json";
+    $metaDir = getServerMetadataDir($serverId);
+    $metaFile = "$metaDir/installed_mods.json";
 
     dbg("Saving metadata for mod $modId ($modName) to $metaFile");
 
@@ -691,15 +894,9 @@ function saveModMetadata($serverId, $modId, $platform, $modName, $fileName, $fil
         $modInfo = array_merge($modInfo, $extraData);
     }
 
-    $modsData[$modId] = $modInfo;
+    $modsData[$fileName] = $modInfo;
 
-    $dir = dirname($metaFile);
-    if (!is_dir($dir)) {
-        dbg("Creating metadata directory: $dir");
-        if (!@mkdir($dir, 0755, true)) {
-            dbg("ERROR: Failed to create directory $dir");
-        }
-    }
+    mcmm_mkdir(dirname($metaFile), 0755, true);
 
     $json = json_encode($modsData, JSON_PRETTY_PRINT);
     if (file_put_contents($metaFile, $json) === false) {
@@ -718,8 +915,13 @@ function saveModMetadata($serverId, $modId, $platform, $modName, $fileName, $fil
         $globalData = json_decode(file_get_contents($globalFile), true) ?: [];
     }
 
-    // Only update if missing or newer info
-    if (!isset($globalData[$modId])) {
+    // Only update if missing OR if current name is empty and new name is not
+    $shouldUpdate = !isset($globalData[$modId]);
+    if (isset($globalData[$modId]) && empty($globalData[$modId]['name']) && !empty($modName)) {
+        $shouldUpdate = true;
+    }
+
+    if ($shouldUpdate) {
         $globalData[$modId] = [
             'name' => $modName,
             'source' => $platform,
@@ -748,6 +950,100 @@ function buildEnvArgs(array $env): string
         $parts[] = '-e ' . escapeshellarg($key . '=' . $value);
     }
     return implode(' ', $parts);
+}
+
+/**
+ * Builds Docker port arguments for the 'docker create' command.
+ *
+ * @param array $portBindings The HostConfig.PortBindings from docker inspect.
+ * @return string The formatted port arguments (e.g., "-p 25565:25565").
+ */
+function buildPortArgs(array $portBindings): string
+{
+    $parts = [];
+    foreach ($portBindings as $containerPort => $bindings) {
+        if (empty($bindings)) continue;
+        foreach ($bindings as $binding) {
+            $hostPort = $binding['HostPort'] ?? '';
+            $hostIp = $binding['HostIp'] ?? '';
+            if ($hostPort) {
+                $portStr = ($hostIp ? "$hostIp:" : "") . $hostPort . ":" . explode('/', $containerPort)[0];
+                $parts[] = '-p ' . escapeshellarg($portStr);
+            }
+        }
+    }
+    return implode(' ', $parts);
+}
+
+/**
+ * Builds Docker volume arguments for the 'docker create' command.
+ *
+ * @param array $mounts The Mounts array from docker inspect.
+ * @return string The formatted volume arguments (e.g., "-v /src:/dest").
+ */
+function buildVolumeArgs(array $mounts): string
+{
+    $parts = [];
+    foreach ($mounts as $mount) {
+        $source = $mount['Source'] ?? '';
+        $dest = $mount['Destination'] ?? '';
+        $mode = ($mount['RW'] ?? true) ? '' : ':ro';
+        if ($source && $dest) {
+            $parts[] = '-v ' . escapeshellarg($source . ':' . $dest . $mode);
+        }
+    }
+    return implode(' ', $parts);
+}
+
+/**
+ * Builds Docker label arguments for the 'docker create' command.
+ *
+ * @param array $labels The Config.Labels from docker inspect.
+ * @return string The formatted label arguments (e.g., "--label key=value").
+ */
+function buildLabelArgs(array $labels): string
+{
+    $parts = [];
+    foreach ($labels as $k => $v) {
+        $parts[] = '--label ' . escapeshellarg($k . '=' . $v);
+    }
+    return implode(' ', $parts);
+}
+
+/**
+ * Extracts a full container configuration from 'docker inspect'.
+ *
+ * @param string $id Container ID or name.
+ * @return array|null The extracted configuration or null on failure.
+ */
+function extractContainerConfig(string $id): ?array
+{
+    $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
+    $json = shell_exec("$dockerBin inspect " . escapeshellarg($id) . " 2>/dev/null");
+    $data = json_decode($json, true);
+
+    if (!$data || !isset($data[0])) return null;
+    $c = $data[0];
+
+    // Extract ENV
+    $env = [];
+    if (!empty($c['Config']['Env'])) {
+        foreach ($c['Config']['Env'] as $e) {
+            $ev = explode('=', $e, 2);
+            if (count($ev) === 2) $env[$ev[0]] = $ev[1];
+        }
+    }
+
+    return [
+        'name' => ltrim($c['Name'], '/'),
+        'image' => $c['Config']['Image'],
+        'env' => $env,
+        'ports' => $c['HostConfig']['PortBindings'] ?? [],
+        'mounts' => $c['Mounts'] ?? [],
+        'labels' => $c['Config']['Labels'] ?? [],
+        'restart_policy' => $c['HostConfig']['RestartPolicy']['Name'] ?? 'unless-stopped',
+        'network_mode' => $c['HostConfig']['NetworkMode'] ?? 'bridge'
+    ];
 }
 
 /**
@@ -890,10 +1186,8 @@ function getContainerCgroupRamMb(string $containerId, ?string $longId = null): ?
  */
 function getJavaHeapUsedMb(string $containerId, int $cacheTtlSec = 4): float
 {
-    $stateDir = '/tmp/mcmm_heap';
-    if (!is_dir($stateDir)) {
-        @mkdir($stateDir, 0777, true);
-    }
+    $stateDir = MCMM_TMP_DIR . '/heap';
+    mcmm_mkdir($stateDir, 0777, true);
     $stateFile = $stateDir . '/' . preg_replace('/[^a-zA-Z0-9_.-]/', '_', $containerId) . '.json';
     $now = time();
 
@@ -1050,7 +1344,7 @@ function getCgroupStats(string $cid, ?float $configuredMemMb = null): array
     }
 
     if ($usageVal > 0) {
-        $stateDir = '/tmp/mcmm_cpu';
+        $stateDir = MCMM_TMP_DIR . '/cpu';
         if (!is_dir($stateDir)) {
             @mkdir($stateDir, 0777, true);
         }
@@ -1145,9 +1439,20 @@ function getLabelValue(string $labels, string $key): ?string
  * @param array  $config        Global plugin configuration.
  * @return string The resolved icon URL.
  */
-function backfillServerIcon(string $containerId, string $containerName, string $serversDir, array $config): string
+function backfillServerIcon(string $containerId, string $containerName, array $config): string
 {
-    // Inspect container to get environment variables
+    // 1. Check if we already have a meta with an icon
+    $serverDir = getServerMetadataDir($containerId);
+    $metaFile = $serverDir . '/metadata.json';
+
+    if (file_exists($metaFile)) {
+        $saved = json_decode((string) @file_get_contents($metaFile), true);
+        if (is_array($saved) && !empty($saved['icon'])) {
+            return $saved['icon'];
+        }
+    }
+
+    // 2. Inspect container to get environment variables (Docker inspect)
     $inspectCmd = '/usr/bin/docker inspect ' . escapeshellarg($containerId) . ' 2>/dev/null';
     $inspectOutput = shell_exec($inspectCmd);
     if (!$inspectOutput) {
@@ -1166,6 +1471,7 @@ function backfillServerIcon(string $containerId, string $containerName, string $
     $cfSlug = '';
     $cfFileId = '';
     $modpackId = '';
+    $iconEnv = '';
 
     foreach ($env as $envVar) {
         if (strpos($envVar, 'CF_SLUG=') === 0) {
@@ -1174,16 +1480,25 @@ function backfillServerIcon(string $containerId, string $containerName, string $
             $cfFileId = substr($envVar, 11);
         } elseif (strpos($envVar, 'CF_MODPACK_ID=') === 0) {
             $modpackId = substr($envVar, 14);
+        } elseif (strpos($envVar, 'ICON=') === 0) {
+            $iconEnv = substr($envVar, 5);
         }
     }
 
-    // If we don't have a slug or modpack ID, we can't fetch the icon
+    // Priority 1: Direct ICON env var (fastest, no API)
+    if (!empty($iconEnv)) {
+        saveServerIconConfig($serverDir, $containerName, $iconEnv, 'manual', $cfSlug, $modpackId);
+        return $iconEnv;
+    }
+
+    // If we don't have a slug or modpack ID, we can't fetch from API
     if (empty($cfSlug) && empty($modpackId)) {
         return '';
     }
 
     // Try to fetch modpack info from CurseForge
     $apiKey = $config['curseforge_api_key'] ?? '';
+    // If no API key, we can't do lookups
     if (empty($apiKey)) {
         return '';
     }
@@ -1216,29 +1531,138 @@ function backfillServerIcon(string $containerId, string $containerName, string $
 
     // If we found an icon, save the config file for future use
     if ($icon) {
-        $serverId = md5($containerName); // Generate a deterministic ID based on container name
-        $serverDir = $serversDir . '/' . $serverId;
-
-        if (!is_dir($serverDir)) {
-            @mkdir($serverDir, 0755, true);
-        }
-
-        $serverConfig = [
-            'id' => $serverId,
-            'name' => $containerName,
-            'modpack' => $modpackName,
-            'slug' => $cfSlug,
-            'modpackId' => $modpackId,
-            'logo' => $icon,
-            'containerName' => $containerName,
-            'backfilled' => true
-        ];
-
-        @file_put_contents($serverDir . '/config.json', json_encode($serverConfig, JSON_PRETTY_PRINT));
+        saveServerIconConfig($serverDir, $containerName, $icon, $modpackName, $cfSlug, $modpackId);
     }
 
     return $icon;
 }
+
+/**
+ * Helper to save server icon config.
+ */
+function saveServerIconConfig(string $serverDir, string $containerName, string $icon, string $modpackName = '', string $slug = '', string $modpackId = ''): void
+{
+    if (!is_dir($serverDir)) {
+        @mkdir($serverDir, 0755, true);
+    }
+
+    $serverConfig = [
+        'id' => md5($containerName),
+        'name' => $containerName,
+        'modpack' => $modpackName,
+        'slug' => $slug,
+        'modpackId' => $modpackId,
+        'logo' => $icon,
+        'containerName' => $containerName,
+        'backfilled' => true
+    ];
+
+    @file_put_contents($serverDir . '/config.json', json_encode($serverConfig, JSON_PRETTY_PRINT));
+}
+
+/**
+ * Backfill server icon - Legacy/Original Implementation (Replaced)
+ * @deprecated
+ */
+function _old_backfillServerIcon(string $containerId, string $containerName, string $serversDir, array $config): string
+{
+    // 1. Check if we already have a config with an icon (Fast path for page load)
+    $serverId = md5($containerName);
+    $serverDir = $serversDir . '/' . $serverId;
+    $configFile = $serverDir . '/config.json';
+
+    if (file_exists($configFile)) {
+        $saved = json_decode((string) @file_get_contents($configFile), true);
+        if (is_array($saved) && !empty($saved['logo'])) {
+            return $saved['logo'];
+        }
+    }
+
+    // 2. Inspect container to get environment variables (Docker inspect)
+    $inspectCmd = '/usr/bin/docker inspect ' . escapeshellarg($containerId) . ' 2>/dev/null';
+    $inspectOutput = shell_exec($inspectCmd);
+    if (!$inspectOutput) {
+        return '';
+    }
+
+    $inspectData = json_decode($inspectOutput, true);
+    if (!$inspectData || !isset($inspectData[0])) {
+        return '';
+    }
+
+    $containerInfo = $inspectData[0];
+    $env = $containerInfo['Config']['Env'] ?? [];
+
+    // Extract relevant environment variables
+    $cfSlug = '';
+    $cfFileId = '';
+    $modpackId = '';
+    $iconEnv = '';
+
+    foreach ($env as $envVar) {
+        if (strpos($envVar, 'CF_SLUG=') === 0) {
+            $cfSlug = substr($envVar, 8);
+        } elseif (strpos($envVar, 'CF_FILE_ID=') === 0) {
+            $cfFileId = substr($envVar, 11);
+        } elseif (strpos($envVar, 'CF_MODPACK_ID=') === 0) {
+            $modpackId = substr($envVar, 14);
+        } elseif (strpos($envVar, 'ICON=') === 0) {
+            $iconEnv = substr($envVar, 5);
+        }
+    }
+
+    // Priority 1: Direct ICON env var (fastest, no API)
+    if (!empty($iconEnv)) {
+        saveServerIconConfig($serverDir, $containerName, $iconEnv, 'manual', $cfSlug, $modpackId);
+        return $iconEnv;
+    }
+
+    // If we don't have a slug or modpack ID, we can't fetch from API
+    if (empty($cfSlug) && empty($modpackId)) {
+        return '';
+    }
+
+    // Try to fetch modpack info from CurseForge
+    $apiKey = $config['curseforge_api_key'] ?? '';
+    // If no API key, we can't do lookups
+    if (empty($apiKey)) {
+        return '';
+    }
+
+    $icon = '';
+    $modpackName = '';
+
+    // If we have a slug, search for the modpack
+    if ($cfSlug) {
+        $response = cfRequest('/mods/search?gameId=432&classId=4471&slug=' . urlencode($cfSlug), $apiKey);
+
+        if ($response && isset($response['data'][0])) {
+            $modpack = $response['data'][0];
+            $icon = $modpack['logo']['url'] ?? '';
+            $modpackName = $modpack['name'] ?? '';
+            $modpackId = $modpack['id'] ?? '';
+        }
+    }
+
+    // If we have a modpack ID but no icon yet, fetch by ID
+    if (empty($icon) && $modpackId) {
+        $response = cfRequest('/mods/' . intval($modpackId), $apiKey);
+
+        if ($response && isset($response['data'])) {
+            $modpack = $response['data'];
+            $icon = $modpack['logo']['url'] ?? '';
+            $modpackName = $modpack['name'] ?? '';
+        }
+    }
+
+    // If we found an icon, save the config file for future use
+    if ($icon) {
+        saveServerIconConfig($serverDir, $containerName, $icon, $modpackName, $cfSlug, $modpackId);
+    }
+
+    return $icon;
+}
+
 
 /**
  * Send a JSON response and terminate execution.
@@ -2050,8 +2474,8 @@ function mrRequest(string $path, bool $isFullUrl = false): ?array
     // SSRF Check for Modrinth
     $host = parse_url($url, PHP_URL_HOST);
     if (!empty($host) && !preg_match('/(modrinth\.com|modrinth-production\.s3\.amazonaws\.com)$/', $host)) {
-         dbg("Blocked SSRF attempt in mrRequest: $url");
-         return null;
+        dbg("Blocked SSRF attempt in mrRequest: $url");
+        return null;
     }
 
     // Strict host check above
@@ -2098,7 +2522,7 @@ function getModDownloadUrl(int $modId, string $fileId, string $apiKey): ?string
         // Strict ID validation
         $fileId = sanitizeKey($fileId);
         if (!$fileId) {
-             return null;
+            return null;
         }
         $file = cfRequest("/mods/$modId/files/$fileId", $apiKey);
         if ($file && isset($file['data']['downloadUrl'])) {
@@ -2159,8 +2583,8 @@ function cfRequest(string $path, string $apiKey, bool $isFullUrl = false, string
     // SSRF Check for CurseForge
     $host = parse_url($url, PHP_URL_HOST);
     if (!empty($host) && !str_ends_with($host, 'curseforge.com')) {
-         dbg("Blocked SSRF attempt in cfRequest: $url");
-         return null;
+        dbg("Blocked SSRF attempt in cfRequest: $url");
+        return null;
     }
 
 
@@ -2228,10 +2652,11 @@ function getModpackDownload(int $modId, string $apiKey, ?int $preferredFileId = 
 {
     $details = cfRequest('/mods/' . $modId, $apiKey);
     if (!$details || empty($details['data'])) {
-        return [null, null];
+        return [null, null, null];
     }
 
     $data = $details['data'];
+    $slug = $data['slug'] ?? null;
     $serverPackId = $data['serverPackFileId'] ?? null;
 
     // Helper to decide if file looks like a server pack
@@ -2253,7 +2678,7 @@ function getModpackDownload(int $modId, string $apiKey, ?int $preferredFileId = 
     if ($preferredFileId) {
         $file = cfRequest('/mods/' . $modId . '/files/' . $preferredFileId, $apiKey);
         if ($file && isset($file['data']['downloadUrl'])) {
-            return [$preferredFileId, $file['data']['downloadUrl']];
+            return [$preferredFileId, $file['data']['downloadUrl'], $slug];
         }
     }
 
@@ -2261,7 +2686,7 @@ function getModpackDownload(int $modId, string $apiKey, ?int $preferredFileId = 
     if ($serverPackId) {
         $file = cfRequest('/mods/' . $modId . '/files/' . $serverPackId, $apiKey);
         if ($file && isset($file['data']['downloadUrl'])) {
-            return [$serverPackId, $file['data']['downloadUrl']];
+            return [$serverPackId, $file['data']['downloadUrl'], $slug];
         }
     }
 
@@ -2269,32 +2694,32 @@ function getModpackDownload(int $modId, string $apiKey, ?int $preferredFileId = 
     if (!empty($data['latestFiles'])) {
         foreach ($data['latestFiles'] as $f) {
             if ($isServerPack($f) && !empty($f['downloadUrl'])) {
-                return [$f['id'], $f['downloadUrl']];
+                return [$f['id'], $f['downloadUrl'], $slug];
             }
         }
         foreach ($data['latestFiles'] as $f) {
             if (!empty($f['downloadUrl'])) {
-                return [$f['id'], $f['downloadUrl']];
+                return [$f['id'], $f['downloadUrl'], $slug];
             }
         }
     }
 
     // Final fallback: query files list and pick a server pack if possible, else first with downloadUrl
-        $files = fetchCurseForgeFiles($modId, '', '', $apiKey);
+    $files = fetchCurseForgeFiles($modId, '', '', $apiKey);
     if (!empty($files)) {
         foreach ($files as $f) {
             if ($isServerPack($f) && !empty($f['downloadUrl'])) {
-                return [$f['id'], $f['downloadUrl']];
+                return [$f['id'], $f['downloadUrl'], $slug];
             }
         }
         foreach ($files as $f) {
             if (!empty($f['downloadUrl'])) {
-                return [$f['id'], $f['downloadUrl']];
+                return [$f['id'], $f['downloadUrl'], $slug];
             }
         }
     }
 
-        return [null, null];
+    return [null, null, $slug];
 }
 
 /**
@@ -2371,12 +2796,12 @@ function getModpackVersions(string $platform, string $id, string $apiKey = ''): 
         $versions = [];
         foreach ($data as $v) {
             $versions[] = [
-            'id' => $v['id'],
-            'name' => $v['name'],
-            'version_number' => $v['version_number'],
-            'game_versions' => $v['game_versions'],
-            'loaders' => $v['loaders'],
-            'date' => $v['date_published']
+                'id' => $v['id'],
+                'name' => $v['name'],
+                'version_number' => $v['version_number'],
+                'game_versions' => $v['game_versions'],
+                'loaders' => $v['loaders'],
+                'date' => $v['date_published']
             ];
         }
         return $versions;
@@ -2406,11 +2831,11 @@ function getModpackVersions(string $platform, string $id, string $apiKey = ''): 
                 }
             }
             $versions[] = [
-            'id' => $file['id'],
-            'name' => $file['displayName'] ?? '',
-            'game_versions' => $mcVersions,
-            'loaders' => $loaders,
-            'date' => $file['fileDate']
+                'id' => $file['id'],
+                'name' => $file['displayName'] ?? '',
+                'game_versions' => $mcVersions,
+                'loaders' => $loaders,
+                'date' => $file['fileDate']
             ];
         }
         return $versions;
@@ -2551,10 +2976,10 @@ function getMinecraftStatusModern(string $host, int $port, int $timeout = 2): ?a
 
     if ($json && isset($json['players'])) {
         return [
-        'online' => intval($json['players']['online']),
-        'max' => intval($json['players']['max']),
-        'version' => $json['version']['name'] ?? '',
-        'sample' => $json['players']['sample'] ?? []
+            'online' => intval($json['players']['online']),
+            'max' => intval($json['players']['max']),
+            'version' => $json['version']['name'] ?? '',
+            'sample' => $json['players']['sample'] ?? []
         ];
     }
 
@@ -2596,11 +3021,11 @@ function getMinecraftStatus(string $host, int $port, int $timeout = 1): ?array
     $protocol = 74; // 1.7.2
     // Robust 1.6.1 compatible ping payload
     $payload = "\xFE\x01\xFA" .
-    pack('n', 11) . mb_convert_encoding("MC|PingHost", "UTF-16BE") .
-    pack('n', 7 + (strlen($host) * 2)) .
-    pack('C', $protocol) .
-    pack('n', strlen($host)) . mb_convert_encoding($host, "UTF-16BE") .
-    pack('N', $port);
+        pack('n', 11) . mb_convert_encoding("MC|PingHost", "UTF-16BE") .
+        pack('n', 7 + (strlen($host) * 2)) .
+        pack('C', $protocol) .
+        pack('n', strlen($host)) . mb_convert_encoding($host, "UTF-16BE") .
+        pack('N', $port);
 
     fwrite($socket, $payload);
     $data = fread($socket, 4096);
@@ -2617,9 +3042,9 @@ function getMinecraftStatus(string $host, int $port, int $timeout = 1): ?array
         $parts = explode("\x00", $response);
         if (count($parts) >= 6) {
             return [
-            'online' => intval($parts[4]),
-            'max' => intval($parts[5]),
-            'version' => $parts[2]
+                'online' => intval($parts[4]),
+                'max' => intval($parts[5]),
+                'version' => $parts[2]
             ];
         }
     }
@@ -2663,10 +3088,10 @@ function detectVersionFromFiles(string $dir): array
     // 2. Check libraries for MC version (The most reliable for installed servers)
     if (!$ver) {
         $libPaths = [
-        "$dir/libraries/net/minecraft/server",
-        "$dir/libraries/net/minecraft/client",
-        "$dir/libraries/net/minecraft",
-        "$dir/libraries/com/mojang/minecraft"
+            "$dir/libraries/net/minecraft/server",
+            "$dir/libraries/net/minecraft/client",
+            "$dir/libraries/net/minecraft",
+            "$dir/libraries/com/mojang/minecraft"
         ];
         foreach ($libPaths as $lp) {
             if (is_dir($lp)) {
@@ -2808,14 +3233,14 @@ function getServerMetadata(array $env, array $config, string $containerName, str
 
         // B. Deep Scan JSON Files (Including dot-prefixed ones found in FTB)
         $jsonFiles = [
-        'version.json',
-        'versions.json',
-        'modpack.json',
-        'minecraftinstance.json',
-        'manifest.json',
-        '.manifest.json',
-        'ftb-modpack.json',
-        'instance.json'
+            'version.json',
+            'versions.json',
+            'modpack.json',
+            'minecraftinstance.json',
+            'manifest.json',
+            '.manifest.json',
+            'ftb-modpack.json',
+            'instance.json'
         ];
         foreach ($jsonFiles as $jf) {
             $path = rtrim($dataDir, '/') . '/' . $jf;
@@ -2890,13 +3315,13 @@ function getServerMetadata(array $env, array $config, string $containerName, str
     }
 
     return [
-    'mcVersion' => ($mcVersion && strtoupper($mcVersion) !== 'LATEST') ? $mcVersion : 'Latest',
-    'loader' => $loader ?: 'Vanilla',
-    'modpackVersion' => $modpackVersion,
-    'modpackId' => $modpackId,
-    'modpackFileId' => $modpackFileId,
-    'cache_ver' => 'v11',
-    '_debug' => $debug
+        'mcVersion' => ($mcVersion && strtoupper($mcVersion) !== 'LATEST') ? $mcVersion : 'Latest',
+        'loader' => $loader ?: 'Vanilla',
+        'modpackVersion' => $modpackVersion,
+        'modpackId' => $modpackId,
+        'modpackFileId' => $modpackFileId,
+        'cache_ver' => 'v11',
+        '_debug' => $debug
     ];
 }
 
@@ -2935,7 +3360,7 @@ function handleDeploy(array $config, array $defaults): void
     $modpackSlug = trim($input['modpack_slug'] ?? '');
     $mcVerSelected = trim($input['mc_version'] ?? '');
     $loaderSelected = trim($input['loader'] ?? '');
-    $safeSlug = $modpackSlug ? strtolower(preg_replace('/[^a-z0-9-]/', '-', $modpackSlug)) : '';
+    $safeSlug = $modpackSlug ? preg_replace('/[^a-z0-9-]+/', '-', strtolower($modpackSlug)) : '';
     $safeSlug = trim($safeSlug, '-');
 
     $resolvedFileId = $fileId ?: ($input['resolved_file_id'] ?? '');
@@ -2983,11 +3408,15 @@ function handleDeploy(array $config, array $defaults): void
         $downloadUrl = "https://api.modpacks.ch/public/modpack/$modId"; // Indicator for success
     } else {
         // CurseForge path
-        [$resolvedFileId, $downloadUrl] = getModpackDownload(
+        [$resolvedFileId, $downloadUrl, $realSlug] = getModpackDownload(
             $modId,
             $config['curseforge_api_key'],
             $fileId ?: null
         );
+
+        if ($realSlug) {
+            $safeSlug = $realSlug;
+        }
 
         if (!$downloadUrl) {
             $logDir = __DIR__;
@@ -3032,24 +3461,24 @@ function handleDeploy(array $config, array $defaults): void
     $flagGraalvm = boolInput($input['graalvm_flags'] ?? $config['default_graalvm_flags'], $config['default_graalvm_flags']);
 
     $env = [
-    'EULA' => 'TRUE',
-    'SERVER_NAME' => $serverName,
-    'SERVER_IP' => $serverIp,
-    'SERVER_PORT' => 25565,
-    'QUERY_PORT' => $port,
-    'MEMORY' => $memory,
-    'MAX_PLAYERS' => $maxPlayers,
-    'ENABLE_WHITELIST' => $whitelist !== '' ? 'TRUE' : 'FALSE',
-    'WHITELIST' => $whitelist,
-    'PVP' => $flagPvp ? 'TRUE' : 'FALSE',
-    'HARDCORE' => $flagHardcore ? 'TRUE' : 'FALSE',
-    'ALLOW_FLIGHT' => $flagFlight ? 'TRUE' : 'FALSE',
-    'ENABLE_COMMAND_BLOCK' => $flagCmdBlocks ? 'TRUE' : 'FALSE',
-    'ENABLE_ROLLING_LOGS' => $flagRolling ? 'TRUE' : 'FALSE',
-    'USE_LOG_TIMESTAMP' => $flagLogTs ? 'TRUE' : 'FALSE',
-    'USE_AIKAR_FLAGS' => $flagAikar ? 'TRUE' : 'FALSE',
-    'JVM_OPTS' => $jvmFlags,
-    'MODPACK_VERSION' => $input['modpack_version_name'] ?? ''
+        'EULA' => 'TRUE',
+        'SERVER_NAME' => $serverName,
+        'SERVER_IP' => $serverIp,
+        'SERVER_PORT' => 25565,
+        'QUERY_PORT' => $port,
+        'MEMORY' => $memory,
+        'MAX_PLAYERS' => $maxPlayers,
+        'ENABLE_WHITELIST' => $whitelist !== '' ? 'TRUE' : 'FALSE',
+        'WHITELIST' => $whitelist,
+        'PVP' => $flagPvp ? 'TRUE' : 'FALSE',
+        'HARDCORE' => $flagHardcore ? 'TRUE' : 'FALSE',
+        'ALLOW_FLIGHT' => $flagFlight ? 'TRUE' : 'FALSE',
+        'ENABLE_COMMAND_BLOCK' => $flagCmdBlocks ? 'TRUE' : 'FALSE',
+        'ENABLE_ROLLING_LOGS' => $flagRolling ? 'TRUE' : 'FALSE',
+        'USE_LOG_TIMESTAMP' => $flagLogTs ? 'TRUE' : 'FALSE',
+        'USE_AIKAR_FLAGS' => $flagAikar ? 'TRUE' : 'FALSE',
+        'JVM_OPTS' => $jvmFlags,
+        'MODPACK_VERSION' => $input['modpack_version_name'] ?? ''
     ];
 
     if ($modId !== -1) {
@@ -3083,6 +3512,12 @@ function handleDeploy(array $config, array $defaults): void
         $env['ICON'] = $iconUrl;
     }
 
+    // MC Router hostname — enables label-based routing for this server
+    $mcRouterHost = trim($input['mc_router_host'] ?? '');
+    if ($mcRouterHost !== '') {
+        $env['MC_ROUTER_HOST'] = $mcRouterHost;
+    }
+
     if ($flagMeowice) {
         if ($javaVer !== '8') {
             $env['JVM_OPTS'] = trim(($env['JVM_OPTS'] ?? '') . ' -XX:+UseZGC');
@@ -3101,6 +3536,12 @@ function handleDeploy(array $config, array $defaults): void
         $env['ENABLE_RCON'] = 'TRUE';
     }
 
+    // MC Router Hostname
+    $routerHost = trim($input['mc_router_host'] ?? '');
+    if ($routerHost) {
+        $env['MC_ROUTER_HOST'] = $routerHost;
+    }
+
     $envArgs = buildEnvArgs($env);
 
     $dockerBin = file_exists('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
@@ -3116,13 +3557,18 @@ function handleDeploy(array $config, array $defaults): void
     }
 
     $labels = [
-    'mcmm' => '1',
-    'net.unraid.docker.managed' => 'dockerman',
-    'net.unraid.docker.repository' => $dockerImage
+        'mcmm' => '1',
+        'net.unraid.docker.managed' => 'dockerman',
+        'net.unraid.docker.repository' => $dockerImage
     ];
     if (!empty($iconUrl)) {
         $labels['net.unraid.docker.icon'] = $iconUrl;
         $labels['mcmm.icon'] = $iconUrl;
+    }
+    // Apply mc-router labels so mc-router can auto-discover this container
+    if (!empty($env['MC_ROUTER_HOST'])) {
+        $labels['mc-router.host'] = $env['MC_ROUTER_HOST'];
+        $labels['mc-router.port'] = '25565';
     }
     $labelArgs = '';
     foreach ($labels as $k => $v) {
@@ -3184,7 +3630,7 @@ XML;
     exec($cmd . ' 2>&1', $output, $exitCode);
 
     if ($exitCode !== 0) {
-        @file_put_contents('/tmp/mcmm_deploy_fail.log', "CMD: $cmd\nExit: $exitCode\nOutput:\n" . implode("\n", $output) . "\n\n", FILE_APPEND);
+        @file_put_contents(MCMM_LOG_DIR . '/deploy_fail.log', "CMD: $cmd\nExit: $exitCode\nOutput:\n" . implode("\n", $output) . "\n\n", FILE_APPEND);
         jsonResponse([
             'success' => false,
             'error' => 'Docker failed to create the server. See output for details.',
@@ -3215,21 +3661,21 @@ XML;
     }
 
     $serverConfig = [
-    'id' => $serverId,
-    'name' => $serverName,
-    'modpack' => $modpackName,
-    'author' => trim($input['modpack_author'] ?? 'Unknown'),
-    'slug' => $modpackSlug,
-    'modpackId' => $modId,
-    'modpackFileId' => $fileId ?: $resolvedFileId,
-    'mc_version' => $mcVerSelected,
-    'loader' => $loaderSelected,
-    'icon' => $iconUrl,
-    'logo' => $iconUrl,
-    'port' => $port,
-    'maxPlayers' => $maxPlayers,
-    'memory' => $memory,
-    'containerName' => $containerName
+        'id' => $serverId,
+        'name' => $serverName,
+        'modpack' => $modpackName,
+        'author' => trim($input['modpack_author'] ?? 'Unknown'),
+        'slug' => $modpackSlug,
+        'modpackId' => $modId,
+        'modpackFileId' => $fileId ?: $resolvedFileId,
+        'mc_version' => $mcVerSelected,
+        'loader' => $loaderSelected,
+        'icon' => $iconUrl,
+        'logo' => $iconUrl,
+        'port' => $port,
+        'maxPlayers' => $maxPlayers,
+        'memory' => $memory,
+        'containerName' => $containerName
     ];
 
     file_put_contents($serverDir . '/config.json', json_encode($serverConfig, JSON_PRETTY_PRINT));
@@ -3238,10 +3684,10 @@ XML;
     // OPTIONAL: Only include download in response when present
     // ---------------------------
     $response = [
-    'success' => true,
-    'container' => $containerName,
-    'id' => trim($output[0] ?? ''),
-    'fileId' => $fileId,
+        'success' => true,
+        'container' => $containerName,
+        'id' => trim($output[0] ?? ''),
+        'fileId' => $fileId,
     ];
 
     if ($downloadUrl !== null && $downloadUrl !== '') {
@@ -3288,11 +3734,11 @@ function _getMinecraftLiveStatsUncached($containerId, $hostPort, $env)
     if ($statusRes) {
         $jd = json_decode($statusRes, true);
         if (isset($jd['players'])) {
-            @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $jd['players']['online'] . "/" . $jd['players']['max'] . "\n\n", FILE_APPEND);
+            @file_put_contents(MCMM_LOG_DIR . '/ping.log', $log . "Result: " . $jd['players']['online'] . "/" . $jd['players']['max'] . "\n\n", FILE_APPEND);
             return [
-            'online' => intval($jd['players']['online']),
-            'max' => intval($jd['players']['max']),
-            'sample' => $jd['players']['sample'] ?? []
+                'online' => intval($jd['players']['online']),
+                'max' => intval($jd['players']['max']),
+                'sample' => $jd['players']['sample'] ?? []
             ];
         }
     }
@@ -3320,18 +3766,18 @@ function _getMinecraftLiveStatsUncached($containerId, $hostPort, $env)
         if ($rconOut && preg_match('/(?:There are|online:?) (\d+) (?:of|out of|\/) a max of (\d+)/i', $rconOut, $m)) {
             @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $m[1] . "/" . $m[2] . "\n\n", FILE_APPEND);
             return [
-            'online' => intval($m[1]),
-            'max' => intval($m[2]),
-            'sample' => $players
+                'online' => intval($m[1]),
+                'max' => intval($m[2]),
+                'sample' => $players
             ];
         }
         // Fallback for just the number if regex above is too strict
         if ($rconOut && preg_match('/There are (\d+) /i', $rconOut, $m)) {
             @file_put_contents('/tmp/mcmm_ping.log', $log . "Result: " . $m[1] . "/20 (partial match)\n\n", FILE_APPEND);
             return [
-            'online' => intval($m[1]),
-            'max' => $max,
-            'sample' => $players
+                'online' => intval($m[1]),
+                'max' => $max,
+                'sample' => $players
             ];
         }
     }
@@ -3471,7 +3917,7 @@ function getOnlinePlayers(string $id, int $port, array $env): array
     }
 
     // Identify Operators
-        $ops = [];
+    $ops = [];
     if ($rconPass) {
         $opOut = [];
         exec("docker exec " . escapeshellarg($id) . " rcon-cli --port $rconPort --password " . escapeshellarg($rconPass) . " \"op list\" 2>&1", $opOut);
@@ -3511,7 +3957,7 @@ function getOnlinePlayers(string $id, int $port, array $env): array
         }
     }
 
-        return ['online' => $online, 'max' => $max, 'players' => $players];
+    return ['online' => $online, 'max' => $max, 'players' => $players];
 }
 
 /**
@@ -3573,51 +4019,7 @@ function getBannedPlayers(string $id, array $env): array
  */
 function GetMurmurHash2(string $filePath, int $seed = 1): int
 {
-    // Read file
-    $content = @file_get_contents($filePath);
-    if ($content === false) {
-        return 0;
-    }
-
-    // Filter typical whitespace characters: 9 (TAB), 10 (LF), 13 (CR), 32 (SPACE)
-    // Using str_replace is faster than preg_replace for simple byte removal
-    $content = str_replace([chr(9), chr(10), chr(13), chr(32)], '', $content);
-
-    $length = strlen($content);
-    $m = 0x5bd1e995;
-    $r = 24;
-    $h = $seed ^ $length;
-    $i = 0;
-
-    while ($length >= 4) {
-        $k = unpack('V', substr($content, $i, 4))[1];
-
-        $k = ($k * $m) & 0xFFFFFFFF;
-        $k ^= ($k >> $r);
-        $k = ($k * $m) & 0xFFFFFFFF;
-
-        $h = ($h * $m) & 0xFFFFFFFF;
-        $h ^= $k;
-
-        $i += 4;
-        $length -= 4;
-    }
-
-    switch ($length) {
-        case 3:
-            $h ^= ord($content[$i + 2]) << 16;
-        case 2:
-            $h ^= ord($content[$i + 1]) << 8;
-        case 1:
-            $h ^= ord($content[$i]);
-            $h = ($h * $m) & 0xFFFFFFFF;
-    }
-
-    $h ^= ($h >> 13);
-    $h = ($h * $m) & 0xFFFFFFFF;
-    $h ^= ($h >> 15);
-
-    return $h;
+    return (int) CursedFingerprintHelper::getFingerprintFromFile($filePath);
 }
 
 /**
@@ -3660,4 +4062,47 @@ function fetchCurseForgeFingerprints(array $fingerprints, string $apiKey): array
     }
 
     return $json['data']['exactMatches'];
+}
+
+/**
+ * Ensure the MCMM background worker cron job is installed.
+ *
+ * Runs every 2 minutes.
+ */
+function install_mcmm_cron()
+{
+    // Adjust path based on environment
+    $plugin = 'mcmm';
+    $docroot = $_SERVER['DOCUMENT_ROOT'] ?? '/usr/local/emhttp';
+
+    // Check various possible locations for the script
+    $candidates = [
+        __DIR__ . '/background_worker.php',
+        "$docroot/plugins/$plugin/include/background_worker.php",
+        "/usr/local/emhttp/plugins/$plugin/include/background_worker.php"
+    ];
+
+    $scriptPath = '';
+    foreach ($candidates as $path) {
+        if (file_exists($path)) {
+            $scriptPath = $path;
+            break;
+        }
+    }
+
+    if (!$scriptPath) {
+        return;
+    }
+
+    $cronFile = '/etc/cron.d/mcmm_updates';
+    $cronContent = "# MCMM Background Update Checker\n";
+    $cronContent .= "*/2 * * * * php " . escapeshellarg($scriptPath) . " > /dev/null 2>&1\n";
+
+    // Only write if content differs to avoid unnecessary wear or race conditions
+    // Use @ to suppress errors if we don't have permission (e.g. dev environment)
+    if (!file_exists($cronFile) || md5(file_get_contents($cronFile)) !== md5($cronContent)) {
+        @file_put_contents($cronFile, $cronContent);
+        @chmod($cronFile, 0644);
+        @exec("update_cron");
+    }
 }

@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Built-in Server",
+            "type": "php",
+            "request": "launch",
+            "program": "${workspaceFolder}/index.php",
+            "cwd": "${workspaceFolder}",
+            "port": 8000,
+            "runtimeArgs": [
+                "-S",
+                "localhost:8000",
+                "-t",
+                "."
+            ],
+            "externalConsole": false
+        },
+        {
+            "name": "Listen for XDebug",
+            "type": "php",
+            "request": "launch",
+            "port": 9003
+        }
+    ]
+}

@@ -46,6 +46,11 @@ if (file_exists("$docroot/plugins/$plugin/include/lib.php")) {
     require_once __DIR__ . '/include/lib.php';
 }
 
+// Ensure background worker cron is installed
+if (function_exists('install_mcmm_cron')) {
+    install_mcmm_cron();
+}
+
 // Default config values (mirrored in default.cfg, but good to have fallback)
 $defaults = [
     'curseforge_api_key' => '',
@@ -404,6 +409,9 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                     <div class="mcmm-side-link" onclick="switchSettingsCategory('gameplay', this)">
                         <span class="material-symbols-outlined">gamepad</span> Gameplay
                     </div>
+                    <div class="mcmm-side-link" onclick="switchSettingsCategory('router', this)">
+                        <span class="material-symbols-outlined">router</span> MC Router
+                    </div>
 
                     <div
                         style="margin-top: auto; padding: 1rem; background: rgb(124 58 237 / 5%); border: 1px dashed rgb(124 58 237 / 20%); border-radius: 12px; font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">
@@ -478,6 +486,19 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                     <div class="mcmm-input-hint">Required for browsing and installing modpacks from the
                                         catalog.</div>
                                 </div>
+                                
+                                <div class="mcmm-section-divider">Maintenance</div>
+                                <div class="mcmm-form-group">
+                                    <label class="mcmm-label">System Update Check</label>
+                                    <div style="display: flex; gap: 1rem; align-items: center;">
+                                        <button type="button" class="mcmm-btn" id="forceUpdateCheckBtn" onclick="forceSystemUpdateCheck()">
+                                            <span class="material-symbols-outlined">refresh</span> Force Check for Updates
+                                        </button>
+                                        <div id="forceUpdateCheckStatus" style="font-size: 0.85rem; color: var(--text-secondary);"></div>
+                                    </div>
+                                    <div class="mcmm-input-hint">Bypasses the 1-hour cache and checks Docker Hub for image updates.</div>
+                                </div>
+
                             </div>
 
                             <!-- Performance -->
@@ -538,6 +559,61 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- Router -->
+                            <div id="settings-router" class="mcmm-settings-pane">
+                                <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+                                    <span class="material-symbols-outlined" style="color: var(--primary);">router</span> MC Router
+                                </h3>
+
+                                <div class="mcmm-form-group">
+                                    <div class="mcmm-toggle-item" style="padding: 0; border: none;">
+                                        <div class="mcmm-toggle-label">
+                                            <span class="mcmm-toggle-name">Enable MC Router</span>
+                                            <span class="mcmm-toggle-desc">Dynamic hostname routing via <code>itzg/mc-router</code></span>
+                                        </div>
+                                        <label class="mcmm-switch">
+                                            <input type="checkbox" id="mc_router_enabled" <?php echo boolInput($config['mc_router_enabled'] ?? false) ? 'checked' : ''; ?> />
+                                            <span class="mcmm-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="mcmm-input-hint" style="margin-top: 0.5rem;">
+                                        MCMM will manage the <code>mc-router</code> container. Servers with an External Hostname set will be auto-discovered.
+                                    </div>
+                                </div>
+
+                                <div class="mcmm-form-grid" style="margin-top: 1.5rem;">
+                                    <div class="mcmm-form-group">
+                                        <label class="mcmm-label">Router External Port</label>
+                                        <input type="number" id="mc_router_port" class="mcmm-input"
+                                            value="<?php echo htmlspecialchars((string) ($config['mc_router_port'] ?? 25565)); ?>" />
+                                        <div class="mcmm-input-hint">Port players connect to (must match VPS/firewall forwarding).</div>
+                                    </div>
+                                    <div class="mcmm-form-group">
+                                        <label class="mcmm-label">Router API Port</label>
+                                        <input type="number" id="mc_router_api_port" class="mcmm-input"
+                                            value="<?php echo htmlspecialchars((string) ($config['mc_router_api_port'] ?? 25564)); ?>" />
+                                        <div class="mcmm-input-hint">Internal API port used by MCMM to query routes.</div>
+                                    </div>
+                                </div>
+
+                                <div class="mcmm-form-group" style="margin-top: 1.5rem;">
+                                    <label class="mcmm-label">Default Route (Fallback)</label>
+                                    <input type="text" id="mc_router_default" class="mcmm-input"
+                                        placeholder="e.g. vanilla.exodusgames.org"
+                                        value="<?php echo htmlspecialchars((string) ($config['mc_router_default'] ?? '')); ?>" />
+                                    <div class="mcmm-input-hint">If set, connections with an unrecognized hostname (e.g. raw IP) are routed here.</div>
+                                </div>
+
+                                <div class="mcmm-section-divider" style="margin-top: 2rem;">Live Routes</div>
+                                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                                    <div id="routerStatusBadge" style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem;"></div>
+                                    <button type="button" class="mcmm-btn" style="font-size: 0.8rem; padding: 0.35rem 0.85rem;" onclick="loadRouterStatus()">
+                                        <span class="material-symbols-outlined" style="font-size: 1rem;">refresh</span> Refresh
+                                    </button>
+                                </div>
+                                <div id="routerRoutesTable" style="font-size: 0.85rem; color: var(--text-secondary);">Loading...</div>
                             </div>
 
                             <!-- Gameplay -->
@@ -689,6 +765,10 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                         <label class="mcmm-label">Server IP</label>
                         <input type="text" id="deploy_ip" class="mcmm-input"
                             value="<?php echo htmlspecialchars((string) ($config['default_ip'] ?? '')); ?>" />
+                    </div>
+                    <div class="mcmm-form-group">
+                        <label class="mcmm-label">External Hostname</label>
+                        <input type="text" id="deploy_hostname" class="mcmm-input" placeholder="e.g. survival.example.com" />
                     </div>
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Port</label>
@@ -961,6 +1041,8 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                     <button class="mcmm-tab active" onclick="switchModTab('all', this)">Install Mods</button>
                     <button class="mcmm-tab" onclick="switchModTab('installed', this)">Installed Mods</button>
                     <button class="mcmm-tab" onclick="switchModTab('updates', this)">Updates</button>
+                    <!-- Temporary Debug Button -->
+                    <button class="mcmm-tab" onclick="handleForceUpdateCheck()" style="color: #eab308; border-color: #eab308; margin-left: 1rem;">Debug Updates</button>
                 </div>
 
                 <!-- Active Filter Display -->
@@ -1041,6 +1123,10 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Server IP</label>
                         <input type="text" id="edit_ip" class="mcmm-input" />
+                    </div>
+                    <div class="mcmm-form-group">
+                        <label class="mcmm-label">External Hostname</label>
+                        <input type="text" id="edit_hostname" class="mcmm-input" placeholder="e.g. survival.example.com" />
                     </div>
                     <div class="mcmm-form-group">
                         <label class="mcmm-label">Port</label>
@@ -1284,4 +1370,3 @@ unset($clientConfig['curseforge_api_key']); // Don't expose key to client logic 
     // @phpstan-ignore-next-line
     const csrfToken = "<?php echo $csrfToken; ?>";
 </script>
-<script src="/plugins/mcmm/javascript/mcmm.js?v=<?php echo time(); ?>"></script>

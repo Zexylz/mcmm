@@ -61,9 +61,16 @@ window.loadBackups = loadBackups;
 window.createBackup = createBackup;
 window.reinstallFromBackup = reinstallFromBackup;
 window.deleteBackup = deleteBackup;
-window.openGlobalSettings = openGlobalSettings;
 window.closeGlobalSettings = closeGlobalSettings;
 window.switchSettingsCategory = switchSettingsCategory;
+window.loadRouterStatus = loadRouterStatus;
+window.checkSystemUpdate = checkSystemUpdate;
+window.forceSystemUpdateCheck = forceSystemUpdateCheck;
+window.showSystemUpdateNotification = showSystemUpdateNotification;
+window.performSystemUpdate = performSystemUpdate;
+window.closeSystemUpdateConfirmModal = closeSystemUpdateConfirmModal;
+window.filterServerList = filterServerList;
+window.setServerSort = setServerSort;
 
 /**
  * Helper to get the CSRF token from either global variable or meta tag.
@@ -86,9 +93,16 @@ function getCsrfToken() {
 async function mcmmFetch(url, options = {}) {
     const token = getCsrfToken();
 
-    const headers = options.headers || {};
-    if (token) {
+    const headers = { ...(options.headers || {}) };
+    if (token && !headers['X-CSRF-Token']) {
         headers['X-CSRF-Token'] = token;
+    }
+
+    // Default Content-Type for JSON objects, but DON'T set it for URLSearchParams/FormData
+    if (options.body && typeof options.body === 'object' && !(options.body instanceof URLSearchParams) && !(options.body instanceof FormData)) {
+        if (!headers['Content-Type']) {
+            headers['Content-Type'] = 'application/json';
+        }
     }
 
     return window.fetch(url, { ...options, headers });
@@ -120,6 +134,25 @@ function closeGlobalSettings() {
 }
 
 /**
+ * Deep equality check for objects/arrays.
+ */
+function isDeepEqual(obj1, obj2) {
+    if (obj1 === obj2) return true;
+    if (typeof obj1 !== 'object' || obj1 === null || typeof obj2 !== 'object' || obj2 === null) return false;
+
+    const keys1 = Object.keys(obj1);
+    const keys2 = Object.keys(obj2);
+
+    if (keys1.length !== keys2.length) return false;
+
+    for (const key of keys1) {
+        if (!keys2.includes(key) || !isDeepEqual(obj1[key], obj2[key])) return false;
+    }
+
+    return true;
+}
+
+/**
  * Switches the active settings category in the global settings modal.
  *
  * @param {string} categoryId - The ID of the category to switch to.
@@ -133,6 +166,7 @@ function switchSettingsCategory(categoryId, btn) {
     if (pane) pane.classList.add('active');
     const container = document.getElementById('settingsCategoryContainer');
     if (container) container.scrollTop = 0;
+    if (categoryId === 'router') loadRouterStatus();
 }
 
 // Hide debug banner
@@ -163,6 +197,11 @@ document.addEventListener('DOMContentLoaded', () => {
             serverRefreshInterval = setInterval(loadServers, 3000);
         }
     }
+
+    // Check for global system updates
+    checkSystemUpdate();
+    // Check for modpack updates on dashboard
+    setTimeout(checkModpackUpdates, 2000);
 
     // --- Interactive Hover Effects ---
     document.addEventListener('mousemove', e => {
@@ -205,7 +244,7 @@ window.addEventListener('error', function (event) {
     console.error("%c MCMM Runtime Error: ", "background:rgb(239  68  68 / 100%);color:rgb(255 255 255 / 100%);font-weight:700;padding:2px 6px;border-radius:4px;", event.message, "at", event.filename, ":", event.lineno);
 });
 
-var modpackState = { items: [], loading: false, error: '', source: 'curseforge', sort: 'popularity', page: 1, limit: 12 };
+var modpackState = { items: [], loading: false, error: '', source: (typeof mcmmConfig !== 'undefined' && mcmmConfig.has_api_key) ? 'curseforge' : 'modrinth', sort: 'popularity', page: 1, limit: 12 };
 var modpackSearchTimer;
 
 window.switchModpackSource = switchModpackSource;
@@ -240,6 +279,98 @@ var modState = {
 };
 var modSearchTimer;
 var serverRefreshInterval = null;
+
+/** @type {Map<string, number[]>} Ring-buffer of RAM % history per server ID (max 20 samples). */
+var serverRamHistory = new Map();
+
+/**
+ * Pushes a RAM percent sample into the ring buffer for a server and redraws its sparkline.
+ *
+ * @param {string} serverId - The server container ID.
+ * @param {number} ramPercent - The current RAM usage percentage (0–100).
+ */
+function pushRamSample(serverId, ramPercent) {
+    if (!serverRamHistory.has(serverId)) serverRamHistory.set(serverId, []);
+    const buf = serverRamHistory.get(serverId);
+    buf.push(ramPercent);
+    if (buf.length > 20) buf.shift();
+    drawSparkline(serverId, buf);
+}
+
+/**
+ * Draws a RAM sparkline onto the canvas element for a given server.
+ *
+ * @param {string} serverId - The server container ID.
+ * @param {number[]} data - Array of RAM percent values (0–100).
+ */
+function drawSparkline(serverId, data) {
+    const canvas = document.getElementById(`sparkline-${serverId}`);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    if (data.length < 2) return;
+
+    const max = 100;
+    const step = w / (data.length - 1);
+
+    // Fill gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, 'rgba(168,85,247,0.35)');
+    grad.addColorStop(1, 'rgba(168,85,247,0.02)');
+
+    ctx.beginPath();
+    data.forEach((v, i) => {
+        const x = i * step;
+        const y = h - (v / max) * h;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    // Close fill path
+    ctx.lineTo((data.length - 1) * step, h);
+    ctx.lineTo(0, h);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    data.forEach((v, i) => {
+        const x = i * step;
+        const y = h - (v / max) * h;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = 'rgba(168,85,247,0.85)';
+    ctx.lineWidth = 1.5;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+}
+
+/** Current sort mode for the server list. */
+var serverSortMode = 'status';
+
+/**
+ * Filters and sorts the server list cards based on the search input and current sort mode.
+ */
+function filterServerList() {
+    const query = (document.getElementById('serverSearchInput')?.value || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('#serverListContainer .mcmm-server-row');
+    rows.forEach(row => {
+        const name = (row.querySelector('.mcmm-server-name')?.textContent || '').toLowerCase();
+        row.style.display = (!query || name.includes(query)) ? '' : 'none';
+    });
+}
+
+/**
+ * Sets the server list sort mode and re-renders the list.
+ *
+ * @param {string} mode - Sort mode: 'status' | 'name' | 'ram'.
+ */
+function setServerSort(mode) {
+    serverSortMode = mode;
+    loadServers(false);
+}
+var modManagerInterval = null;
 var consoleInterval = null;
 var isServersLoading = false;
 
@@ -452,7 +583,7 @@ function renderModpacks(data) {
         card.onclick = () => openDeployModal(pack);
 
         card.innerHTML = `
-            <div class="mcmm-modpack-thumb" style="background-image: url('${pack.img || ''}')"></div>
+            <div class="mcmm-modpack-thumb" style="background-image: url('${pack.icon || pack.img || ''}')"></div>
             <div class="mcmm-modpack-info">
                 <div class="mcmm-modpack-name">${pack.name}</div>
                 <div class="mcmm-modpack-meta">
@@ -659,6 +790,14 @@ async function openModManager(serverId, serverName) {
 
     loadInstalledMods(); // Load installed first to know status
     loadMods(''); // Initial search
+
+    // Start polling for updates (silent check every 5 seconds)
+    if (modManagerInterval) clearInterval(modManagerInterval);
+    modManagerInterval = setInterval(() => {
+        if (currentServerId && document.getElementById('modManagerModal').classList.contains('open')) {
+            loadInstalledMods(true);
+        }
+    }, 5000);
 }
 
 /**
@@ -667,6 +806,10 @@ async function openModManager(serverId, serverName) {
 function closeModManager() {
     document.getElementById('modManagerModal').classList.remove('open');
     currentServerId = null;
+    if (modManagerInterval) {
+        clearInterval(modManagerInterval);
+        modManagerInterval = null;
+    }
 }
 
 /**
@@ -681,9 +824,6 @@ function switchModTab(view, btn) {
     if (btn) btn.classList.add('active');
 
     renderMods();
-    if (view === 'installed' || view === 'updates') {
-        checkForUpdates();
-    }
 }
 
 /**
@@ -888,13 +1028,17 @@ async function loadMods(query) {
  *
  * @returns {Promise<void>}
  */
-async function checkForUpdates() {
+async function checkForUpdates(force = false) {
     if (!currentServerId) return;
     modState.loading = true;
     renderMods();
 
     try {
-        const res = await mcmmFetch(`/plugins/mcmm/api.php?action=check_updates&id=${currentServerId}`);
+        const mcVer = modState.mcVersion || '';
+        const loader = modState.loader || '';
+        let url = `/plugins/mcmm/api.php?action=check_updates&id=${currentServerId}&mc_version=${encodeURIComponent(mcVer)}&loader=${encodeURIComponent(loader)}`;
+        if (force) url += '&refresh=1';
+        const res = await mcmmFetch(url);
         const data = await res.json();
         if (data.success && data.updates) {
             // Update installed mods with latest info
@@ -933,18 +1077,25 @@ async function checkForUpdates() {
     }
 }
 
+
 /**
  * Loads the list of installed mods for the current server.
  *
+ * @param {boolean} silent - If true, suppresses loading indicators and only updates if data changed.
  * @remarks Triggers identification for unknown mods in parallel batches.
  * @returns {Promise<void>}
  */
-async function loadInstalledMods() {
+async function loadInstalledMods(silent = false) {
     if (!currentServerId) return;
     try {
         const res = await mcmmFetch('/plugins/mcmm/api.php?action=mod_list&id=' + currentServerId);
         const data = await res.json();
         if (data.success) {
+            // Silent update check: Deep equal comparison
+            if (silent && isDeepEqual(modState.installed, data.data || [])) {
+                return; // No changes, skip render
+            }
+
             if (data.debug_log && data.debug_log.length > 0) {
                 console.groupCollapsed("[MCMM] Server-Side Scan Logs");
                 data.debug_log.forEach(line => console.log(line));
@@ -1101,11 +1252,11 @@ async function identifyModsBatch(filenames) {
             // Update the state
             modState.installed = modState.installed.map(m => {
                 const f = m.file || m.fileName;
-                const identified = data.data[f];
-                if (identified) {
+                if (filenames.includes(f)) {
+                    const identified = data.data[f];
                     return {
                         ...m,
-                        ...identified,
+                        ...(identified || {}),
                         needsIdentification: false
                     };
                 }
@@ -1188,9 +1339,6 @@ function renderMods() {
                         <div style="font-size: 0.95rem; margin-bottom: 2rem; opacity: 0.7;">
                             No updates found for your installed mods.
                         </div>
-                        <button class="mcmm-btn mcmm-btn-primary" style="margin: 0 auto; padding: 0.75rem 2rem;" onclick="checkForUpdates()">
-                            Check Again
-                        </button>
                     </div>`;
                 return;
             }
@@ -1834,7 +1982,7 @@ async function openDeployModal(pack) {
     }
     document.getElementById('deploy_whitelist').value = cfg.default_whitelist || '';
     // Use modpack icon if available, otherwise use default
-    document.getElementById('deploy_icon_url').value = pack.img || cfg.default_icon_url || '';
+    document.getElementById('deploy_icon_url').value = pack.icon || pack.img || cfg.default_icon_url || '';
 
     setChecked('deploy_pvp', cfg.default_pvp);
     setChecked('deploy_hardcore', cfg.default_hardcore);
@@ -1848,9 +1996,13 @@ async function openDeployModal(pack) {
     const jvmField = document.getElementById('deploy_jvm_flags');
     if (jvmField) jvmField.value = cfg.jvm_flags || '';
 
+    // Reset Hostname (MC Router)
+    const hostnameField = document.getElementById('deploy_hostname');
+    if (hostnameField) hostnameField.value = '';
+
     // Fetch Modpack versions in background
     try {
-        const source = pack.source || 'curseforge';
+        const source = pack.source || (typeof modpackState !== 'undefined' ? modpackState.source : 'curseforge');
         const res = await mcmmFetch(`/plugins/mcmm/api.php?action=mod_files&source=${source}&mod_id=` + pack.id);
         const data = await res.json();
 
@@ -1955,6 +2107,9 @@ async function openVanillaDeploy() {
     const jvmField = document.getElementById('deploy_jvm_flags');
     if (jvmField) jvmField.value = cfg.jvm_flags || '';
 
+    const hostnameField = document.getElementById('deploy_hostname');
+    if (hostnameField) hostnameField.value = '';
+
     setDeployStatus('');
     document.getElementById('deployModal').classList.add('open');
 }
@@ -2003,7 +2158,9 @@ async function loadSettingsDefaults() {
                 'default_direct_console',
                 'default_aikar_flags',
                 'default_meowice_flags',
-                'default_graalvm_flags'
+                'default_meowice_flags',
+                'default_graalvm_flags',
+                'mc_router_enabled'
             ];
             boolKeys.forEach(k => {
                 if (k in cfg) {
@@ -2460,6 +2617,9 @@ async function loadServers(fastMode = false) {
                             if (ramBar) ramBar.style.width = `${ramPercent}%`;
                             if (cpuTxt) cpuTxt.textContent = `${Number(cpuUsage).toFixed(1)}%`;
                             if (cpuBar) cpuBar.style.width = `${Math.min(Math.max(cpuUsage, 0), 100)}%`;
+
+                            // Push sample into sparkline ring buffer
+                            pushRamSample(String(s.id), ramPercent);
                         }
 
                         // Always update Status & Players (Fast Loop)
@@ -2482,8 +2642,8 @@ async function loadServers(fastMode = false) {
                                         <button class="mcmm-btn-icon" title="Players" onclick="openPlayersModal('${s.id}', '${s.name}', '${s.ports}')"><span class="material-symbols-outlined">groups</span></button>
                                     ` : `
                                         <button class="mcmm-btn-icon success" title="Start Server" onclick="controlServer('${s.id}', 'start', true)"><span class="material-symbols-outlined">play_arrow</span></button>
-                                        <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Console Offline"><span class="material-symbols-outlined">terminal</span></button>
-                                        <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Players Offline"><span class="material-symbols-outlined">groups</span></button>
+                                        <button class="mcmm-btn-icon" style="opacity:0.4;cursor:not-allowed;" title="Console (offline)"><span class="material-symbols-outlined">terminal</span></button>
+                                        <button class="mcmm-btn-icon" style="opacity:0.4;cursor:not-allowed;" title="Players (offline)"><span class="material-symbols-outlined">groups</span></button>
                                     `}
                                     ${(s.loader || 'Vanilla').toLowerCase() !== 'vanilla' ? `
                                         <button class="mcmm-btn-icon" title="Mods" onclick="openModManager('${s.id}', '${s.name}')"><span class="material-symbols-outlined">extension</span></button>
@@ -2493,22 +2653,24 @@ async function loadServers(fastMode = false) {
                                     <button class="mcmm-btn-icon danger" title="Delete Server" onclick="deleteServer('${s.id}')"><span class="material-symbols-outlined">delete</span></button>
                                 `;
                             }
+
+                            // Update status pill
+                            const pill = row.querySelector('.mcmm-status-pill');
+                            if (pill) {
+                                pill.className = `mcmm-status-pill ${s.isRunning ? 'pill-online' : 'pill-offline'}`;
+                                const pillTxt = pill.querySelector('.mcmm-status-text');
+                                if (pillTxt) pillTxt.textContent = s.isRunning ? 'Online' : 'Offline';
+                            }
                         }
 
                         if (playersTxt) {
                             if (s.isRunning) {
                                 const pOnline = s.players?.online || 0;
                                 const pMax = s.players?.max || 0;
-                                playersTxt.textContent = `${pOnline} / ${pMax > 0 ? pMax : '?'} players`;
-                                playersTxt.style.display = 'inline';
-                                if (playersTxt.previousElementSibling && playersTxt.previousElementSibling.textContent.trim() === '|') {
-                                    playersTxt.previousElementSibling.style.display = 'inline';
-                                }
+                                playersTxt.innerHTML = `<span class="material-symbols-outlined" style="font-size:0.9em;vertical-align:middle;">group</span> ${pOnline}/${pMax > 0 ? pMax : '?'}`;
+                                playersTxt.style.display = 'inline-flex';
                             } else {
                                 playersTxt.style.display = 'none';
-                                if (playersTxt.previousElementSibling && playersTxt.previousElementSibling.textContent.trim() === '|') {
-                                    playersTxt.previousElementSibling.style.display = 'none';
-                                }
                             }
                         }
                     } else {
@@ -2559,75 +2721,158 @@ function renderServerRow(server) {
     const ramCapLabel = (server.ramLimitMb || 0) > 0 ? (server.ramLimitMb / 1024).toFixed(1) + ' GB' : 'N/A';
     const cpuUsage = server.cpu || 0;
 
+    // Backup timestamp
+    let backupHtml = '';
+    if (server.lastBackup) {
+        const ago = formatTimeAgo(server.lastBackup);
+        backupHtml = `<span class="mcmm-backup-ts">
+            <span class="material-symbols-outlined" style="font-size:0.85em;vertical-align:middle;">cloud_done</span>
+            ${ago}</span>`;
+    }
+
+    // Status pill
+    const pillClass = server.isRunning ? 'pill-online' : 'pill-offline';
+    const pillLabel = server.isRunning ? 'Online' : 'Offline';
+
+    // Loader icon
+    const loaderIconMap = {
+        forge: 'extension', neoforge: 'extension', fabric: 'texture',
+        quilt: 'texture', vanilla: 'grass'
+    };
+    const loaderIcon = loaderIconMap[loaderRaw.toLowerCase()] || 'extension';
+
     return `
         <div class="mcmm-server-row ${statusClass}" data-server-id="${server.id}">
-            <div class="mcmm-server-icon" style="background-image: url('${icon}');"></div>
-            
-            <!-- Backup Status Overlay -->
-            <div class="mcmm-backup-status" id="backup-status-${server.id}" style="display: none; position: absolute; top: 8px; left: 80px; background: rgba(59, 130, 246, 0.95); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; align-items: center; gap: 6px; z-index: 10;">
-                <span class="material-symbols-outlined" style="font-size: 0.9rem; animation: spin 1s linear infinite;">autorenew</span>
+
+            <!-- Backup progress overlay -->
+            <div class="mcmm-backup-status" id="backup-status-${server.id}"
+                 style="display:none;position:absolute;top:10px;left:90px;background:rgba(59,130,246,0.95);
+                        color:#fff;padding:4px 12px;border-radius:12px;font-size:0.75rem;font-weight:600;
+                        align-items:center;gap:6px;z-index:10;">
+                <span class="material-symbols-outlined" style="font-size:0.9rem;animation:spin 1s linear infinite;">autorenew</span>
                 Backing up...
             </div>
-            
+
+            <!-- Server icon -->
+            <div class="mcmm-server-icon" style="background-image:url('${icon}');"></div>
+
+            <!-- Info block -->
             <div class="mcmm-server-info">
                 <div class="mcmm-server-title">
-                    ${server.name}
-                    <span class="mcmm-badge">${mcVersion}</span>
-                    <span class="mcmm-badge secondary">${loader}</span>
-                    ${modpackVersion ? `<span class="mcmm-badge" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.25);" title="Modpack Version">${modpackVersion}</span>` : ''}
-                    ${server.containerUpdate ? `<span class="mcmm-badge update" title="New container image available"><span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 2px; vertical-align: text-bottom;">download</span> Update</span>` : ''}
+                    <span class="mcmm-server-name">${server.name}</span>
+                    <span class="mcmm-status-pill ${pillClass}">
+                        <span class="mcmm-status-dot"></span>
+                        <span class="mcmm-status-text">${pillLabel}</span>
+                    </span>
+                    <span id="mp-update-badge-${server.id}"></span>
                 </div>
                 <div class="mcmm-server-subtitle">
-                    <span class="mcmm-status-dot"></span>
-                    <span class="mcmm-status-text">${server.isRunning ? 'Online' : 'Offline'}</span>
-                    <span style="opacity:0.5;">|</span>
-                    <span>Port: ${server.ports}</span>
-                    <span style="opacity:0.5; ${server.isRunning ? '' : 'display:none;'}">|</span>
+                    <span class="material-symbols-outlined" style="font-size:0.95em;opacity:0.55;">${loaderIcon}</span>
+                    <span>${loader}</span>
+                    <span class="mcmm-badge">${mcVersion}</span>
+                    ${modpackVersion ? `<span class="mcmm-badge" id="mp-version-${server.id}"
+                        style="background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.25);"
+                        title="Modpack Version">${modpackVersion}</span>` : ''}
+                    <span class="mcmm-sep">·</span>
+                    <span>:${server.ports}</span>
+                    ${server.isRunning ? `<span class="mcmm-sep">·</span>
                     <span class="mcmm-val-players" id="players-${server.id}" data-server-id="${server.id}">
-                        ${server.isRunning ? `${playersOnline} / ${playersMax > 0 ? playersMax : '?'} players` : ''}
-                    </span>
+                        <span class="material-symbols-outlined" style="font-size:0.9em;vertical-align:middle;">group</span>
+                        ${playersOnline}/${playersMax > 0 ? playersMax : '?'}
+                    </span>` : `<span class="mcmm-val-players" id="players-${server.id}"
+                        data-server-id="${server.id}" style="display:none;"></span>`}
                 </div>
+                ${backupHtml}
             </div>
+
+            <!-- Metrics + sparkline -->
             <div class="mcmm-server-metrics">
-                <div class="mcmm-metric">
-                    <div class="mcmm-metric-label">
-                        <span>RAM</span>
-                        <span class="mcmm-val-ram">${ramUsedLabel} / ${ramCapLabel}</span>
+                <div class="mcmm-metrics-bars">
+                    <div class="mcmm-metric">
+                        <div class="mcmm-metric-label">
+                            <span>RAM</span>
+                            <span class="mcmm-val-ram">${ramUsedLabel} / ${ramCapLabel}</span>
+                        </div>
+                        <div class="mcmm-metric-bar">
+                            <div class="mcmm-metric-fill mcmm-bar-ram"
+                                 style="width:${ramPercent}%;background:linear-gradient(90deg,#a855f7,#ec4899);"></div>
+                        </div>
                     </div>
-                    <div class="mcmm-metric-bar">
-                        <div class="mcmm-metric-fill mcmm-bar-ram" style="width: ${ramPercent}%; background: linear-gradient(90deg, #a855f7, #ec4899);"></div>
+                    <div class="mcmm-metric">
+                        <div class="mcmm-metric-label">
+                            <span>CPU</span>
+                            <span class="mcmm-val-cpu">${Number(cpuUsage).toFixed(1)}%</span>
+                        </div>
+                        <div class="mcmm-metric-bar">
+                            <div class="mcmm-metric-fill mcmm-bar-cpu"
+                                 style="width:${Math.min(Math.max(cpuUsage, 0), 100)}%;background:linear-gradient(90deg,#3b82f6,#06b6d4);"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="mcmm-metric">
-                    <div class="mcmm-metric-label">
-                        <span>CPU</span>
-                        <span class="mcmm-val-cpu">${Number(cpuUsage).toFixed(1)}%</span>
-                    </div>
-                    <div class="mcmm-metric-bar">
-                        <div class="mcmm-metric-fill mcmm-bar-cpu" style="width: ${Math.min(Math.max(cpuUsage, 0), 100)}%; background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
-                    </div>
-                </div>
+                <canvas class="mcmm-sparkline" id="sparkline-${server.id}" width="120" height="36"
+                        title="RAM usage history"></canvas>
             </div>
+
+            <!-- Action buttons -->
             <div class="mcmm-server-actions">
                 ${server.isRunning ? `
-                    <button class="mcmm-btn-icon danger" title="Stop Server" onclick="controlServer('${server.id}', 'stop', true)"><span class="material-symbols-outlined">stop</span></button>
-                    <button class="mcmm-btn-icon" title="Console" onclick="openConsole('${server.id}', '${server.name}')"><span class="material-symbols-outlined">terminal</span></button>
-                    <button class="mcmm-btn-icon" title="Players" onclick="openPlayersModal('${server.id}', '${server.name}', '${server.ports}')"><span class="material-symbols-outlined">groups</span></button>
+                    <button class="mcmm-btn-icon danger" title="Stop Server"
+                            onclick="controlServer('${server.id}', 'stop', true)">
+                        <span class="material-symbols-outlined">stop</span>
+                    </button>
+                    <button class="mcmm-btn-icon" title="Console"
+                            onclick="openConsole('${server.id}', '${server.name}')">
+                        <span class="material-symbols-outlined">terminal</span>
+                    </button>
+                    <button class="mcmm-btn-icon" title="Players"
+                            onclick="openPlayersModal('${server.id}', '${server.name}', '${server.ports}')">
+                        <span class="material-symbols-outlined">groups</span>
+                    </button>
                 ` : `
-                    <button class="mcmm-btn-icon success" title="Start Server" onclick="controlServer('${server.id}', 'start', true)"><span class="material-symbols-outlined">play_arrow</span></button>
-                    <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Console Offline"><span class="material-symbols-outlined">terminal</span></button>
-                    <button class="mcmm-btn-icon" style="opacity:0.5; cursor:not-allowed;" title="Players Offline"><span class="material-symbols-outlined">groups</span></button>
+                    <button class="mcmm-btn-icon success" title="Start Server"
+                            onclick="controlServer('${server.id}', 'start', true)">
+                        <span class="material-symbols-outlined">play_arrow</span>
+                    </button>
+                    <button class="mcmm-btn-icon" style="opacity:0.4;cursor:not-allowed;" title="Console (offline)">
+                        <span class="material-symbols-outlined">terminal</span>
+                    </button>
+                    <button class="mcmm-btn-icon" style="opacity:0.4;cursor:not-allowed;" title="Players (offline)">
+                        <span class="material-symbols-outlined">groups</span>
+                    </button>
                 `}
                 ${loaderRaw.toLowerCase() !== 'vanilla' ? `
-                    <button class="mcmm-btn-icon" title="Mods" onclick="openModManager('${server.id}', '${server.name}')"><span class="material-symbols-outlined">extension</span></button>
-                ` : ''
-        }
-                <button class="mcmm-btn-icon" title="Backup" onclick="createBackup('${server.id}')"><span class="material-symbols-outlined">cloud_upload</span></button>
-                <button class="mcmm-btn-icon" title="Settings" onclick="openServerSettings('${server.id}')"><span class="material-symbols-outlined">settings</span></button>
-                <button class="mcmm-btn-icon danger" title="Delete Server" onclick="deleteServer('${server.id}')"><span class="material-symbols-outlined">delete</span></button>
-            </div >
-        </div >
+                    <button class="mcmm-btn-icon" title="Mods"
+                            onclick="openModManager('${server.id}', '${server.name}')">
+                        <span class="material-symbols-outlined">extension</span>
+                    </button>
+                ` : ''}
+                <button class="mcmm-btn-icon" title="Backup" onclick="createBackup('${server.id}')">
+                    <span class="material-symbols-outlined">cloud_upload</span>
+                </button>
+                <button class="mcmm-btn-icon" title="Settings" onclick="openServerSettings('${server.id}')">
+                    <span class="material-symbols-outlined">settings</span>
+                </button>
+                <button class="mcmm-btn-icon danger" title="Delete Server" onclick="deleteServer('${server.id}')">
+                    <span class="material-symbols-outlined">delete</span>
+                </button>
+            </div>
+        </div>
         `;
+}
+
+/**
+ * Formats a Unix timestamp (seconds) or ISO date string into a relative "X ago" label.
+ *
+ * @param {number|string} ts - Unix timestamp in seconds or ISO date string.
+ * @returns {string} Human-readable relative time string.
+ */
+function formatTimeAgo(ts) {
+    const date = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
+    const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
 }
 
 /**
@@ -2639,38 +2884,65 @@ function renderServers(servers) {
     const container = document.getElementById('tab-servers');
     if (!container) return;
 
-    if (!servers || servers.length === 0) {
-        container.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2 style="font-size: 1.25rem;">Servers Status</h2>
+    const emptyState = `
+        <div class="mcmm-server-toolbar">
+            <div class="mcmm-server-toolbar-left">
+                <h2 class="mcmm-server-toolbar-title">My Servers</h2>
+            </div>
+            <div class="mcmm-server-toolbar-right">
                 <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog')">
-                    Deploy New Server
+                    <span class="material-symbols-outlined">add</span> Deploy New
                 </button>
             </div>
+        </div>
         <div class="mcmm-empty">
-            <span class="material-symbols-outlined" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;">dns</span>
+            <span class="material-symbols-outlined" style="font-size:3rem;opacity:0.3;margin-bottom:1rem;">dns</span>
             <h3>No servers found</h3>
             <p>Get started by deploying your first modpack server.</p>
             <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog')">Browse Catalog</button>
         </div>
     `;
+
+    if (!servers || servers.length === 0) {
+        container.innerHTML = emptyState;
         return;
     }
 
-    let html = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2 style="font-size: 1.25rem;">Servers Status</h2>
-                <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog')">
-                    Deploy New Server
-                </button>
-            </div>
-            <div class="mcmm-server-list" id="serverListContainer">
-    `;
-
     const sortedServers = [...servers].sort((a, b) => {
+        if (serverSortMode === 'name') return a.name.localeCompare(b.name);
+        if (serverSortMode === 'ram') return (b.ram || 0) - (a.ram || 0);
+        // default: status (running first), then name
         if (a.isRunning !== b.isRunning) return a.isRunning ? -1 : 1;
         return a.name.localeCompare(b.name);
     });
+
+    let html = `
+        <div class="mcmm-server-toolbar">
+            <div class="mcmm-server-toolbar-left">
+                <h2 class="mcmm-server-toolbar-title">My Servers</h2>
+                <div class="mcmm-server-toolbar-stats">
+                    <span class="mcmm-stat-pill online">${servers.filter(s => s.isRunning).length} online</span>
+                    <span class="mcmm-stat-pill offline">${servers.filter(s => !s.isRunning).length} offline</span>
+                </div>
+            </div>
+            <div class="mcmm-server-toolbar-right">
+                <div class="mcmm-search" style="max-width:220px;">
+                    <span class="material-symbols-outlined mcmm-search-icon">search</span>
+                    <input id="serverSearchInput" class="mcmm-search-input" type="text"
+                           placeholder="Search servers…" oninput="filterServerList()" autocomplete="off">
+                </div>
+                <select class="mcmm-sort-select" onchange="setServerSort(this.value)" title="Sort servers">
+                    <option value="status" ${serverSortMode === 'status' ? 'selected' : ''}>Sort: Status</option>
+                    <option value="name"   ${serverSortMode === 'name' ? 'selected' : ''}>Sort: Name</option>
+                    <option value="ram"    ${serverSortMode === 'ram' ? 'selected' : ''}>Sort: RAM</option>
+                </select>
+                <button class="mcmm-btn mcmm-btn-primary" onclick="switchTab('catalog')">
+                    <span class="material-symbols-outlined">add</span> Deploy New
+                </button>
+            </div>
+        </div>
+        <div class="mcmm-server-list" id="serverListContainer">
+    `;
 
     sortedServers.forEach(server => {
         html += renderServerRow(server);
@@ -2678,13 +2950,21 @@ function renderServers(servers) {
 
     html += `
         </div>
-        <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
-             <button class="mcmm-btn" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.5rem;" onclick="startAgents()">
-                <span class="material-symbols-outlined" style="font-size: 1.2rem;">restart_alt</span> Restart Agents
+        <div style="margin-top:1.5rem;display:flex;gap:1rem;">
+            <button class="mcmm-btn"
+                    style="background:rgba(255,255,255,0.05);display:flex;align-items:center;gap:0.5rem;"
+                    onclick="startAgents()">
+                <span class="material-symbols-outlined" style="font-size:1.2rem;">restart_alt</span> Restart Agents
             </button>
         </div>
     `;
     container.innerHTML = html;
+
+    // Seed sparklines from existing history
+    servers.forEach(s => {
+        const buf = serverRamHistory.get(String(s.id));
+        if (buf && buf.length >= 2) drawSparkline(String(s.id), buf);
+    });
 }
 
 // Render Modpack version buttons in deploy modal
@@ -2861,6 +3141,7 @@ async function submitDeploy() {
         mc_version: document.getElementById('deploy_mc_version')?.value || '',
         loader: document.getElementById('deploy_loader')?.value || '',
         jvm_flags: document.getElementById('deploy_jvm_flags').value,
+        mc_router_host: document.getElementById('deploy_hostname').value || '',
         csrf_token: typeof csrfToken !== 'undefined' ? csrfToken : ''
     };
 
@@ -3409,6 +3690,55 @@ function deleteServer(id) {
 // --- Settings ---
 
 /**
+ * Loads and displays the current mc-router status and live routes in the Router settings tab.
+ */
+async function loadRouterStatus() {
+    const badge = document.getElementById('routerStatusBadge');
+    const table = document.getElementById('routerRoutesTable');
+    if (!table) return;
+    table.innerHTML = '<span style="opacity:0.5;">Loading...</span>';
+    if (badge) badge.innerHTML = '';
+
+    try {
+        const res = await mcmmFetch('/plugins/mcmm/api.php?action=router_status');
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Unknown error');
+
+        const { running, routes } = json.data;
+
+        if (badge) {
+            badge.innerHTML = running
+                ? `<span class="material-symbols-outlined" style="font-size:1rem;color:#4ade80;">check_circle</span> <span style="color:#4ade80;">Running</span>`
+                : `<span class="material-symbols-outlined" style="font-size:1rem;color:#f87171;">cancel</span> <span style="color:#f87171;">Stopped</span>`;
+        }
+
+        const entries = Object.entries(routes || {});
+        if (entries.length === 0) {
+            table.innerHTML = '<div style="opacity:0.5; padding: 0.5rem 0;">No routes registered yet. Deploy a server with an External Hostname to get started.</div>';
+            return;
+        }
+
+        let html = `<table style="width:100%; border-collapse:collapse;">
+            <thead><tr style="border-bottom:1px solid var(--border); color: var(--text-muted); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">
+                <th style="text-align:left; padding:0.5rem 0.75rem;">Hostname</th>
+                <th style="text-align:left; padding:0.5rem 0.75rem;">Backend</th>
+            </tr></thead><tbody>`;
+        for (const [host, backend] of entries) {
+            html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                <td style="padding:0.6rem 0.75rem; font-family:monospace; color:var(--primary);">${host}</td>
+                <td style="padding:0.6rem 0.75rem; font-family:monospace; opacity:0.7;">${backend}</td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        table.innerHTML = html;
+    } catch (err) {
+        if (badge) badge.innerHTML = `<span style="color:#f87171;">Error: ${err.message}</span>`;
+        table.innerHTML = '<span style="opacity:0.5;">Could not load routes.</span>';
+    }
+}
+
+
+/**
  * Collects settings from the UI and submits them to the API.
  * 
  * @param {Event} e - The form submission event.
@@ -3445,6 +3775,10 @@ function saveSettings(e) {
         default_meowice_flags: getChecked('default_meowice_flags'),
         default_graalvm_flags: getChecked('default_graalvm_flags'),
         jvm_flags: getVal('jvm_flags'),
+        mc_router_enabled: getChecked('mc_router_enabled'),
+        mc_router_port: parseInt(getVal('mc_router_port')) || 25565,
+        mc_router_api_port: parseInt(getVal('mc_router_api_port')) || 25564,
+        mc_router_default: getVal('mc_router_default'),
         csrf_token: typeof csrfToken !== 'undefined' ? csrfToken : ''
     };
 
@@ -3927,6 +4261,7 @@ async function openServerSettings(id) {
         document.getElementById('edit_whitelist').value = env.WHITELIST || '';
         document.getElementById('edit_icon_url').value = env.ICON || '';
         document.getElementById('edit_jvm_flags').value = env.JVM_OPTS || '';
+        document.getElementById('edit_hostname').value = env.MC_ROUTER_HOST || '';
 
         const iconPrev = document.getElementById('edit_icon_preview');
         if (iconPrev) {
@@ -3985,6 +4320,7 @@ async function submitServerSettings() {
     const payload = {
         id: id,
         port: portVal,
+        mc_router_host: document.getElementById('edit_hostname').value,
         env: {
             SERVER_PORT: portVal,
             QUERY_PORT: portVal,
@@ -3995,6 +4331,8 @@ async function submitServerSettings() {
             ENABLE_WHITELIST: document.getElementById('edit_whitelist').value ? 'TRUE' : 'FALSE',
             ICON: document.getElementById('edit_icon_url').value,
             JVM_OPTS: document.getElementById('edit_jvm_flags').value,
+            // MC_ROUTER_HOST is also sent at top level for cleaner handling, but we allow it here too
+            MC_ROUTER_HOST: document.getElementById('edit_hostname').value,
 
             PVP: document.getElementById('edit_pvp').checked ? 'TRUE' : 'FALSE',
             HARDCORE: document.getElementById('edit_hardcore').checked ? 'TRUE' : 'FALSE',
@@ -4364,3 +4702,447 @@ async function reinstallFromBackup(name) {
         container.innerHTML = originalHtml;
     }
 }
+
+/**
+ * Debug function to force run the background update worker.
+ */
+async function handleForceUpdateCheck() {
+    const btn = event?.target;
+    let originalText = 'Debug Updates';
+    if (btn) {
+        originalText = btn.textContent;
+        btn.textContent = 'Running...';
+        btn.disabled = true;
+    }
+
+    try {
+        const res = await mcmmFetch('/plugins/mcmm/api.php?action=force_update_check');
+        const data = await res.json();
+        console.log("[MCMM] Debug Output:", data);
+
+        if (data.success) {
+            let out = data.output || 'No output captured.';
+            if (out.length > 2000) out = out.substring(0, 2000) + '... (truncated)';
+            alert("Background check completed!\n\nOutput:\n" + out);
+
+            // Refresh list
+            loadInstalledMods(true);
+        } else {
+            alert("Failed to run check:\n" + (data.error || 'Unknown error'));
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error running debug check: " + e.message);
+    } finally {
+        if (btn) {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+}
+window.handleForceUpdateCheck = handleForceUpdateCheck;
+
+/**
+ * Checks for global system image updates and displays a notification if available.
+ * 
+ * @param {boolean} [force=false] - Whether to bypass the cache.
+ */
+async function checkSystemUpdate(force = false) {
+    console.log("MCMM: Checking for system updates" + (force ? " (force)..." : "..."));
+    try {
+        const url = '/plugins/mcmm/api.php?action=check_global_image_update' + (force ? '&force=1' : '');
+        const res = await mcmmFetch(url);
+        const data = await res.json();
+
+        if (data.success && data.updateAvailable) {
+            console.log("System update available!", data);
+
+            // Pass the whole data object or extract tags
+            let displayText = data.targetImage || 'itzg/minecraft-server:latest';
+            let updateTags = data.updateTags || [];
+
+            // If multiple tags, format them for display
+            if (updateTags.length > 0) {
+                // Pass the tags to notification
+                showSystemUpdateNotification(displayText, updateTags);
+            } else {
+                showSystemUpdateNotification(displayText);
+            }
+        } else {
+            console.log(force ? "Force check: No update." : "No system update available.", data.message || "");
+        }
+        return data; // Return data for caller
+    } catch (e) {
+        console.error('Failed to check for system updates', e);
+        throw e;
+    }
+}
+
+/**
+ * Triggers a forced system update check from the UI.
+ */
+async function forceSystemUpdateCheck() {
+    const btn = document.getElementById('forceUpdateCheckBtn');
+    const status = document.getElementById('forceUpdateCheckStatus');
+    if (!btn || !status) return;
+
+    btn.disabled = true;
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '<div class="mcmm-spinner-small"></div> Checking...';
+    status.textContent = 'Starting check...';
+    status.style.color = 'var(--text-secondary)';
+
+    let pollInterval = null;
+    const startPolling = () => {
+        pollInterval = setInterval(async () => {
+            try {
+                const res = await mcmmFetch('/plugins/mcmm/api.php?action=get_update_progress');
+                const data = await res.json();
+                if (data.success && data.progress && data.progress.status !== 'idle') {
+                    const p = data.progress;
+                    let text = p.status;
+                    if (p.total > 0) {
+                        const percent = Math.round((p.current / p.total) * 100);
+                        text += ` (${percent}%)`;
+                    }
+                    status.textContent = text;
+                }
+            } catch (e) {
+                console.warn("Update check progress poll failed", e);
+            }
+        }, 1000);
+    };
+
+    try {
+        startPolling();
+        const data = await checkSystemUpdate(true);
+        if (data.updateAvailable) {
+            status.textContent = 'Update found!';
+            status.style.color = 'var(--success)';
+        } else {
+            status.textContent = 'All images up to date.';
+            status.style.color = 'var(--text-muted)';
+        }
+    } catch (err) {
+        status.textContent = 'Check failed. See console.';
+        status.style.color = 'var(--danger)';
+    } finally {
+        if (pollInterval) clearInterval(pollInterval);
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+    }
+}
+
+
+
+function showSystemUpdateNotification(displayText, updateTags) {
+    // Check if valid notification area exists, if not create one
+    let notifyArea = document.getElementById('mcmm-global-notification-area');
+    if (!notifyArea) {
+        notifyArea = document.createElement('div');
+        notifyArea.id = 'mcmm-global-notification-area';
+        document.body.appendChild(notifyArea);
+    }
+
+    // Clear existing
+    notifyArea.innerHTML = '';
+
+    // Store tags globally or in data attribute for reference? 
+    // Easier to just pass them as JSON string in onclick
+    const tagsJson = updateTags ? JSON.stringify(updateTags).replace(/"/g, '&quot;') : '[]';
+
+    const notification = document.createElement('div');
+    notification.className = 'mcmm-notification-bar';
+    notification.innerHTML = `
+
+        <div class="mcmm-notification-content">
+            <i class="fa-solid fa-circle-arrow-up"></i>
+            <span>Image Update Available: <span style="color:var(--primary-hover); font-weight:600;">${updateTags.length} Image(s)</span></span>
+        </div>
+        <div class="mcmm-notification-actions">
+            <button onclick="confirmSystemUpdate('${displayText}', ${tagsJson})" class="mcmm-btn mcmm-btn-primary" style="padding:0.4rem 1rem; font-size:0.85rem;">Update Now</button>
+            <button onclick="dismissSystemUpdate()" class="mcmm-btn" style="padding:0.4rem 1rem; font-size:0.85rem;">Dismiss</button>
+        </div>
+    `;
+
+    notifyArea.appendChild(notification);
+    // Animate in
+    requestAnimationFrame(() => {
+        notification.classList.add('visible');
+    });
+}
+
+function dismissSystemUpdate() {
+    const notifyArea = document.getElementById('mcmm-global-notification-area');
+    const bar = notifyArea ? notifyArea.querySelector('.mcmm-notification-bar') : null;
+
+    if (bar) {
+        bar.classList.remove('visible');
+        setTimeout(() => {
+            if (notifyArea) notifyArea.innerHTML = '';
+        }, 400);
+    }
+}
+
+function confirmSystemUpdate(displayText, updateTags) {
+    // Remove existing if any
+    const existing = document.getElementById('systemUpdateConfirmModal');
+    if (existing) existing.remove();
+
+    if (!displayText) displayText = 'itzg/minecraft-server';
+
+    // Format tag list for display
+    let tagsHtml = '';
+    if (updateTags && updateTags.length > 0) {
+        tagsHtml = `<div style="margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem;">
+            ${updateTags.map(tag => `<code style="color:var(--primary); background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px;">${tag}</code>`).join('')}
+        </div>`;
+    } else {
+        // Fallback legacy behavior
+        tagsHtml = `<code style="color:var(--primary); background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px;">${displayText}</code>`;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'mcmm-modal-overlay open';
+    modal.id = 'systemUpdateConfirmModal';
+    modal.innerHTML = `
+        <div class="mcmm-modal" style="max-width: 500px;">
+            <div class="mcmm-modal-header">
+                <div class="mcmm-modal-title">System Update Available</div>
+                <button class="mcmm-modal-close" onclick="closeSystemUpdateConfirmModal()">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="mcmm-modal-body">
+                <p>New versions are available for the following images:</p>
+                ${tagsHtml}
+                
+                <div style="margin-top:1.5rem; padding:1rem; background:rgba(251, 191, 36, 0.1); border:1px solid rgba(251, 191, 36, 0.3); border-radius:12px; color:var(--warning); display:flex; gap:0.75rem;">
+                    <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px;"></i>
+                    <div style="font-size:0.9rem;">
+                        <strong>Warning:</strong><br>
+                        This update requires stopping <strong>ALL</strong> running Minecraft servers. They will need to be started manually after the update completes.
+                    </div>
+                </div>
+            </div>
+            <div class="mcmm-settings-footer">
+                <button class="mcmm-btn" onclick="closeSystemUpdateConfirmModal()">Cancel</button>
+                <button class="mcmm-btn mcmm-btn-primary" onclick="performSystemUpdate('${displayText}')">Yes, Update All</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+
+function closeSystemUpdateConfirmModal() {
+    const modal = document.getElementById('systemUpdateConfirmModal');
+    if (modal) modal.remove();
+}
+
+async function performSystemUpdate(targetImage) {
+    if (!confirm("This will stop all running MCMM servers and pull the latest Docker image. Continue?")) {
+        return;
+    }
+
+    // Close the original confirmation modal
+    closeSystemUpdateConfirmModal();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'mcmm-modal-overlay open';
+    overlay.style.zIndex = '12000';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.innerHTML = `
+        <div class="mcmm-update-modal-alt" style="background: var(--bg-surface); padding: 2.5rem; border-radius: 20px; text-align: center; max-width: 500px; width: 90%; box-shadow: 0 30px 60px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); margin: auto;">
+            <div style="margin-bottom: 1.5rem;">
+                <i class="fa-solid fa-cloud-arrow-down" style="font-size: 3rem; color: var(--primary);"></i>
+            </div>
+            <h2 style="margin-bottom:0.5rem; font-weight: 800;">System Update</h2>
+            <p style="color:var(--text-secondary); line-height: 1.6;">The system is being updated. This may take a few minutes as we stop containers and pull new images.</p>
+            
+            <div class="mcmm-update-progress-container">
+                <div class="mcmm-update-status">
+                    <span class="mcmm-update-status-text" id="mcmm-update-status-text">Starting update...</span>
+                    <span class="mcmm-update-percentage" id="mcmm-update-percentage">0%</span>
+                </div>
+                <div class="mcmm-progress-bar-bg">
+                    <div class="mcmm-progress-bar-fill active" id="mcmm-update-progress-fill" style="width: 0%"></div>
+                </div>
+                <div class="mcmm-update-details" id="mcmm-update-details" style="display: none;">Initialising...</div>
+            </div>
+            
+            <div style="margin-top:2rem; font-family:monospace; font-size:0.75rem; color:var(--text-muted); background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 8px;">
+                Image: ${targetImage}
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const statusText = document.getElementById('mcmm-update-status-text');
+    const percentageText = document.getElementById('mcmm-update-percentage');
+    const progressFill = document.getElementById('mcmm-update-progress-fill');
+    const detailsText = document.getElementById('mcmm-update-details');
+
+    let pollInterval = null;
+
+    const startPolling = () => {
+        pollInterval = setInterval(async () => {
+            try {
+                const res = await mcmmFetch('/plugins/mcmm/api.php?action=get_update_progress');
+                const data = await res.json();
+
+                if (data.success && data.progress) {
+                    const p = data.progress;
+
+                    // Update UI
+                    if (p.status) statusText.innerText = p.status;
+
+                    if (p.total > 0) {
+                        const percent = Math.min(100, Math.round((p.current / p.total) * 100));
+                        percentageText.innerText = percent + '%';
+                        progressFill.style.width = percent + '%';
+                    } else if (p.status === 'Stopping servers...') {
+                        progressFill.style.width = '10%';
+                    } else if (p.status === 'idle') {
+                        // If it's idle, it means no update is currently running
+                        // We check the timestamp in the backend, but here we just show 0 or 100?
+                    }
+
+                    if (p.details) {
+                        detailsText.innerText = p.details;
+                        detailsText.style.display = 'block';
+                    } else {
+                        detailsText.style.display = 'none';
+                    }
+                }
+            } catch (e) {
+                console.warn("Progress poll failed", e);
+                statusText.innerText = "Connection lost. Retrying...";
+            }
+        }, 2000);
+    };
+    // Begin the actual update
+    startPolling();
+
+    try {
+        console.log("MCMM: Starting system update request via $.ajax...", targetImage);
+
+        // Use jQuery.ajax to match the working save_settings pattern exactly
+        $.ajax({
+            url: '/plugins/mcmm/api.php?action=update_system_image&ts=' + Date.now(),
+            type: 'POST',
+            data: {
+                image: targetImage,
+                csrf_token: typeof csrfToken !== 'undefined' ? csrfToken : ''
+            },
+            headers: {
+                'X-CSRF-Token': typeof csrfToken !== 'undefined' ? csrfToken : ''
+            },
+            dataType: 'json',
+            success: function (data) {
+                console.log("MCMM Update Result:", data);
+                // Stop polling
+                if (pollInterval) clearInterval(pollInterval);
+
+                if (data.success) {
+                    statusText.innerText = 'Update Complete!';
+                    percentageText.innerText = '100%';
+                    progressFill.style.width = '100%';
+                    progressFill.classList.remove('active');
+
+                    setTimeout(() => {
+                        alert("System updated successfully! You can now start your servers.");
+                        location.reload();
+                    }, 500);
+                } else {
+                    alert("Update Server Error: " + (data.error || "Unknown server error"));
+                    overlay.remove();
+                }
+            },
+            error: function (xhr, status, error) {
+                if (pollInterval) clearInterval(pollInterval);
+                console.error("MCMM Update AJAX Error:", status, error, xhr.responseText);
+
+                let errorMsg = error || "Unknown Error";
+                if (xhr.status === 0) errorMsg = "Network Error / Connection Reset";
+                else if (xhr.responseText) {
+                    try {
+                        const json = JSON.parse(xhr.responseText);
+                        if (json.error) errorMsg = json.error;
+                    } catch (e) { }
+                }
+
+                alert("Update Failed (" + xhr.status + "): " + errorMsg);
+                overlay.remove();
+            }
+        });
+
+    } catch (e) {
+        if (pollInterval) clearInterval(pollInterval);
+        console.error("performSystemUpdate catch block:", e);
+        alert("Update Initialization Error: " + e.message);
+        overlay.remove();
+    }
+}
+
+/**
+ * Iterates over all servers on the dashboard and checks for modpack updates.
+ */
+async function checkModpackUpdates() {
+    const servers = document.querySelectorAll('.mcmm-server-row');
+    if (servers.length === 0) return;
+
+    console.log(`%c MCMM %c Checking modpack updates for ${servers.length} servers...`, "background:rgb(124 58 237 / 100%);color:rgb(255 255 255 / 100%);font-weight:700;padding:2px 6px;border-radius:4px;", "");
+
+    for (const serverRow of servers) {
+        const serverId = serverRow.getAttribute('data-server-id');
+        if (!serverId) continue;
+
+        try {
+            const res = await mcmmFetch(`/plugins/mcmm/api.php?action=check_updates&id=${serverId}`);
+            const data = await res.json();
+
+            if (data.success && data.updates) {
+                // Look for an entry marked as is_modpack
+                const modpackUpdate = Object.values(data.updates).find(u => u.is_modpack === true);
+                if (modpackUpdate) {
+                    updateModpackBadge(serverId, modpackUpdate);
+                }
+            }
+        } catch (e) {
+            console.warn(`MCMM: Failed to check updates for server ${serverId}`, e);
+        }
+    }
+}
+
+/**
+ * Updates the modpack badge UI for a specific server if an update is found.
+ * 
+ * @param {string} serverId - The ID of the server.
+ * @param {Object} update - The update information.
+ */
+function updateModpackBadge(serverId, update) {
+    const badgeContainer = document.getElementById(`mp-update-badge-${serverId}`);
+    if (!badgeContainer) return;
+
+    // Only add if not already present
+    if (badgeContainer.innerHTML.includes('Update Available')) return;
+
+    badgeContainer.innerHTML = `
+        <span class="mcmm-badge success" 
+              style="cursor:pointer; animation: pulse 2s infinite; background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3);" 
+              title="A newer version of this modpack is available: ${update.latestFileName || 'Latest'}"
+              onclick="openModManager('${serverId}', '')">
+            <i class="fa-solid fa-circle-up" style="margin-right:4px;"></i>Update Available
+        </span>
+    `;
+
+    // Also style the version badge to indicate update
+    const versionBadge = document.getElementById(`mp-version-${serverId}`);
+    if (versionBadge) {
+        versionBadge.style.borderColor = 'rgba(34, 197, 94, 0.5)';
+    }
+}
+

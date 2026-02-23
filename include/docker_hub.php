@@ -8,7 +8,13 @@
  * @return bool|null True if update available, False if up to date, Null on error
  * @psalm-taint-escape ssrf
  */
-function checkDockerHubUpdate(string $image, string $currentDigest): ?bool
+/**
+ * Fetch the remote digest for an image from Docker Hub.
+ *
+ * @param string $image Full image name (e.g., 'itzg/minecraft-server:latest')
+ * @return string|null Remote digest (sha256:...) or null on error
+ */
+function getRemoteImageDigest(string $image): ?string
 {
     // Parse image
     if (strpos($image, '/') === false) {
@@ -66,19 +72,24 @@ function checkDockerHubUpdate(string $image, string $currentDigest): ?bool
 
     // Extract Docker-Content-Digest header
     if (preg_match('/docker-content-digest:\s*(sha256:[a-f0-9]+)/i', $response, $matches)) {
-        $remoteDigest = $matches[1];
-
-        // Compare digests
-        // Note: Running digest might be the ImageID (which is a config digest, not manifest digest).
-        // However, standard "docker inspect" usage often gives Config Digest (Image ID).
-        // The Registry returns Distribution Digest. These are DIFFERENT.
-        // CHECK: We need to check if the user is running the image identified by this distribution digest.
-        // Actually, "docker images --digests" shows the distribution digest.
-        // BUT "docker inspect" returns the config digest as "Id".
-        // The "RepoDigests" field in "docker inspect" contains the distribution digest (e.g. repo@sha256:...)
-
-        return $remoteDigest !== $currentDigest;
+        return $matches[1];
     }
 
     return null;
+}
+
+/**
+ * Check Docker Hub for image updates by comparing remote digest with local digest.
+ *
+ * @param string $image Full image name
+ * @param string $currentDigest The current digest (sha256:...)
+ * @return bool|null True if update available, False if up to date, Null on error
+ */
+function checkDockerHubUpdate(string $image, string $currentDigest): ?bool
+{
+    $remoteDigest = getRemoteImageDigest($image);
+    if ($remoteDigest === null) {
+        return null;
+    }
+    return ($remoteDigest !== $currentDigest);
 }
