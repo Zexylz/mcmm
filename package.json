@@ -21,7 +21,7 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.0.0",
     "globals": "^17.3.0",
-    "htmlhint": "^1.8.1",
+    "htmlhint": "^1.9.2",
     "stylelint": "^17.1.1",
     "stylelint-config-standard": "^39.0.1"
   }
