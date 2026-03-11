@@ -20,7 +20,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.0.3",
-    "globals": "^17.3.0",
+    "globals": "^17.4.0",
     "htmlhint": "^1.8.1",
     "stylelint": "^17.1.1",
     "stylelint-config-standard": "^39.0.1"
