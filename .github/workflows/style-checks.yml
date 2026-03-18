@@ -75,9 +75,7 @@ jobs:
       - uses: actions/setup-node@v6.3.0
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-audit --no-fund
       - uses: ./.github/actions/get-changed-files
 
       - name: Run ESLint (changed files on PR; all on push)
@@ -117,9 +115,7 @@ jobs:
       - uses: actions/setup-node@v6.3.0
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-audit --no-fund
       - uses: ./.github/actions/get-changed-files
 
       - name: Extract CSS from .page (line-preserving, PHP-safe, dummy selectors)
@@ -285,7 +281,6 @@ jobs:
               exit 0
             fi
 
-            # Build args array to avoid empty argument issues
             args=()
             if [[ ${#filtered_css[@]} -gt 0 ]]; then
               args+=("${filtered_css[@]}")
@@ -323,9 +318,7 @@ jobs:
       - uses: actions/setup-node@v6.3.0
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-audit --no-fund
       - uses: ./.github/actions/get-changed-files
 
       - name: Prepare HTML (changed .page on PR; all on push)
