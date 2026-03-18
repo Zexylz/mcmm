@@ -23,6 +23,6 @@
     "globals": "^17.4.0",
     "htmlhint": "^1.8.1",
     "stylelint": "^17.1.1",
-    "stylelint-config-standard": "^39.0.1"
+    "stylelint-config-standard": "^41.0.0"
   }
 }
