@@ -144,7 +144,7 @@ jobs:
           unzip -l mcmm-plugin.zip | tail -n +4 | head -n -2
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2.5.0
+        uses: softprops/action-gh-release@v2.6.1
         with:
           files: mcmm-plugin.zip
           tag_name: ${{ github.ref_name }}
@@ -228,7 +228,7 @@ jobs:
 
           
       - name: Upload Package Asset
-        uses: softprops/action-gh-release@v2.5.0
+        uses: softprops/action-gh-release@v2.6.1
         with:
           files: ${{ steps.build.outputs.package_file }}
         env:
